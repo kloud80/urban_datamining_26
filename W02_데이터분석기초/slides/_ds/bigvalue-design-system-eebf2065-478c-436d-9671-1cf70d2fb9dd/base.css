@@ -1,0 +1,71 @@
+/* ============================================================
+   BigValue — Base / element semantics
+   Layered on top of the token files. Product convention: 10px = 1rem.
+   ============================================================ */
+html {
+  font-size: 62.5%; /* 10px = 1rem base */
+}
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  color: var(--fg-1);
+  background: var(--bg-1);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display / marketing headings lean on Mona Sans */
+.display-hero,
+h1.display {
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  font-size: var(--fs-4xl);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+}
+.display-xl {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-3xl);
+  line-height: 1.15;
+  letter-spacing: var(--tracking-display);
+}
+
+/* Product headings — Pretendard, product-matching sizes */
+h1 { font-size: var(--fs-2xl); font-weight: var(--fw-bold); letter-spacing: var(--tracking-heading); }
+h2 { font-size: var(--fs-xl);  font-weight: var(--fw-bold); letter-spacing: var(--tracking-heading); }
+h3 { font-size: var(--fs-lg);  font-weight: var(--fw-bold); }
+h4 { font-size: var(--fs-md);  font-weight: var(--fw-bold); }
+h5 { font-size: 1.3rem;        font-weight: var(--fw-bold); }
+h6 { font-size: 1.1rem;        font-weight: var(--fw-bold); }
+
+p     { font-size: var(--fs-md); line-height: var(--lh-body); color: var(--fg-2); }
+small { font-size: var(--fs-xs); color: var(--fg-3); }
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* Korean body convenience */
+.ko-body { word-break: keep-all; text-wrap: pretty; }
+
+/* Utility text recipes */
+.text-eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--primary-main);
+}
+.text-caption { font-size: var(--fs-xs); color: var(--fg-4); }
+.text-label   { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--fg-2); }
+
+/* Links */
+a {
+  color: var(--primary-main);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+a:hover { color: var(--primary-dark); text-decoration: underline; text-underline-offset: 0.3rem; }

@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도시빅데이터와 머신러닝 — 2주차 회귀분석</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:96px; --type-title:64px; --type-subtitle:44px; --type-formula:48px;
+  --type-body:34px; --type-small:28px; --type-eyebrow:26px; --type-note:24px;
+  --pad-top:100px; --pad-bottom:80px; --pad-x:100px;
+  --gap-title:52px; --gap-item:28px;
+}
+#stage > section[data-deck="0"] a {color:var(--primary-main);text-decoration:none}
+#stage > section[data-deck="0"] a:hover {color:var(--primary-dark)}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+@keyframes bv-grow {from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes bv-sq {0%{transform:scale(0);opacity:0}22%,80%{transform:scale(1);opacity:1}100%{transform:scale(0);opacity:0}}
+@keyframes bv-tilt {0%{transform:rotate(0deg)}100%{transform:rotate(-11.5deg)}}
+@keyframes bv-colorize {0%,12%{filter:saturate(0);opacity:.55}45%,100%{filter:saturate(1);opacity:1}}
+@keyframes bv-draw {0%{stroke-dashoffset:1400}70%,100%{stroke-dashoffset:0}}
+@keyframes bv-fade {0%,25%{opacity:0}60%,100%{opacity:1}}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="인사. 오늘은 회귀분석이다. 평균 하나를 내놓는 데서 출발해서, 변수를 하나씩 붙여 가며 다중회귀까지 간다. 마지막에는 통계 프로그램이 뱉는 표를 직접 읽는다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:flex-end;font-family:var(--font-sans);overflow:hidden">
+  <div style="position:absolute;inset:0;opacity:0.5"><div class="imgslot" style=""><img src="uploads/s1_bg.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>도시 야경 항공사진</span></div></div></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(12,11,23,0.96) 0%, rgba(12,11,23,0.6) 45%, rgba(12,11,23,0.2) 100%);pointer-events:none"></div>
+  <div style="position:relative;display:flex;flex-direction:column;gap:32px;max-width:1560px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.06em;color:var(--accent-green);font-weight:600">한양대학교 도시공학과 · URE9104 · 2026-2학기</div>
+    <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">도시빅데이터와 머신러닝</h1>
+    <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">2주차 · 회귀분석 — 평균 하나에서 다중회귀까지, 숫자를 정하는 데 필요한 것들</p>
+    <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:12px 0 0;max-width:1200px"></div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.6">빅밸류 구름 대표 &nbsp;·&nbsp; 한양대학교 도시공학과</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S1 여는 질문" data-screen-label="02" data-speaker-notes="여러분은 시행사의 사업기획 담당자다. 이 부지에 아파트를 짓는다. 분양가를 정해야 한다." style="background:radial-gradient(900px 620px at 78% 22%,rgba(68,52,226,.30),transparent 60%),var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);word-break:keep-all">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green)">1주차 · 데이터 분석 기초</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em;max-width:1500px">이 아파트, 얼마에 분양해야 할까?</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">평균에서 다중회귀까지 — 숫자 하나를 정하는 데 필요한 것들</p>
+</section>
+
+<section data-deck="0" data-label="S2 상황 설정" data-screen-label="03" data-speaker-notes="너무 높으면 미분양, 너무 낮으면 손실. 정답에 가까운 숫자가 필요하다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">PART 0 · 문제 제기</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">강남구에 새 아파트를 짓는다</h2>
+    <ul style="margin:20px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--gap-item);font-size:var(--type-body);line-height:1.5;color:var(--fg-2)">
+      <li>여러분은 시행사의 사업기획 담당자다.</li>
+      <li>이 부지에 아파트를 짓는다. 분양가를 정해야 한다.</li>
+      <li>너무 높으면 미분양, 너무 낮으면 손실. <span style="color:var(--fg-1);font-weight:600">정답에 가까운 숫자가 필요하다.</span></li>
+    </ul>
+  </div>
+  <div style="height:760px;position:relative;border:1px solid var(--border-1);border-radius:16px;overflow:hidden;background:var(--surface-app)">
+    <div class="imgslot" style=""><img src="uploads/s2_map.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>강남구 지도 — 기존 단지 점 + 빈 부지 강조</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S5 관측 데이터" data-screen-label="04" data-speaker-notes="강남구에서 최근 1년간 거래된 아파트들의 평당가다. 이게 우리가 가진 전부다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:40px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">관측 데이터</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3)">강남구 최근 1년 실거래 · 평당가(만원) · 24개 단지</p>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="chartRaw"></span></div>
+</section>
+
+<section data-deck="0" data-label="PART 1" data-screen-label="05" data-speaker-notes="여기서 답을 말하지 말 것. 학생들에게 물어서 평균을 끌어내야 한다. 예상: 평균 / 중앙값 / 최빈값 / 최근값. 답이 나오면 반드시 왜 그 값인지 되물을 것 — 근거를 못 대는 그 공백이 이 파트의 출발점이다. 가우스 스토리에 시간을 쓸 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green)">PART 1</div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">관측값이 1차원일 때<br>사용 가능한 모델은?</h2>
+</section>
+
+<section data-deck="0" data-label="S6 멈춤2" data-screen-label="06" data-speaker-notes="예상 답변: 평균 / 중앙값 / 최빈값 / 최근 거래가 / 가장 비슷한 단지의 값." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 02</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">이 점들을 하나의 숫자로 요약한다면?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1400px">딱 하나의 숫자를 제시해야 한다면 무슨 값을 쓰겠는가. 그리고 왜 그 값인가?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1300px">진행 포인트 — 반드시 &#34;왜&#34;를 물을 것. 대부분 평균이라 답하지만 근거를 대지 못한다. 그 공백이 이 강의의 출발점.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S7 평균" data-screen-label="07" data-speaker-notes="선이 위아래로 움직이다가 평균 위치에 정착한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartMean"></span></div>
+  <div style="display:flex;flex-direction:column;gap:40px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">평균</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-formula);font-weight:500;color:var(--primary-main);line-height:1.4">ŷ = ȳ = <span style="font-size:0.8em">1/n</span> Σ y<sub style="font-size:0.6em">i</sub></div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">모든 관측치에 같은 하나의 값을 예측하는 수평선.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S8 평균은 모델이다" data-screen-label="08" data-speaker-notes="앞으로 만들 모든 모델은 이 모델보다 나은지로 평가받는다 — 오늘의 핵심 복선." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">정의</div>
+  <h2 style="margin:0;font-size:72px;font-weight:700;line-height:1.25;letter-spacing:-0.02em;max-width:1600px">평균은 우리가 가격 정보 외에 아무것도 모를 때 쓸 수 있는 <span style="color:var(--primary-main)">가장 좋은 데이터 분석 모델</span>이다.</h2>
+  <div style="display:flex;gap:60px;margin-top:20px">
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:2px solid var(--neutral-darkest);padding-top:24px">
+      <div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:600">요약값이 아니다</div>
+      <div style="font-size:var(--type-body);line-height:1.45">평균은 예측 모델이다</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:2px solid var(--neutral-darkest);padding-top:24px">
+      <div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:600">입력이 없는 모델</div>
+      <div style="font-family:var(--font-display);font-size:var(--type-body);line-height:1.45">ŷ = c (상수 모델)</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:2px solid var(--neutral-darkest);padding-top:24px">
+      <div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:600">오늘의 복선</div>
+      <div style="font-size:var(--type-body);line-height:1.45">모든 모델은 이 모델보다 나은지로 평가받는다</div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S9 멈춤3" data-screen-label="09" data-speaker-notes="세 개의 수평선(평균·중앙값·중간값)을 함께 보여준다. 여기서 학생들은 답을 못 한다 — 판정 기준이 없기 때문이다." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 03</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">왜 하필 평균인가?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">중앙값도 최빈값도 있는데, 왜 평균을 &#39;가장 좋은&#39; 모델이라고 하나. &#39;좋다&#39;는 걸 어떻게 판정할 건가?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1300px">진행 포인트 — 답이 나오지 않는다. 판정 기준이 없기 때문이다. &#34;이 질문에 처음 답한 사람이 있다&#34;로 넘어간다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S9b 세 후보" data-screen-label="10" data-speaker-notes="평균선, 중앙값선, (최댓값+최솟값)/2 선. 세 선 중 무엇이 좋은지 판정할 기준이 아직 없다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartThreeLines"></span></div>
+  <div style="display:flex;flex-direction:column;gap:32px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">후보는 셋이다</h2>
+    <div style="display:flex;flex-direction:column;gap:22px;font-size:var(--type-body);color:var(--fg-2)">
+      <div style="display:flex;align-items:center;gap:18px"><span style="width:44px;height:5px;background:var(--secondary-main);border-radius:3px"></span><span>평균</span></div>
+      <div style="display:flex;align-items:center;gap:18px"><span style="width:44px;height:5px;background:var(--primary-main);border-radius:3px"></span><span>중앙값</span></div>
+      <div style="display:flex;align-items:center;gap:18px"><span style="width:44px;height:5px;background:var(--neutral-light);border-radius:3px"></span><span>(최댓값+최솟값) / 2</span></div>
+    </div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;border-top:2px solid var(--neutral-darkest);padding-top:26px">무엇이 더 좋은지 말하려면, 먼저 &#39;좋다&#39;를 재는 자가 필요하다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S10 가우스" data-screen-label="11" data-speaker-notes="정수론·천문학·측지학·통계. 관측 오차를 다루는 문제에서 최소제곱을 정립." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:0.85fr 1.15fr;gap:80px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;border-radius:16px;overflow:hidden;background:var(--surface-app);border:1px solid var(--border-1)">
+    <div class="imgslot" style=""><img src="uploads/s10_gauss.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>가우스 초상 (퍼블릭 도메인)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1777–1855</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">카를 프리드리히 가우스</h2>
+    <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-2);line-height:1.4">정수론 · 천문학 · 측지학 · 통계</p>
+    <p style="margin:20px 0 0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:820px">관측 오차를 다루는 문제에서 최소제곱을 정립했다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S11 세레스" data-screen-label="12" data-speaker-notes="던지는 질문: 관측값이 매번 다를 때, 무엇을 참값의 대표로 삼을 것인가?" style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 0.9fr;gap:70px;align-items:center;font-family:var(--font-sans)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green)">1801 · 이야기</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사라진 천체를 다시 찾다</h2>
+    <ul style="margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:20px;font-size:var(--type-body);line-height:1.45;color:var(--neutral-lighter)">
+      <li>1801년 1월, 이탈리아의 피아치가 새로운 천체 세레스(Ceres)를 발견한다.</li>
+      <li>40여 일간 관측되다가 태양 뒤로 들어가면서 사라진다.</li>
+      <li>다시 나타날 위치를 계산해야 하는데, 확보된 관측값은 몇 개뿐이고 하나하나가 미세하게 다르다.</li>
+      <li style="color:#fff;font-weight:600">24세의 가우스가 계산한 위치에서 세레스는 실제로 재발견된다.</li>
+    </ul>
+    <p style="margin:20px 0 0;font-size:var(--type-subtitle);font-weight:600;color:var(--accent-green);line-height:1.35">관측값이 매번 다를 때, 무엇을 참값의 대표로 삼을 것인가?</p>
+    <div data-dc-if="showNotes">
+      <p style="margin:16px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1100px">메모 — 최소제곱을 학술지에 먼저 발표한 사람은 르장드르(1805). 정규분포·오차이론과 연결해 &#34;왜 최선인가&#34;를 논증한 것은 가우스(1809).</p>
+    </div>
+  </div>
+  <div style="height:780px;border-radius:16px;overflow:hidden;background:#15141f">
+    <div class="imgslot" style=""><img src="uploads/s11_sky.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>밤하늘 관측 이미지 / 어긋난 관측점</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S12 오차를 재보자" data-screen-label="13" data-speaker-notes="선 위의 점은 파란 (+), 선 아래 점은 빨간 (−)." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartErrors"></span></div>
+  <div style="display:flex;flex-direction:column;gap:36px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">첫 번째 시도</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">오차를 재보자</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-formula);font-weight:500;color:var(--primary-main)">e<sub style="font-size:0.6em">i</sub> = y<sub style="font-size:0.6em">i</sub> − ŷ</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">각 점에서 후보 모델값까지의 세로 거리. 위쪽은 (+), 아래쪽은 (−).</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S13 더하면 0" data-screen-label="14" data-speaker-notes="짧은 발문: 그럼 어떻게 하면 될까? → 절댓값 / 제곱 두 답이 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">문제 — 더하면 0이 된다</h2>
+  <div style="display:grid;grid-template-columns:0.85fr 1.15fr;gap:80px;align-items:center">
+    <div style="display:flex;flex-direction:column;gap:20px;padding:56px;background:var(--surface-app2);border-radius:16px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오차들의 단순 합</div>
+      <div style="font-family:var(--font-display);font-size:120px;font-weight:700;color:var(--primary-main);line-height:1">≈ 0</div>
+    </div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--gap-item);font-size:var(--type-body);line-height:1.5;color:var(--fg-2)">
+      <li>+와 −가 상쇄된다.</li>
+      <li>오차가 아무리 커도 합은 0에 가까울 수 있다.</li>
+      <li style="font-weight:600;color:var(--fg-1)">평가 기준이 될 수 없다.</li>
+    </ul>
+  </div>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:600;color:var(--primary-main)">그럼 어떻게 하면 될까?</p>
+</section>
+
+<section data-deck="0" data-label="S14 가우스의 선택" data-screen-label="15" data-speaker-notes="3번이 결정적이다. 이 성질이 앞으로 나올 모든 최적화(경사하강법 포함)의 출발점." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartSquares"></span></div>
+  <div style="display:flex;flex-direction:column;gap:32px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">가우스의 선택 — 제곱</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-formula);font-weight:500;color:var(--primary-main)">SSE = Σ (y<sub style="font-size:0.6em">i</sub> − ŷ)²</div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:24px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li style="display:flex;gap:20px"><span style="color:var(--neutral-light);font-family:var(--font-display);font-weight:700">1</span><span>부호가 사라진다</span></li>
+      <li style="display:flex;gap:20px"><span style="color:var(--neutral-light);font-family:var(--font-display);font-weight:700">2</span><span>큰 오차에 더 큰 벌점 — 크게 틀리는 것을 더 심각하게 본다</span></li>
+      <li style="display:flex;gap:20px;color:var(--fg-1);font-weight:600"><span style="color:var(--primary-main);font-family:var(--font-display);font-weight:700">3</span><span>미분 가능 → 최솟값을 해석적으로 구할 수 있다</span></li>
+    </ul>
+    <p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.5">절댓값은 꺾인 점에서 미분이 불가능하다. 3번이 결정적이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S15 최소제곱의 답" data-screen-label="16" data-speaker-notes="슬라이더로 수평선을 움직이면 SSE가 U자 곡선을 그린다. 최솟값의 위치는 정확히 평균이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:40px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">최소제곱이 지목한 답</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-small);color:var(--fg-3)">슬라이더를 움직여 보세요</div>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="sseLab"></span></div>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:600;line-height:1.35">평균은 관습이 아니라, 제곱오차 기준에서 유일하게 최적인 해다.</p>
+</section>
+
+<section data-deck="0" data-label="S16 TSS" data-screen-label="17" data-speaker-notes="TSS는 평균 모델이 만들어낸 전체 오류량. 편차제곱합·SST로도 표기하며 n−1로 나누면 분산." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartSquares"></span></div>
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">TSS — 총제곱합</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-formula);font-weight:500;color:var(--primary-main)">TSS = Σ (y<sub style="font-size:0.6em">i</sub> − ȳ)²</div>
+    <div style="display:flex;align-items:baseline;gap:20px">
+      <span style="font-family:var(--font-display);font-size:104px;font-weight:700;line-height:1">4,820</span>
+      <span style="font-size:var(--type-small);color:var(--fg-3)">평균 모델의 전체 오류량</span>
+    </div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">Total Sum of Squares · 편차제곱합, SST로도 표기. n−1로 나누면 분산.</p>
+    <p style="margin:0;font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-darkest);padding-top:26px">정보가 하나도 없을 때 감수해야 하는 오류의 총량. 우리의 바닥(baseline)이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S17 멈춤4" data-screen-label="18" data-speaker-notes="유도할 답: 정보(변수). 면적을 알면? 층수를 알면? 역거리를 알면? 학생들이 제안한 변수 리스트를 남겨두고 다중회귀에서 다시 꺼낸다." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 04</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">TSS를 줄이려면 무엇이 필요한가?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">모델을 더 복잡하게 만들면 되는가? 아니면 다른 게 필요한가?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1300px">진행 포인트 — 학생들이 스스로 변수를 제안하게 한다. 이 리스트를 칠판에 남겨두고 S31에서 다시 꺼낸다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="PART 2" data-screen-label="19" data-speaker-notes="S24가 이 파트의 클라이맥스다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green)">PART 2</div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.1;letter-spacing:-0.02em;max-width:1450px">정보를 하나 주면 — 단순회귀</h2>
+</section>
+
+<section data-deck="0" data-label="S18 골턴" data-screen-label="20" data-speaker-notes="다윈의 사촌. 유전 형질이 세대 간에 어떻게 전달되는지를 숫자로 보려 했다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:0.85fr 1.15fr;gap:80px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;border-radius:16px;overflow:hidden;background:var(--surface-app);border:1px solid var(--border-1)">
+    <div class="imgslot" style=""><img src="uploads/s18_galton.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>골턴 사진 / 부모키×자식키 도수분포표</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1822–1911</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">프랜시스 골턴</h2>
+    <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-2);line-height:1.4">다윈의 사촌</p>
+    <p style="margin:20px 0 0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:820px">유전 형질이 세대 간에 어떻게 전달되는지를 숫자로 보려 했다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S19 평범함으로의 회귀" data-screen-label="21" data-speaker-notes="1886년 논문 제목: Regression towards Mediocrity in Hereditary Stature. 여기서 '회귀'라는 이름이 나왔다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1886 · 발견</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">평범함으로의 회귀</h2>
+    <ul style="margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:20px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>1870년대 스위트피 완두콩 씨앗 크기 실험에서 시작해 사람 키 데이터로 확장했다.</li>
+      <li>부모가 아주 크면 자식은 부모보다 작은 쪽으로, 아주 작으면 큰 쪽으로 간다.</li>
+      <li>자식의 키가 집단 평균 쪽으로 당겨진다.</li>
+    </ul>
+    <p style="margin:16px 0 0;font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-darkest);padding-top:24px">여기서 &#39;회귀(regression)&#39;라는 이름이 나왔다. 오늘날의 &#34;y를 x로 예측하는 기법&#34;이라는 뜻은 나중에 붙은 것이다.</p>
+    <div data-dc-if="showNotes">
+      <p style="margin:8px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1000px">메모 — 유전의 법칙이 아니다. 두 변수의 상관이 완전하지 않으면(|r| &lt; 1) 수학적으로 반드시 나타나는 통계적 현상이다.</p>
+    </div>
+  </div>
+  <div style="height:780px;border-radius:16px;overflow:hidden;background:var(--surface-app);border:1px solid var(--border-1)">
+    <span data-dc-slot="galtonScatter"></span>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S20 피어슨" data-screen-label="22" data-speaker-notes="골턴 = 현상의 발견, 피어슨 = 수학적 형식화." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:0.85fr 1.15fr;gap:80px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;border-radius:16px;overflow:hidden;background:var(--surface-app);border:1px solid var(--border-1)">
+    <div class="imgslot" style=""><img src="uploads/s20_pearson.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>칼 피어슨 사진 (퍼블릭 도메인)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1857–1936</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">칼 피어슨 — 관계를 숫자로</h2>
+    <ul style="margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>골턴의 관찰을 상관계수 r로 공식화 (1896)</li>
+      <li>회귀직선의 계수를 데이터에서 계산하는 절차를 정립</li>
+    </ul>
+    <div style="margin-top:24px;font-family:var(--font-display);font-size:40px;font-weight:500;color:var(--primary-main);line-height:1.5">r = Σ (x<sub style="font-size:0.6em">i</sub>−x̄)(y<sub style="font-size:0.6em">i</sub>−ȳ) / √Σ(x<sub style="font-size:0.6em">i</sub>−x̄)² √Σ(y<sub style="font-size:0.6em">i</sub>−ȳ)²</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S21 왜 y=ax+b" data-screen-label="23" data-speaker-notes="평균 모델은 x가 무엇이든 같은 값을 낸다(기울기 0). x의 정보를 쓰려면 x가 변할 때 예측값도 변해야 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartRegression"></span></div>
+  <div style="display:flex;flex-direction:column;gap:30px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">왜 y = ax + b 인가?</h2>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:20px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>평균 모델은 x가 무엇이든 같은 값을 낸다 → 기울기 0</li>
+      <li>x의 정보를 쓰려면, x가 변할 때 예측값도 변해야 한다</li>
+      <li>가장 단순한 변화 방식 = 일정 비율로 변한다</li>
+      <li>a는 &#34;x가 1 늘 때 y가 얼마나 변하는가&#34;</li>
+    </ul>
+    <p style="margin:0;font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-darkest);padding-top:26px">직선은 가정이 아니라 가장 적은 가정이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S22 멈춤5" data-screen-label="24" data-speaker-notes="유도할 답: 평균 모델은 회귀 모델의 특수한 경우(a=0)다. 복잡한 모델은 단순한 모델을 포함한다 — 선형회귀 ⊂ 신경망, 단일 모델 ⊂ 앙상블." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 05</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">평균 모델과 회귀 모델은 완전히 다른 모델인가?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">회귀 모델에서 기울기가 0이면 무엇이 되는가?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1300px">유도할 답 — 평균 모델은 회귀 모델의 특수한 경우(a=0). 이 관계는 한 학기 내내 반복된다: 복잡한 모델은 단순한 모델을 포함한다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S23 최소제곱을 직선에" data-screen-label="25" data-speaker-notes="달라진 것은 후보 모델의 집합뿐(상수 → 직선). 판정 기준은 그대로 제곱오차." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartRegSquares"></span></div>
+  <div style="display:flex;flex-direction:column;gap:32px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">같은 원리, 다른 대상</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-2);line-height:1.5">가우스가 상수에 대해 했던 일을 직선에 대해 똑같이 한다.</p>
+    <div style="font-family:var(--font-display);font-size:44px;font-weight:500;color:var(--primary-main);line-height:1.4">min<sub style="font-size:0.55em">a,b</sub> Σ (y<sub style="font-size:0.6em">i</sub> − (ax<sub style="font-size:0.6em">i</sub> + b))²</div>
+    <p style="margin:0;font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-darkest);padding-top:26px">달라진 것은 후보 모델의 집합뿐이다. 판정 기준은 그대로 제곱오차.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S24 정보가 사람을 드러낸다" data-screen-label="26" data-speaker-notes="이 슬라이드가 이 강의의 심장. 왼쪽은 키밖에 모른다 — 그래서 누구에게나 평균 168cm 하나를 내놓을 수밖에 없다. 오른쪽은 같은 사람들인데 나이가 보인다. 나이를 알면 키를 훨씬 정확히 맞춘다. 모델이 좋아진 것이 아니다, 정보가 늘어난 것이다. 학기 후반 LLM에서 '컨텍스트를 준다'는 것도 정확히 같은 일." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:18px;font-family:var(--font-sans);color:var(--fg-1);word-break:keep-all">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">정보가 사람을 드러낸다</h2>
+  <div style="height:505px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/s24_height_age.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>왼쪽: 키만 다른 검은 실루엣 5명 / 오른쪽: 같은 5명이 컬러로, 나이가 드러난다</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center">
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:3px solid var(--neutral-medium);padding-top:16px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);letter-spacing:0.06em;text-transform:uppercase;color:var(--neutral-medium)">우리가 아는 것: 키뿐</div>
+      <div style="font-size:var(--type-body);color:var(--fg-2);line-height:1.35">평균 168cm — <b style="color:var(--fg-1)">누구에게나 같은 하나의 예측</b></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:center;border-top:3px solid var(--secondary-main);padding-top:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-family:var(--font-display);font-size:var(--type-small);letter-spacing:0.06em;text-transform:uppercase;color:var(--secondary-dark)">우리가 아는 것: 키 + 나이</div>
+        <div style="font-size:var(--type-body);color:var(--fg-2);line-height:1.35">나이를 알면 <b style="color:var(--fg-1)">사람마다 다른 예측</b>이 가능하다</div>
+      </div>
+      <div style="height:104px"><span data-dc-slot="ageScatter"></span></div>
+    </div>
+  </div>
+  <div style="margin-top:auto;font-size:var(--type-subtitle);font-weight:700;line-height:1.3">모델이 좋아진 것이 아니다. <span style="color:var(--primary-main)">정보가 늘어난 것이다.</span></div>
+</section>
+
+<section data-deck="0" data-label="S25 RSS" data-screen-label="27" data-speaker-notes="RSS는 SSE, SSR로도 표기되니 주의 — SSR은 문헌에 따라 Regression Sum of Squares를 뜻하기도 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:40px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">RSS — 잔차제곱합</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-formula);font-weight:500;color:var(--primary-main)">RSS = Σ (y<sub style="font-size:0.6em">i</sub> − ŷ<sub style="font-size:0.6em">i</sub>)²</div>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center">
+    <div style="display:flex;flex-direction:column;gap:26px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <div style="display:flex;gap:22px"><span style="font-family:var(--font-display);font-weight:700;color:var(--secondary-main);min-width:90px">TSS</span><span>평균 모델의 오류 — 정보 없음</span></div>
+      <div style="display:flex;gap:22px"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);min-width:90px">RSS</span><span>회귀 모델의 오류 — 정보 있음</span></div>
+      <div style="display:flex;gap:22px"><span style="font-family:var(--font-display);font-weight:700;color:var(--neutral-dark);min-width:90px">ESS</span><span>TSS − RSS · 정보가 없애준 오류</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:44px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">TSS</span>
+        <span style="font-family:var(--font-display);font-size:96px;font-weight:700;line-height:1;color:var(--secondary-main)">4,820</span>
+      </div>
+      <span style="font-family:var(--font-display);font-size:64px;color:var(--neutral-light)">→</span>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">RSS</span>
+        <span style="font-family:var(--font-display);font-size:96px;font-weight:700;line-height:1;color:var(--primary-main)">1,930</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S26 멈춤6" data-screen-label="28" data-speaker-notes="유도할 답: 차이는 단위와 데이터 규모에 종속된다. 비율이어야 다른 문제끼리 비교가 된다. 학생이 '비율'을 말하는 순간 R²를 꺼낸다." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 06</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">이 모델은 얼마나 좋아진 건가?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">4,820에서 1,930으로 줄었다. 차이(2,890)를 쓸까, 비율을 쓸까. 왜?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1300px">유도할 답 — 차이는 단위와 데이터 규모에 종속된다. 비율이어야 다른 문제끼리 비교가 된다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S27 피셔" data-screen-label="29" data-speaker-notes="정확성 메모: R²를 만든 사람이 피셔라는 말은 정확하지 않다. '결정계수'라는 용어는 시월 라이트(1921)가 경로분석 맥락에서 붙였다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:0.85fr 1.15fr;gap:80px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;border-radius:16px;overflow:hidden;background:var(--surface-app);border:1px solid var(--border-1)">
+    <div class="imgslot" style=""><img src="uploads/s27_fisher.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>로널드 피셔 사진 (퍼블릭 도메인)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1890–1962</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">로널드 피셔 — 오류를 쪼개다</h2>
+    <ul style="margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>분산분석(ANOVA)을 정립 — 전체 변동을 &#34;설명된 부분&#34;과 &#34;남은 부분&#34;으로 분해</li>
+      <li>실험계획법, 유의성 검정, p값의 실용화</li>
+    </ul>
+    <div style="margin-top:20px;display:flex;height:74px;border-radius:8px;overflow:hidden;max-width:900px">
+      <div style="flex:0.6;background:var(--neutral-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:var(--type-small);font-weight:600">ESS 설명된 부분</div>
+      <div style="flex:0.4;background:var(--primary-main);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:var(--type-small);font-weight:600">RSS 남은 부분</div>
+    </div>
+    <div style="font-family:var(--font-display);font-size:var(--type-body);color:var(--fg-2)">TSS = ESS + RSS</div>
+    <div data-dc-if="showNotes">
+      <p style="margin:8px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1000px">메모 — 피셔가 세운 것은 분산분해와 검정의 틀이다. &#34;결정계수&#34;라는 용어는 시월 라이트(1921)가 붙였다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S28 R²" data-screen-label="30" data-speaker-notes="R²=0 이면 평균 모델과 똑같다. 정보가 아무 도움이 안 됐다는 뜻." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:40px;font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">R² — 결정계수</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;flex:1;min-height:0">
+    <div style="display:flex;flex-direction:column;gap:36px">
+      <div style="font-family:var(--font-display);font-size:56px;font-weight:500;color:var(--primary-main);line-height:1.35">R² = 1 − RSS/TSS</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;height:80px;border-radius:8px;overflow:hidden">
+          <div style="flex:0.6;background:var(--primary-main);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:var(--type-body);font-weight:700">60%</div>
+          <div style="flex:0.4;background:var(--neutral-pale);color:var(--fg-3);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:var(--type-body);font-weight:700">40%</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:var(--type-small);color:var(--fg-3)">
+          <span>모델이 없애준 오류</span>
+          <span>남은 오류</span>
+        </div>
+      </div>
+      <div style="font-family:var(--font-display);font-size:var(--type-body);color:var(--fg-2)">1 − 1,930 / 4,820 = 0.60</div>
+    </div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:26px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>정보 없이 만든 모델의 오류 중, 이 모델이 없애준 비중</li>
+      <li><span style="font-family:var(--font-display);font-weight:700">R² = 0</span> → 평균 모델과 똑같다. 정보가 아무 도움이 안 됐다</li>
+      <li><span style="font-family:var(--font-display);font-weight:700">R² = 1</span> → 오류가 0. 완벽히 설명</li>
+      <li style="font-weight:600;color:var(--fg-1);border-top:2px solid var(--neutral-darkest);padding-top:26px">모든 모델은 &#34;정보 없는 모델(평균)&#34;과 비교당한다. R²는 그 비교의 점수판이다.</li>
+    </ul>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S29 멈춤7" data-screen-label="31" data-speaker-notes="정답: RSS > TSS일 때, 즉 모델이 평균보다 못 맞출 때. 절편이 있는 OLS로 학습 데이터에 적합하면 음수가 나올 수 없지만, 학습에 쓰지 않은 데이터로 평가하면 얼마든지 음수가 나온다. '학습 성능 ≠ 평가 성능'의 첫 등장." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 07</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">R²가 음수가 될 수 있을까?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">음수가 나오려면 어떤 상황이어야 하나. 그런 일이 실제로 있을까?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1400px">정답 — RSS &gt; TSS, 즉 모델이 평균보다 못 맞출 때. 학습 데이터에 절편 있는 OLS는 음수 불가. 학습에 쓰지 않은 데이터에서는 얼마든지 발생한다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S30 아파트 복귀" data-screen-label="32" data-speaker-notes="면적 하나를 알았을 뿐인데 분양가 예측이 이만큼 나아졌다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="chartRegFit"></span></div>
+  <div style="display:flex;flex-direction:column;gap:32px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">아파트 문제로 복귀</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-2);line-height:1.5">x축을 전용면적으로 바꾸고 회귀선을 그었다.</p>
+    <div style="display:flex;align-items:baseline;gap:24px">
+      <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">R²</span>
+      <span style="font-family:var(--font-display);font-size:120px;font-weight:700;line-height:1;color:var(--primary-main)">0.60</span>
+    </div>
+    <p style="margin:0;font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-darkest);padding-top:26px">면적 하나를 알았을 뿐인데 분양가 예측이 이만큼 나아졌다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="PART 3" data-screen-label="33" data-speaker-notes="S36 p값은 오해가 많은 지점이라 충분히 시간을 쓸 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green)">PART 3</div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.1;letter-spacing:-0.02em;max-width:1450px">정보를 더 주면 — 다중회귀와 그 함정</h2>
+</section>
+
+<section data-deck="0" data-label="S31 다음 질문" data-screen-label="34" data-speaker-notes="S17에서 학생들이 제안했던 변수 리스트를 다시 띄운다. 하나로 60%를 설명했다면, 열 개를 넣으면?" style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">하나로 60%를 설명했다면, 열 개를 넣으면?</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:20px">
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--primary-pale);color:var(--primary-main);font-weight:600">전용면적</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">층수</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">준공연도</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">역거리</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">세대수</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">학군</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">공급면적</span>
+    <span style="font-size:var(--type-body);padding:16px 30px;border-radius:999px;background:var(--surface-app);color:var(--fg-2)">방 개수</span>
+  </div>
+  <div style="font-family:var(--font-display);font-size:var(--type-formula);font-weight:500;color:var(--primary-main);line-height:1.4;margin-top:20px">ŷ = b + a<sub style="font-size:0.6em">1</sub>x<sub style="font-size:0.6em">1</sub> + a<sub style="font-size:0.6em">2</sub>x<sub style="font-size:0.6em">2</sub> + ⋯ + a<sub style="font-size:0.6em">k</sub>x<sub style="font-size:0.6em">k</sub></div>
+</section>
+
+<section data-deck="0" data-label="S32 R²는 계속 오른다" data-screen-label="35" data-speaker-notes="변수를 추가하면 RSS는 절대 늘어나지 않는다 → R²는 절대 줄어들지 않는다. 난수 변수를 넣어도 조금씩 올라간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px"><span data-dc-slot="r2Curve"></span></div>
+  <div style="display:flex;flex-direction:column;gap:30px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.15">변수를 늘리면 R²는?</h2>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:22px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>변수를 추가하면 RSS는 절대 늘어나지 않는다</li>
+      <li style="font-weight:600;color:var(--fg-1)">→ R²는 절대 줄어들지 않는다</li>
+      <li>심지어 난수 변수를 넣어도 R²는 조금씩 올라간다</li>
+    </ul>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;border-top:2px solid var(--neutral-darkest);padding-top:26px">통계학자들은 처음에 이걸 보고 만족했다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S33 멈춤8" data-screen-label="36" data-speaker-notes="학생들이 잘 내는 답: 과적합, 해석 불가, 무의미한 변수. 여기서 멈추지 말고 '실무에서 관찰된 더 이상한 현상'으로 넘어간다." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 08</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em;max-width:1560px">그럼 변수를 계속 넣으면 되는가?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">무언가 이상하다면, 무엇이 이상한가?</p>
+  <div data-dc-if="showNotes">
+    <p style="margin:20px 0 0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;max-width:1300px">학생들이 잘 내는 답 — 과적합, 해석 불가, 무의미한 변수.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S33b 수정 R²" data-screen-label="37" data-speaker-notes="수정 R²는 쓸모없는 변수를 넣으면 실제로 내려간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">변수 수에 벌점을 준다 — 수정 R²</h2>
+  <div style="font-family:var(--font-display);font-size:56px;font-weight:500;color:var(--primary-main);line-height:1.5">R²<sub style="font-size:0.5em">adj</sub> = 1 − [RSS / (n−k−1)] / [TSS / (n−1)]</div>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:600;line-height:1.4;max-width:1500px">수정 R²는 쓸모없는 변수를 넣으면 실제로 내려간다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1400px">k는 변수 개수. 변수를 늘려 얻은 설명력이 자유도 손실보다 작으면 지표가 하락한다.</p>
+</section>
+
+<section data-deck="0" data-label="S34 계수가 뒤집힌다" data-screen-label="38" data-speaker-notes="면적이 늘수록 가격이 떨어진다? 상식과 반대되는 계수가 나온다. 짧은 발문: 이 결과를 보고서에 그대로 쓸 수 있겠는가?" style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">이상 현상 ①</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">계수가 뒤집힌다</h2>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:var(--type-body)">
+    <thead>
+      <tr style="border-bottom:2px solid var(--neutral-darkest)">
+        <th style="text-align:left;padding:20px 24px;font-weight:600">모델</th>
+        <th style="text-align:right;padding:20px 24px;font-weight:600">면적 계수</th>
+        <th style="text-align:right;padding:20px 24px;font-weight:600">층수 계수</th>
+        <th style="text-align:right;padding:20px 24px;font-weight:600">역거리 계수</th>
+      </tr>
+    </thead>
+    <tbody style="font-family:var(--font-display)">
+      <tr style="border-bottom:1px solid var(--border-1)">
+        <td style="padding:24px;font-family:var(--font-sans)">면적만</td>
+        <td style="padding:24px;text-align:right;font-weight:700">+1,240</td>
+        <td style="padding:24px;text-align:right;color:var(--neutral-light)">—</td>
+        <td style="padding:24px;text-align:right;color:var(--neutral-light)">—</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-1)">
+        <td style="padding:24px;font-family:var(--font-sans)">+ 층수</td>
+        <td style="padding:24px;text-align:right">+1,180</td>
+        <td style="padding:24px;text-align:right">+85</td>
+        <td style="padding:24px;text-align:right;color:var(--neutral-light)">—</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-1)">
+        <td style="padding:24px;font-family:var(--font-sans)">+ 역거리</td>
+        <td style="padding:24px;text-align:right">+1,205</td>
+        <td style="padding:24px;text-align:right">+71</td>
+        <td style="padding:24px;text-align:right;font-weight:700">−340</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-1);background:var(--error-soft)">
+        <td style="padding:24px;font-family:var(--font-sans)">+ 세대수</td>
+        <td style="padding:24px;text-align:right;font-weight:700;color:var(--error)">−210</td>
+        <td style="padding:24px;text-align:right">+66</td>
+        <td style="padding:24px;text-align:right">−290</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:600;line-height:1.35">면적이 늘수록 가격이 떨어진다? 변수를 하나 넣고 뺄 때마다 기울기가 흔들린다.</p>
+</section>
+
+<section data-deck="0" data-label="S35 가설검정" data-screen-label="39" data-speaker-notes="t통계량의 의미: 추정치가 0에서 표준오차 몇 개만큼 떨어져 있는가." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">이 계수를 믿어도 되는가</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center">
+    <div style="display:flex;flex-direction:column;gap:28px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <p style="margin:0">우리가 가진 데이터는 표본이다. 다른 표본을 뽑으면 계수는 다르게 나온다.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;border-top:2px solid var(--neutral-darkest);padding-top:24px">
+        <span style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:600">귀무가설 H₀</span>
+        <span>βⱼ = 0 — 이 변수는 y와 아무 선형관계가 없다</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:600">대립가설 H₁</span>
+        <span>βⱼ ≠ 0</span>
+      </div>
+      <div style="font-family:var(--font-display);font-size:44px;font-weight:500;color:var(--primary-main)">t = β̂ⱼ / SE(β̂ⱼ)</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <svg viewBox="0 0 600 320" style="width:100%;height:auto">
+        <path d="M20 280 C 140 280, 180 40, 300 40 C 420 40, 460 280, 580 280" fill="var(--primary-pale)" stroke="var(--primary-main)" stroke-width="4"></path>
+        <line x1="300" y1="40" x2="300" y2="290" stroke="var(--neutral-light)" stroke-width="3" stroke-dasharray="8 8"></line>
+        <text x="300" y="316" text-anchor="middle" font-size="26" fill="var(--neutral-dark)" font-family="var(--font-display)">0</text>
+        <line x1="470" y1="150" x2="470" y2="290" stroke="var(--secondary-main)" stroke-width="4"></line>
+        <text x="470" y="316" text-anchor="middle" font-size="26" fill="var(--secondary-main)" font-family="var(--font-display)">β̂ⱼ</text>
+      </svg>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">추정치가 0에서 표준오차 몇 개만큼 떨어져 있는가.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S36 멈춤9 p값" data-screen-label="40" data-speaker-notes="이 슬라이드는 시간을 충분히 쓸 것. 대학원생 중 상당수가 1번·2번으로 답한다." style="background:var(--surface-app2);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span style="width:22px;height:22px;border-radius:999px;background:var(--primary-main)"></span>
+    <span style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">멈춤 09</span>
+  </div>
+  <h2 style="margin:0;font-size:var(--type-hero);font-weight:700;line-height:1.15;letter-spacing:-0.02em">p값은 무엇의 확률인가?</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--fg-3);line-height:1.4;max-width:1450px">p &lt; 0.05를 보고 우리는 정확히 무슨 말을 할 수 있는가?</p>
+</section>
+
+<section data-deck="0" data-label="S36b p값 정답" data-screen-label="41" data-speaker-notes="조건이 뒤집혀 있다: P(데이터|H0) ≠ P(H0|데이터). 0.05는 관습적 기준이지 자연법칙이 아니다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:40px;font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em;line-height:1.2;max-width:1600px">귀무가설이 참일 때, 관측된 것만큼 극단적인 결과가 나올 확률</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center">
+    <div style="display:flex;flex-direction:column;gap:26px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <p style="margin:0">p값은 &#34;가설이 참일 확률&#34;이 아니다. 가설이 참이라고 가정했을 때 데이터가 관측될 확률이다.</p>
+      <div style="font-family:var(--font-display);font-size:40px;color:var(--fg-1);line-height:1.4">P(데이터 | H₀) ≠ P(H₀ | 데이터)</div>
+      <p style="margin:0;color:var(--fg-3)">그래서 &#34;계수가 0일 확률이 5%&#34;, &#34;0이 아닐 확률이 95%&#34;는 모두 틀린 진술이다. 조건이 뒤집혀 있다. 통계학에서 가장 널리 퍼진 오해이자 논문 심사에서 지적당하는 단골 항목이다.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:26px;padding:52px;background:var(--surface-app2);border-radius:16px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실무 규칙</div>
+      <div style="font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">p &lt; 0.05 → 귀무가설을 기각한다 → 계수가 0이라고 보기 어렵다 → 변수를 채택</div>
+      <div style="font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-lighter);padding-top:24px">0.05는 관습적 기준이지 자연법칙이 아니다.</div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S37 변수 선택" data-screen-label="42" data-speaker-notes="유의하지 않은 변수를 제거하고 다시 적합한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:40px;font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">변수 선택 — p값으로 가지치기</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:var(--type-body)">
+    <thead>
+      <tr style="border-bottom:2px solid var(--neutral-darkest)">
+        <th style="text-align:left;padding:20px 24px;font-weight:600">변수</th>
+        <th style="text-align:right;padding:20px 24px;font-weight:600">계수</th>
+        <th style="text-align:right;padding:20px 24px;font-weight:600">p값</th>
+        <th style="text-align:left;padding:20px 24px;font-weight:600">판정</th>
+      </tr>
+    </thead>
+    <tbody style="font-family:var(--font-display)">
+      <tr style="border-bottom:1px solid var(--border-1)">
+        <td style="padding:22px 24px;font-family:var(--font-sans)">전용면적</td>
+        <td style="padding:22px 24px;text-align:right">+1,190</td>
+        <td style="padding:22px 24px;text-align:right">0.000</td>
+        <td style="padding:22px 24px;font-family:var(--font-sans);color:var(--primary-main);font-weight:600">채택</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-1)">
+        <td style="padding:22px 24px;font-family:var(--font-sans)">층수</td>
+        <td style="padding:22px 24px;text-align:right">+68</td>
+        <td style="padding:22px 24px;text-align:right">0.003</td>
+        <td style="padding:22px 24px;font-family:var(--font-sans);color:var(--primary-main);font-weight:600">채택</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-1);background:var(--error-soft);color:var(--error)">
+        <td style="padding:22px 24px;font-family:var(--font-sans)">세대수</td>
+        <td style="padding:22px 24px;text-align:right">−12</td>
+        <td style="padding:22px 24px;text-align:right;font-weight:700">0.412</td>
+        <td style="padding:22px 24px;font-family:var(--font-sans);font-weight:600">제거</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-1);background:var(--error-soft);color:var(--error)">
+        <td style="padding:22px 24px;font-family:var(--font-sans)">준공연도</td>
+        <td style="padding:22px 24px;text-align:right">+4</td>
+        <td style="padding:22px 24px;text-align:right;font-weight:700">0.688</td>
+        <td style="padding:22px 24px;font-family:var(--font-sans);font-weight:600">제거</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">유의하지 않은 변수를 제거하고 다시 적합한다.</p>
+</section>
+
+<section data-deck="0" data-label="S38 뺐더니 살아난다" data-screen-label="43" data-speaker-notes="분명히 중요한 변수인데 p값 때문에 잘려나갔다. 다른 변수 하나를 빼자 갑자기 매우 유의해진다. 30초 생각할 시간을 준다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">이상 현상 ②</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">뺐더니 살아난다</h2>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1차 · 전체 변수</div>
+      <table style="width:100%;border-collapse:collapse;font-size:var(--type-body)">
+        <tbody style="font-family:var(--font-display)">
+          <tr style="border-bottom:1px solid var(--border-1);background:var(--error-soft);color:var(--error)">
+            <td style="padding:22px;font-family:var(--font-sans)">전용면적</td><td style="padding:22px;text-align:right">+820</td><td style="padding:22px;text-align:right;font-weight:700">0.312</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-1);background:var(--error-soft);color:var(--error)">
+            <td style="padding:22px;font-family:var(--font-sans)">공급면적</td><td style="padding:22px;text-align:right">+410</td><td style="padding:22px;text-align:right;font-weight:700">0.287</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-1)">
+            <td style="padding:22px;font-family:var(--font-sans)">층수</td><td style="padding:22px;text-align:right">+66</td><td style="padding:22px;text-align:right">0.004</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main)">2차 · 공급면적 제거 후</div>
+      <table style="width:100%;border-collapse:collapse;font-size:var(--type-body)">
+        <tbody style="font-family:var(--font-display)">
+          <tr style="border-bottom:1px solid var(--border-1);background:var(--primary-pale);color:var(--primary-main)">
+            <td style="padding:22px;font-family:var(--font-sans)">전용면적</td><td style="padding:22px;text-align:right">+1,190</td><td style="padding:22px;text-align:right;font-weight:700">0.000</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-1)">
+            <td style="padding:22px;font-family:var(--font-sans)">층수</td><td style="padding:22px;text-align:right">+68</td><td style="padding:22px;text-align:right">0.003</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:600;line-height:1.35">중요한 변수가 p값 때문에 잘려나갔다. 무슨 일이 벌어진 건가?</p>
+</section>
+
+<section data-deck="0" data-label="S39 다중공선성" data-screen-label="44" data-speaker-notes="키와 몸무게를 같이 넣는 경우. 계수 자체는 여전히 불편추정량이지만 불안정해진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">다중공선성</h2>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:20px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">
+      <li>같은 방향의 정보를 담은 변수가 둘 이상 들어가면 공통 변동성을 나눠 갖는다</li>
+      <li>그 공통 부분이 &#34;누구의 몫인가&#34;를 데이터가 결정하지 못한다</li>
+      <li style="font-weight:600;color:var(--fg-1)">표준오차 ↑ → t값 ↓ → p값 ↑</li>
+      <li>계수는 여전히 불편추정량이지만 불안정해진다</li>
+    </ul>
+    <div style="font-family:var(--font-display);font-size:40px;font-weight:500;color:var(--primary-main)">VIFⱼ = 1 / (1 − R²ⱼ)</div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">보통 5 또는 10 초과 시 경고. 아파트에서는 전용면적 / 공급면적 / 방 개수가 전형적 사례.</p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:24px;align-items:center">
+    <svg viewBox="0 0 660 440" style="width:100%;height:auto">
+      <line x1="60" y1="380" x2="620" y2="380" stroke="var(--neutral-lighter)" stroke-width="3"></line>
+      <line x1="60" y1="380" x2="60" y2="30" stroke="var(--neutral-lighter)" stroke-width="3"></line>
+      <line x1="60" y1="360" x2="580" y2="40" stroke="var(--primary-main)" stroke-width="5" stroke-opacity="0.5"></line>
+      <circle cx="86" cy="352" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="122" cy="314" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="154" cy="310" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="190" cy="272" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="221" cy="268" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="258" cy="246" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="289" cy="210" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="320" cy="206" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="351" cy="172" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="382" cy="168" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="414" cy="150" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="445" cy="118" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="476" cy="110" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="507" cy="78" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="538" cy="72" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <circle cx="564" cy="56" r="9" fill="var(--secondary-main)" fill-opacity="0.8"></circle>
+      <text x="620" y="424" text-anchor="end" font-size="28" fill="var(--neutral-dark)" font-family="var(--font-display)">x₁ 전용면적</text>
+      <text x="58" y="22" text-anchor="start" font-size="28" fill="var(--neutral-dark)" font-family="var(--font-display)">x₂ 공급면적</text>
+    </svg>
+    <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);text-align:center">두 변수가 관측치마다 거의 같이 움직인다 — r = 0.95</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S40 Stepwise" data-screen-label="45" data-speaker-notes="stepwise는 만능이 아니다. 같은 데이터를 여러 번 검정하므로 p값이 왜곡되고, 투입 순서에 따라 결과가 달라진다. 자동화된 절차가 도메인 지식을 대체하지 못한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:40px;font-family:var(--font-sans);color:var(--fg-1)">
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;letter-spacing:-0.02em">대응 — Stepwise와 그 한계</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:40px">
+    <div style="padding:44px;background:var(--surface-app);border-radius:16px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-body);font-weight:700;color:var(--primary-main)">전진선택 Forward</div>
+      <div style="font-size:var(--type-small);color:var(--fg-2);line-height:1.5">아무것도 없이 시작해 가장 도움 되는 변수를 하나씩 추가</div>
+    </div>
+    <div style="padding:44px;background:var(--surface-app);border-radius:16px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-body);font-weight:700;color:var(--primary-main)">후진제거 Backward</div>
+      <div style="font-size:var(--type-small);color:var(--fg-2);line-height:1.5">전부 넣고 가장 쓸모없는 것을 하나씩 제거</div>
+    </div>
+    <div style="padding:44px;background:var(--surface-app);border-radius:16px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-body);font-weight:700;color:var(--primary-main)">단계적선택 Stepwise</div>
+      <div style="font-size:var(--type-small);color:var(--fg-2);line-height:1.5">추가하면서 동시에 제거도 검토</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:600">다중공선성 대응</div>
+      <div style="font-size:var(--type-body);color:var(--fg-2);line-height:1.5">변수 제거 · 변수 결합(면적당 가격) · 차원 축소(PCA) · 정규화 회귀(Ridge/Lasso)</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:var(--type-small);color:var(--error);font-weight:600">그러나 stepwise는 만능이 아니다</div>
+      <div style="font-size:var(--type-body);color:var(--fg-2);line-height:1.5">p값 왜곡 · 투입 순서 의존 · 자동화가 도메인 지식을 대체하지 못한다</div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);font-weight:600;line-height:1.45;border-top:2px solid var(--neutral-darkest);padding-top:26px">변수들이 같은 정보를 공유한다면, 아예 서로 겹치지 않는 새 축을 만들면 어떨까? — PCA의 출발점</p>
+</section>
+
+<section data-deck="0" data-label="S40b 우리가 얻은 것" data-screen-label="46" data-speaker-notes="여기까지가 회귀분석이다. 우리가 손에 쥔 것은 숫자 네 개짜리 선형 방정식 하나다. 이 네 숫자가 모델의 전부이고, 새 부지의 면적·층수·역거리를 넣으면 분양가가 나온다. 다음 파트에서는 이 형태로는 풀 수 없는 것이 무엇인지 본다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1);word-break:keep-all">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">PART 3 정리</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그래서 우리가 얻은 것</h2>
+  <div style="background:var(--surface-app2);border-radius:18px;padding:44px 48px;display:flex;flex-direction:column;gap:14px">
+    <div style="font-family:var(--font-display);font-size:64px;font-weight:700;color:var(--primary-main);letter-spacing:-0.01em">ŷ = b + a₁x₁ + a₂x₂ + a₃x₃</div>
+    <div style="font-size:var(--type-body);color:var(--fg-2)">독립변수 3개, 가중치 4개짜리 <b style="color:var(--fg-1)">선형 방정식 하나</b></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1.25fr;gap:70px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="font-size:var(--type-small);font-weight:700;color:var(--neutral-medium)">독립변수 3개 — 우리가 넣는 정보</div>
+      <div style="display:flex;gap:16px"><div style="display:flex;flex-direction:column;gap:8px;align-items:center;background:#fff;border:2px solid var(--primary-main);border-radius:14px;padding:22px 30px"><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--primary-main)">x₁</div><div style="font-size:var(--type-small);color:var(--fg-2)">전용면적</div></div><div style="display:flex;flex-direction:column;gap:8px;align-items:center;background:#fff;border:2px solid var(--primary-main);border-radius:14px;padding:22px 30px"><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--primary-main)">x₂</div><div style="font-size:var(--type-small);color:var(--fg-2)">층수</div></div><div style="display:flex;flex-direction:column;gap:8px;align-items:center;background:#fff;border:2px solid var(--primary-main);border-radius:14px;padding:22px 30px"><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--primary-main)">x₃</div><div style="font-size:var(--type-small);color:var(--fg-2)">역거리</div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="font-size:var(--type-small);font-weight:700;color:var(--neutral-medium)">가중치 4개 — 데이터가 정해준 숫자</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap"><div style="display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--surface-app2);border-radius:12px;padding:20px 26px;min-width:150px"><div style="font-family:var(--font-display);font-size:34px;font-weight:700;color:var(--fg-1)">b</div><div style="font-size:var(--type-note);color:var(--fg-3)">절편</div></div><div style="display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--surface-app2);border-radius:12px;padding:20px 26px;min-width:150px"><div style="font-family:var(--font-display);font-size:34px;font-weight:700;color:var(--fg-1)">a₁</div><div style="font-size:var(--type-note);color:var(--fg-3)">면적 1㎡당</div></div><div style="display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--surface-app2);border-radius:12px;padding:20px 26px;min-width:150px"><div style="font-family:var(--font-display);font-size:34px;font-weight:700;color:var(--fg-1)">a₂</div><div style="font-size:var(--type-note);color:var(--fg-3)">한 층당</div></div><div style="display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--surface-app2);border-radius:12px;padding:20px 26px;min-width:150px"><div style="font-family:var(--font-display);font-size:34px;font-weight:700;color:var(--fg-1)">a₃</div><div style="font-size:var(--type-note);color:var(--fg-3)">역거리 1m당</div></div></div>
+    </div>
+  </div>
+  <div style="margin-top:auto;border-top:2px solid var(--neutral-darkest);padding-top:26px;font-size:var(--type-body);font-weight:600;line-height:1.45">
+    이 네 숫자가 <b style="color:var(--primary-main)">모델의 전부</b>다. 새 부지의 면적·층수·역거리를 넣으면 분양가가 나온다.
+    <span style="color:var(--fg-3);font-weight:400">— 그렇다면 이 형태로는 무엇을 풀 수 없을까?</span>
+  </div>
+</section>
+
+<section data-deck="0" data-label="S40c 통계 출력 읽기" data-screen-label="47" data-speaker-notes="SPSS든 SAS든 statsmodels든 회귀를 돌리면 이 화면이 나온다. 오늘 배운 것이 전부 여기 한 장에 있다. R²는 이 모델이 없애준 오류의 비중, B는 x가 1 늘 때 y가 얼마나 변하는가, t는 그 추정치가 0에서 표준오차 몇 개만큼 떨어져 있는가, 유의확률은 귀무가설이 참일 때 이만큼 극단적인 결과가 나올 확률. VIF는 다중공선성 경고등이다. 강조된 행을 짚으면서 한 줄씩 읽어준다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:30px;font-family:var(--font-sans);color:var(--fg-1);word-break:keep-all">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">SPSS · SAS · statsmodels</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">돌리면 이 화면이 나온다</h2>
+  <div style="display:grid;grid-template-columns:1.62fr 1fr;gap:56px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:26px">
+      <div style="display:flex;gap:56px;background:var(--surface-app2);border-radius:14px;padding:26px 34px">
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--type-note);color:var(--neutral-medium);font-weight:600">R 제곱</div><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--fg-1)">0.600</div><div style="font-size:var(--type-note);color:var(--fg-3)">TSS 4,820 → RSS 1,930</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--type-note);color:var(--neutral-medium);font-weight:600">수정 R 제곱</div><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--fg-1)">0.594</div><div style="font-size:var(--type-note);color:var(--fg-3)">변수 3개에 대한 벌점 반영</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--type-note);color:var(--neutral-medium);font-weight:600">F</div><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--fg-1)">117.8</div><div style="font-size:var(--type-note);color:var(--fg-3)">유의확률 .000</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--type-note);color:var(--neutral-medium);font-weight:600">표본 수</div><div style="font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--fg-1)">240</div><div style="font-size:var(--type-note);color:var(--fg-3)">자유도 3 / 236</div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:left;border-bottom:2px solid var(--neutral-darkest)">변수</th>
+          <th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:right;border-bottom:2px solid var(--neutral-darkest)">B</th><th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:right;border-bottom:2px solid var(--neutral-darkest)">표준오차</th><th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:right;border-bottom:2px solid var(--neutral-darkest)">β</th>
+          <th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:right;border-bottom:2px solid var(--neutral-darkest)">t</th><th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:right;border-bottom:2px solid var(--neutral-darkest)">유의확률</th><th style="padding:14px 16px;font-size:var(--type-note);font-weight:700;color:var(--neutral-medium);text-align:right;border-bottom:2px solid var(--neutral-darkest)">VIF</th>
+        </tr></thead>
+        <tbody><tr ><td style="padding:15px 16px;font-size:var(--type-small);text-align:left;border-bottom:1px solid var(--border-1);font-weight:600">(상수)</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">2,140</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">210</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">—</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">10.19</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">.000</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">—</td></tr><tr style="background:var(--primary-pale)"><td style="padding:15px 16px;font-size:var(--type-small);text-align:left;border-bottom:1px solid var(--border-1);font-weight:600">전용면적</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">1,190</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">96</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">.612</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">12.40</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">.000</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">1.8</td></tr><tr ><td style="padding:15px 16px;font-size:var(--type-small);text-align:left;border-bottom:1px solid var(--border-1);font-weight:600">층수</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">68</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">22</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">.154</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">3.09</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">.002</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">1.2</td></tr><tr ><td style="padding:15px 16px;font-size:var(--type-small);text-align:left;border-bottom:1px solid var(--border-1);font-weight:600">역거리</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">−340</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">88</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">−.208</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">−3.86</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">.000</td><td style="padding:15px 16px;font-size:var(--type-small);text-align:right;border-bottom:1px solid var(--border-1);font-family:var(--font-display)">1.5</td></tr></tbody>
+      </table>
+      <div style="font-size:var(--type-note);color:var(--fg-4)">이 수업의 예시 데이터 기준 · 소프트웨어마다 표 이름만 다르고 항목은 같다</div>
+    </div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:20px;border-left:3px solid var(--border-2);padding-left:30px">
+      <li style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);font-size:26px;min-width:74px">R²</span><span style="font-size:var(--type-small);line-height:1.45;color:var(--fg-2)">정보 없는 모델(평균)의 오류 중 이 모델이 없애준 비중</span></li>
+      <li style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);font-size:26px;min-width:74px">B</span><span style="font-size:var(--type-small);line-height:1.45;color:var(--fg-2)">x가 1 늘 때 y가 얼마나 변하는가 — 단위가 그대로 붙는다</span></li>
+      <li style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);font-size:26px;min-width:74px">β</span><span style="font-size:var(--type-small);line-height:1.45;color:var(--fg-2)">단위를 없앤 값. 변수끼리 영향력을 견줄 때 쓴다</span></li>
+      <li style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);font-size:26px;min-width:74px">t</span><span style="font-size:var(--type-small);line-height:1.45;color:var(--fg-2)">추정치가 0에서 표준오차 몇 개만큼 떨어져 있는가 = B / 표준오차</span></li>
+      <li style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);font-size:26px;min-width:74px">p</span><span style="font-size:var(--type-small);line-height:1.45;color:var(--fg-2)">귀무가설이 참일 때 이만큼 극단적인 결과가 나올 확률</span></li>
+      <li style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--font-display);font-weight:700;color:var(--primary-main);font-size:26px;min-width:74px">VIF</span><span style="font-size:var(--type-small);line-height:1.45;color:var(--fg-2)">다중공선성 경고등. 보통 5 또는 10을 넘으면 의심</span></li>
+    </ul>
+  </div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">도시빅데이터와 머신러닝 — 2주차 회귀분석</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">47</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">S1 여는 질문</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">S2 상황 설정</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">S5 관측 데이터</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">PART 1</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">S6 멈춤2</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">S7 평균</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">S8 평균은 모델이다</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">S9 멈춤3</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">S9b 세 후보</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">S10 가우스</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">S11 세레스</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">S12 오차를 재보자</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">S13 더하면 0</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">S14 가우스의 선택</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">S15 최소제곱의 답</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">S16 TSS</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">S17 멈춤4</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">PART 2</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">S18 골턴</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">S19 평범함으로의 회귀</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">S20 피어슨</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">S21 왜 y=ax+b</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">S22 멈춤5</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">S23 최소제곱을 직선에</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">S24 정보가 사람을 드러낸다</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">S25 RSS</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">S26 멈춤6</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">S27 피셔</div></button>
+<button class="ov-card" data-go="29"><div class="ov-thumb"><div class="ov-num">30</div></div><div class="ov-label">S28 R²</div></button>
+<button class="ov-card" data-go="30"><div class="ov-thumb"><div class="ov-num">31</div></div><div class="ov-label">S29 멈춤7</div></button>
+<button class="ov-card" data-go="31"><div class="ov-thumb"><div class="ov-num">32</div></div><div class="ov-label">S30 아파트 복귀</div></button>
+<button class="ov-card" data-go="32"><div class="ov-thumb"><div class="ov-num">33</div></div><div class="ov-label">PART 3</div></button>
+<button class="ov-card" data-go="33"><div class="ov-thumb"><div class="ov-num">34</div></div><div class="ov-label">S31 다음 질문</div></button>
+<button class="ov-card" data-go="34"><div class="ov-thumb"><div class="ov-num">35</div></div><div class="ov-label">S32 R²는 계속 오른다</div></button>
+<button class="ov-card" data-go="35"><div class="ov-thumb"><div class="ov-num">36</div></div><div class="ov-label">S33 멈춤8</div></button>
+<button class="ov-card" data-go="36"><div class="ov-thumb"><div class="ov-num">37</div></div><div class="ov-label">S33b 수정 R²</div></button>
+<button class="ov-card" data-go="37"><div class="ov-thumb"><div class="ov-num">38</div></div><div class="ov-label">S34 계수가 뒤집힌다</div></button>
+<button class="ov-card" data-go="38"><div class="ov-thumb"><div class="ov-num">39</div></div><div class="ov-label">S35 가설검정</div></button>
+<button class="ov-card" data-go="39"><div class="ov-thumb"><div class="ov-num">40</div></div><div class="ov-label">S36 멈춤9 p값</div></button>
+<button class="ov-card" data-go="40"><div class="ov-thumb"><div class="ov-num">41</div></div><div class="ov-label">S36b p값 정답</div></button>
+<button class="ov-card" data-go="41"><div class="ov-thumb"><div class="ov-num">42</div></div><div class="ov-label">S37 변수 선택</div></button>
+<button class="ov-card" data-go="42"><div class="ov-thumb"><div class="ov-num">43</div></div><div class="ov-label">S38 뺐더니 살아난다</div></button>
+<button class="ov-card" data-go="43"><div class="ov-thumb"><div class="ov-num">44</div></div><div class="ov-label">S39 다중공선성</div></button>
+<button class="ov-card" data-go="44"><div class="ov-thumb"><div class="ov-num">45</div></div><div class="ov-label">S40 Stepwise</div></button>
+<button class="ov-card" data-go="45"><div class="ov-thumb"><div class="ov-num">46</div></div><div class="ov-label">S40b 우리가 얻은 것</div></button>
+<button class="ov-card" data-go="46"><div class="ov-thumb"><div class="ov-num">47</div></div><div class="ov-label">S40c 통계 출력 읽기</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+const h = React.createElement;
+
+// 24 pre-computed 관측치, plot box 1000×520 (y inverted). x: 전용면적, y: 평당가
+const PTS = [[56,434],[120,390],[146,386],[167,469],[171,456],[227,317],[297,354],[310,419],[329,310],[424,298],[432,388],[500,411],[533,254],[575,383],[578,295],[596,353],[668,255],[689,291],[707,277],[787,247],[837,203],[884,294],[924,253],[969,290]];
+const PRED = [424,411,405,401,401,389,375,372,368,349,347,334,327,319,318,314,300,295,292,276,265,256,248,239];
+const MEAN_Y = 334;
+const MEDIAN_Y = 344;
+const MIDRANGE_Y = 336;
+const Y2VAL = py => 2500 + (520 - py) / 520 * 7000;   // px → 만원
+const VAL2Y = v => 520 - (v - 2500) / 7000 * 520;
+
+class Component extends DCLogic {
+  state = { c: Math.round(Y2VAL(MEAN_Y) + 1500) };
+
+  frame(kids, opts) {
+    const o = opts || {};
+    return h('svg', { viewBox: '-96 -34 1150 660', preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block', overflow: 'visible', fontFamily: 'var(--font-display)' } },
+      h('line', { x1: 0, y1: 0, x2: 0, y2: 520, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      h('line', { x1: 0, y1: 520, x2: 1010, y2: 520, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      [9000, 7500, 6000, 4500, 3000].map((v, i) => h('g', { key: 'g' + i },
+        h('line', { x1: 0, y1: VAL2Y(v), x2: 1010, y2: VAL2Y(v), stroke: 'var(--neutral-pale)', strokeWidth: 2 }),
+        h('text', { x: -18, y: VAL2Y(v) + 10, textAnchor: 'end', fontSize: 26, fill: 'var(--neutral-medium)' }, v.toLocaleString()))),
+      h('text', { x: -86, y: 250, fontSize: 26, fill: 'var(--neutral-dark)', transform: 'rotate(-90 -86 250)', textAnchor: 'middle' }, '평당가 (만원)'),
+      h('text', { x: 505, y: 585, fontSize: 26, fill: 'var(--neutral-dark)', textAnchor: 'middle' }, o.xLabel || '관측치 (단지)'),
+      kids
+    );
+  }
+
+  dots(color, r) {
+    return PTS.map((p, i) => h('circle', { key: 'p' + i, cx: p[0], cy: p[1], r: r || 9,
+      fill: color || 'var(--neutral-darkest)', opacity: 0.85 }));
+  }
+
+  hline(y, color, label, dash) {
+    return h('g', { key: 'l' + label },
+      h('line', { x1: 0, y1: y, x2: 1010, y2: y, stroke: color, strokeWidth: 5, strokeDasharray: dash || 'none' }),
+      label ? h('text', { x: 1010, y: y - 18, textAnchor: 'end', fontSize: 28, fontWeight: 700, fill: color }, label) : null);
+  }
+
+  renderVals() {
+    const accent = this.props.accent || '#4434E2';
+    const showNotes = this.props.showNotes !== false;
+    const A = accent, V = 'var(--secondary-main)', RED = 'var(--error)';
+
+    const chartRaw = this.frame(this.dots());
+
+    const chartMean = this.frame([this.dots(), this.hline(MEAN_Y, V, 'ȳ = 4,999')]);
+
+    const chartThreeLines = this.frame([
+      this.dots('var(--neutral-light)'),
+      this.hline(MEAN_Y - 46, 'var(--neutral-light)', null, '14 12'),
+      this.hline(MEAN_Y + 40, A, null, '14 12'),
+      this.hline(MEAN_Y, V, null)
+    ]);
+
+    const chartErrors = this.frame([
+      this.hline(MEAN_Y, V, 'ŷ = ȳ'),
+      PTS.map((p, i) => h('line', { key: 'e' + i, x1: p[0], y1: p[1], x2: p[0], y2: MEAN_Y,
+        stroke: p[1] < MEAN_Y ? A : RED, strokeWidth: 3, strokeDasharray: '7 6',
+        style: { animation: 'bv-fade 4s ease-in-out infinite alternate', animationDelay: (i * 40) + 'ms' } })),
+      this.dots()
+    ]);
+
+    const sq = (base, preds, key) => PTS.map((p, i) => {
+      const y0 = preds ? preds[i] : base, s = Math.abs(p[1] - y0);
+      return h('rect', { key: key + i, x: p[0], y: Math.min(p[1], y0), width: s, height: s,
+        fill: V, fillOpacity: 0.16, stroke: V, strokeWidth: 2,
+        style: { transformOrigin: p[0] + 'px ' + y0 + 'px', animation: 'bv-sq 6s cubic-bezier(.4,0,.2,1) infinite', animationDelay: (i * 45) + 'ms' } });
+    });
+
+    const chartSquares = this.frame([sq(MEAN_Y, null, 's'), this.hline(MEAN_Y, V, 'ȳ'), this.dots()]);
+
+    const regLine = h('line', { key: 'rl', x1: 0, y1: 435, x2: 1000, y2: 232, stroke: A, strokeWidth: 6 });
+    const chartRegression = this.frame([
+      h('line', { key: 'base', x1: 0, y1: 334, x2: 1000, y2: 334, stroke: 'var(--neutral-lighter)', strokeWidth: 4, strokeDasharray: '12 10' }),
+      h('line', { key: 'tilt', x1: 0, y1: 334, x2: 1000, y2: 334, stroke: A, strokeWidth: 6,
+        style: { transformOrigin: '500px 334px', animation: 'bv-tilt 3.4s cubic-bezier(.4,0,.2,1) infinite alternate' } }),
+      this.dots()
+    ], { xLabel: '전용면적 (㎡)' });
+
+    const chartRegSquares = this.frame([sq(null, PRED, 'r'), regLine, this.dots()], { xLabel: '전용면적 (㎡)' });
+    const chartRegFit = this.frame([regLine, this.dots()], { xLabel: '전용면적 (㎡)' });
+
+    // ── S15 인터랙티브: 수평선 위치 c ↔ SSE
+    const ys = PTS.map(p => Y2VAL(p[1]));
+    const sseOf = c => ys.reduce((a, y) => a + (y - c) * (y - c), 0);
+    const meanVal = ys.reduce((a, y) => a + y, 0) / ys.length;
+    const K = 4820 / sseOf(meanVal);
+    const c = this.state.c;
+    const curveMin = meanVal - 2400, curveMax = meanVal + 2400;
+    const cx = v => (v - curveMin) / (curveMax - curveMin) * 900;
+    const maxSse = sseOf(curveMin) * K;
+    const cy = s => 400 - s / maxSse * 360;
+    let d = '';
+    for (let i = 0; i <= 60; i++) { const v = curveMin + (curveMax - curveMin) * i / 60; d += (i ? ' L' : 'M') + cx(v).toFixed(1) + ',' + cy(sseOf(v) * K).toFixed(1); }
+    const sseNow = sseOf(c) * K;
+    const lbl = { fontSize: 24, fill: 'var(--neutral-dark)', fontFamily: 'var(--font-display)' };
+
+    const sseLab = h('div', { style: { display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: '56px', height: '100%', alignItems: 'stretch' } },
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px' } },
+        h('div', { style: { flex: 1, minHeight: 0 } }, this.frame([
+          PTS.map((p, i) => { const s = Math.abs(p[1] - VAL2Y(c)); return h('rect', { key: 'q' + i, x: p[0], y: Math.min(p[1], VAL2Y(c)), width: s, height: s, fill: V, fillOpacity: 0.13, stroke: V, strokeWidth: 1.5 }); }),
+          this.hline(VAL2Y(c), A, 'ŷ = ' + Math.round(c).toLocaleString()),
+          this.dots()
+        ])),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '24px' } },
+          h('input', { type: 'range', min: Math.round(curveMin), max: Math.round(curveMax), step: 25, value: c,
+            onChange: e => this.setState({ c: +e.target.value }),
+            style: { flex: 1, accentColor: A, height: '26px' } }),
+          h('button', { onClick: () => this.setState({ c: Math.round(meanVal) }),
+            style: { fontFamily: 'var(--font-sans)', fontSize: '24px', fontWeight: 600, padding: '14px 26px', borderRadius: '8px', border: '1px solid ' + A, background: '#fff', color: A, cursor: 'pointer' } }, '평균에 맞추기')
+        )
+      ),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+        h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '18px', fontFamily: 'var(--font-display)' } },
+          h('span', { style: { fontSize: '28px', color: 'var(--neutral-dark)' } }, 'SSE'),
+          h('span', { style: { fontSize: '76px', fontWeight: 700, color: Math.abs(c - meanVal) < 60 ? A : 'var(--neutral-darkest)', lineHeight: 1 } }, Math.round(sseNow).toLocaleString())),
+        h('div', { style: { flex: 1, minHeight: 0 } },
+          h('svg', { viewBox: '-70 -30 1000 480', preserveAspectRatio: 'xMidYMid meet', style: { width: '100%', height: '100%', overflow: 'visible' } },
+            h('line', { x1: 0, y1: 400, x2: 910, y2: 400, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+            h('line', { x1: 0, y1: 0, x2: 0, y2: 400, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+            h('path', { d: d, fill: 'none', stroke: 'var(--neutral-light)', strokeWidth: 4 }),
+            h('line', { x1: cx(meanVal), y1: cy(sseOf(meanVal) * K), x2: cx(meanVal), y2: 400, stroke: V, strokeWidth: 3, strokeDasharray: '8 8' }),
+            h('text', { x: cx(meanVal), y: 438, textAnchor: 'middle', ...lbl, fill: V }, 'ȳ'),
+            h('circle', { cx: cx(c), cy: cy(sseNow), r: 13, fill: A }),
+            h('text', { x: 906, y: 438, textAnchor: 'end', ...lbl }, 'c (예측 상수값)'),
+            h('text', { x: -18, y: 14, textAnchor: 'end', ...lbl }, 'SSE')
+          )),
+        h('div', { style: { fontFamily: 'var(--font-display)', fontSize: '26px', color: 'var(--neutral-dark)', lineHeight: 1.5 } }, 'd/dc Σ (yᵢ − c)² = −2 Σ (yᵢ − c) = 0  ⇒  c = ȳ')
+      )
+    );
+
+    // ── S24 정보가 사람을 드러낸다
+    const crowd = (colored) => {
+      const cells = [];
+      for (let i = 0; i < 216; i++) {
+        const age = (i * 37) % 100;
+        const col = age < 20 ? 'var(--accent-green)' : age < 45 ? 'var(--primary-light)' : age < 70 ? 'var(--secondary-main)' : 'var(--primary-darkest)';
+        cells.push(h('span', { key: 'c' + i, style: { width: '100%', aspectRatio: '1', borderRadius: '999px',
+          background: colored ? col : 'var(--neutral-light)',
+          animation: colored ? 'bv-colorize 5s ease-in-out infinite alternate' : 'none', animationDelay: (i * 8) + 'ms' } }));
+      }
+      return h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(18, 1fr)', gap: '12px', width: '100%' } }, cells);
+    };
+    const crowdGray = crowd(false);
+    const crowdColor = crowd(true);
+
+    const ageScatter = h('svg', { viewBox: '-10 -10 420 245', preserveAspectRatio: 'xMidYMid meet', style: { width: '100%', height: '100%' } },
+      h('line', { x1: 0, y1: 220, x2: 400, y2: 220, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      h('line', { x1: 0, y1: 0, x2: 0, y2: 220, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      Array.from({ length: 40 }, (_, i) => { const x = (i * 97) % 400; const yy = 210 - 190 / (1 + Math.exp(-(x - 120) / 55)) + ((i * 53) % 24) - 12;
+        return h('circle', { key: 'a' + i, cx: x, cy: yy, r: 6, fill: 'var(--secondary-main)', opacity: 0.75 }); }),
+      h('path', { d: 'M0 208 C 90 200, 140 60, 400 34', fill: 'none', stroke: A, strokeWidth: 5 })
+    );
+
+    // ── S19 골턴: 부모 키(x) vs 자식 키(y). 기울기 < 1 이 '평범함으로의 회귀'
+    const GM = 168, GLO = 148, GHI = 188, GB = 0.65;
+    const gx = v => (v - GLO) / (GHI - GLO) * 900;
+    const gy = v => 460 - (v - GLO) / (GHI - GLO) * 460;
+    // deterministic pseudo-noise: the deck must render identically every run
+    const grnd = (i, k) => { const s = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453; return s - Math.floor(s); };
+    const gnrm = (i, k) => grnd(i, k) + grnd(i, k + 1) + grnd(i, k + 2) - 1.5;
+    const galtonPts = Array.from({ length: 110 }, (_, i) => {
+      const p = GM + gnrm(i, 0) * 9;
+      return [p, GM + GB * (p - GM) + gnrm(i, 5) * 5];
+    });
+    const galtonScatter = h('svg', { viewBox: '-140 -34 1080 600', preserveAspectRatio: 'xMidYMid meet',
+        style: { width: '100%', height: '100%', display: 'block', overflow: 'visible', fontFamily: 'var(--font-display)' } },
+      [155, 165, 175, 185].map(v => h('g', { key: 'gg' + v },
+        h('line', { x1: 0, y1: gy(v), x2: 900, y2: gy(v), stroke: 'var(--neutral-pale)', strokeWidth: 2 }),
+        h('text', { x: -18, y: gy(v) + 9, textAnchor: 'end', fontSize: 24, fill: 'var(--neutral-medium)' }, v))),
+      h('line', { key: 'ax', x1: 0, y1: 0, x2: 0, y2: 460, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      h('line', { key: 'ay', x1: 0, y1: 460, x2: 900, y2: 460, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      h('line', { key: 'idl', x1: gx(GLO), y1: gy(GLO), x2: gx(GHI), y2: gy(GHI),
+        stroke: 'var(--neutral-light)', strokeWidth: 4, strokeDasharray: '12 10' }),
+      galtonPts.map((p, i) => h('circle', { key: 'gp' + i, cx: gx(p[0]), cy: gy(p[1]), r: 7,
+        fill: 'var(--neutral-darkest)', opacity: 0.42 })),
+      h('line', { key: 'reg', x1: gx(GLO), y1: gy(GM + GB * (GLO - GM)), x2: gx(GHI), y2: gy(GM + GB * (GHI - GM)),
+        stroke: A, strokeWidth: 6 }),
+      h('text', { key: 't1', x: gx(183), y: gy(183) - 18, textAnchor: 'end', fontSize: 25, fontWeight: 700,
+        fill: 'var(--neutral-dark)' }, 'y = x  부모와 같은 키'),
+      h('text', { key: 't2', x: gx(187), y: gy(165), textAnchor: 'end', fontSize: 25,
+        fontWeight: 700, fill: A }, '회귀선  기울기 0.65'),
+      h('text', { key: 't3', x: 450, y: 536, textAnchor: 'middle', fontSize: 26, fill: 'var(--neutral-dark)' }, '부모 키 (cm)'),
+      h('text', { key: 't4', x: -108, y: 230, fontSize: 26, fill: 'var(--neutral-dark)',
+        transform: 'rotate(-90 -108 230)', textAnchor: 'middle' }, '자식 키 (cm)')
+    );
+
+    // ── S32 변수 개수 vs R²
+    const steps = [0, 0.60, 0.68, 0.73, 0.76, 0.785, 0.80, 0.812, 0.82, 0.826, 0.83];
+    const sx = i => i / 10 * 900, sy = v => 380 - v * 350;
+    let sd = 'M' + sx(0) + ',' + sy(0);
+    steps.forEach((v, i) => { if (i) sd += ' L' + sx(i - 1) + ',' + sy(v) + ' L' + sx(i) + ',' + sy(v); });
+    const r2Curve = h('svg', { viewBox: '-80 -40 1020 500', preserveAspectRatio: 'xMidYMid meet', style: { width: '100%', height: '100%', overflow: 'visible', fontFamily: 'var(--font-display)' } },
+      h('line', { x1: 0, y1: 380, x2: 910, y2: 380, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      h('line', { x1: 0, y1: 0, x2: 0, y2: 380, stroke: 'var(--neutral-lighter)', strokeWidth: 3 }),
+      [0, 0.5, 1].map(v => h('g', { key: 'y' + v },
+        h('line', { x1: 0, y1: sy(v), x2: 910, y2: sy(v), stroke: 'var(--neutral-pale)', strokeWidth: 2 }),
+        h('text', { x: -18, y: sy(v) + 9, textAnchor: 'end', fontSize: 24, fill: 'var(--neutral-medium)' }, v.toFixed(1)))),
+      h('path', { d: sd, fill: 'none', stroke: A, strokeWidth: 6, strokeDasharray: 1400,
+        style: { animation: 'bv-draw 5s ease-in-out infinite' } }),
+      steps.map((v, i) => i ? h('circle', { key: 'd' + i, cx: sx(i), cy: sy(v), r: 8, fill: A }) : null),
+      h('text', { x: 906, y: 424, textAnchor: 'end', fontSize: 24, fill: 'var(--neutral-dark)' }, '변수 개수 k'),
+      h('text', { x: -18, y: -14, textAnchor: 'end', fontSize: 24, fill: 'var(--neutral-dark)' }, 'R²')
+    );
+
+    return { showNotes, accent, chartRaw, chartMean, chartThreeLines, chartErrors, chartSquares,
+      chartRegression, chartRegSquares, chartRegFit, sseLab, crowdGray, crowdColor, ageScatter, r2Curve, galtonScatter };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {"showNotes": true, "accent": "#4434E2"}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

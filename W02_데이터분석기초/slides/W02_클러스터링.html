@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도시빅데이터와 머신러닝 — 2주차 클러스터링</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:96px; --type-title:64px; --type-subtitle:44px; --type-formula:48px;
+  --type-body:34px; --type-small:28px; --type-eyebrow:26px; --type-note:24px;
+  --pad-top:100px; --pad-bottom:80px; --pad-x:100px;
+  --gap-title:52px; --gap-item:28px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="회귀·주성분에 이어 세 번째. 이론이 많지 않고 알고리즘도 사실상 두 개면 끝난다. 그런데 실무에서 제일 많이 쓴다. 그리고 딥러닝 이후에는 더 많이 쓰게 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 78% 22%,rgba(158,93,249,.30),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">2주차 · 데이터 분석 기초</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">클러스터링</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">정답이 없을 때 — 무엇을 같은 무리로 볼 것인가</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:12px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">03_클러스터링.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="지금까지는 정답이 있었다" data-screen-label="02" data-speaker-notes="지금까지 우리가 한 건 전부 정답이 있는 문제였다. 거래가라는 정답을 주고, 독립변수로 그걸 맞히게 하고, 잘 맞히면 좋은 모델이라고 했다. 이걸 감독학습이라고 한다. 앞으로 배울 뉴럴네트워크도 대부분 이쪽이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">되짚기</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">지금까지는 정답이 있었다</h2>
+  <div style="height:320px"><span data-dc-slot="supervised"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.55;max-width:1560px">“정답은 내가 알려 줄게. 독립변수들로 <b style="color:var(--fg-1)">거래가</b>를 맞혀 봐. 잘 맞히면 좋은 모델이다.” — 이것이 <b style="color:var(--primary-main)">감독학습</b>이고, 앞으로 배울 신경망도 대부분 여기에 속한다.</p>
+</section>
+
+<section data-deck="0" data-label="정답이 없는 문제" data-screen-label="03" data-speaker-notes="클러스터링만 타겟이 없다. 독립변수만 주고 알아서 묶으라는 것. 이론도 별로 없고 알고리즘도 두 개면 실무가 거의 다 된다. 대신 정답이 없으니 주관이 많이 들어간다 — 이게 오늘의 핵심." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary-dark);font-weight:600">UNSUPERVISED</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정답이 없는<br>유일한 자리</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">독립변수만 준다. <b style="color:var(--fg-1)">맞혀야 할 값이 없다.</b> 그저 뭉쳐 있는 것끼리 묶으라는 것이다.</p>
+    <div style="padding:28px 34px;background:#fff;border-radius:14px;border-left:8px solid var(--secondary-main);font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">채점할 정답이 없으니 <b style="color:var(--fg-1)">무엇이 잘 묶인 것인지</b>도 사람이 정해야 한다.</div>
+  </div>
+  <div style="height:660px"><span data-dc-slot="unsupervised"></span></div>
+</section>
+
+<section data-deck="0" data-label="모든 데이터는 좌표다" data-screen-label="04" data-speaker-notes="좌표라고 하면 지도 위 위치만 떠올리는데, 면적과 거래가도 좌표다. 값 두 개면 2차원 좌표. 그래서 지도에서 묶는 것과 면적·가격에서 묶는 것이 같은 알고리즘으로 된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">전제</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">모든 데이터는 좌표다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="everythingCoord"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">지도 위의 위치도, <b style="color:var(--fg-1)">면적과 거래가</b>도 똑같이 좌표다. 그래서 같은 알고리즘이 둘 다 묶는다. 다만 <b style="color:var(--secondary-dark)">'가깝다'가 무슨 뜻인지</b>가 달라진다.</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="05" data-speaker-notes="오늘의 질문. 이 점들을 묶는다면 어떤 기준으로 묶을 것인가. 학생들에게 손으로 그려 보라고 해도 좋다. 사람마다 다르게 그린다는 것 자체가 오늘의 요지다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+  <div style="height:800px"><span data-dc-slot="questionScatter"></span></div>
+  <div style="display:flex;flex-direction:column;gap:32px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">오늘의 질문</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.2;letter-spacing:-0.02em">이걸 묶는다면,<br>어떤 기준으로?</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">몇 덩어리로 보이는가. 옆 사람과 같은 답이 나오는가.</p>
+    <div style="padding:28px 34px;background:rgba(255,255,255,.07);border-radius:14px;font-size:var(--type-body);line-height:1.45;color:var(--neutral-lighter)">사람마다 다르게 그린다면 — <b style="color:#fff">알고리즘도 마찬가지</b>다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="K-means 한 단계씩" data-screen-label="06" data-speaker-notes="K-means를 버튼으로 한 단계씩 돌린다. 센트로이드를 아무 데나 던지고, 각 점을 가장 가까운 센트로이드에 귀속시키고, 센트로이드를 자기 무리의 중앙으로 옮긴다. 이 두 단계를 반복하면 더 이상 안 움직이는 지점이 온다. 학생들에게 '이제 어디로 움직일까'를 먼저 물어보고 누를 것." style="background:#fff;padding:56px var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;font-family:var(--font-sans);color:var(--fg-1);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:56px;font-weight:800;line-height:1.1;letter-spacing:-0.03em">K-means 를 한 단계씩</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">k = 3 · 센트로이드를 던지고 · 귀속시키고 · 옮긴다</span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex;align-items:center;margin-top:12px"><span data-dc-slot="kmeansDemo"></span></div>
+</section>
+
+<section data-deck="0" data-label="송파구 주택" data-screen-label="07" data-speaker-notes="실제 데이터. 송파구의 단독·다세대 주택 좌표만 찍은 것이다. 아파트 단지는 빼고 개별 주택만. 석촌호수가 가운데 비어 있는 게 보인다. 이걸 클러스터로 묶는 게 오늘 실습." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:800px"><span data-dc-slot="songpaRaw"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실습 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">송파구 주택 좌표</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">아파트 단지는 빼고 <b style="color:var(--fg-1)">단독·다세대</b>의 중심 좌표만 찍었다. 가운데 비어 있는 곳이 석촌호수다.</p>
+    <div style="padding:24px 30px;background:var(--surface-app);border-radius:14px;font-family:var(--font-display);font-size:var(--type-small);color:var(--fg-3);line-height:1.5">songpa.xlsx · 경도/위도(EPSG:5179)<br>단위가 <b>미터</b>라 거리 계산이 그대로 된다</div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium)">분포 개념도 — 실제 좌표는 노트북 실행 결과를 볼 것</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="K-means 결과와 질문" data-screen-label="08" data-speaker-notes="k=10으로 돌린 결과. 여기서 다시 물어본다 — 이 분할이 적정한가? 대부분 뭔가 이상하다고 느끼는데 무엇이 이상한지 말로 꺼내게 하는 게 목적이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:800px"><span data-dc-slot="songpaKmeans"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">KMeans(n_clusters=10)</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이 분할이<br>적정한가?</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">몇 초 만에 끝난다. 빠르고 단순하다.</p>
+    <div style="padding:28px 34px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);line-height:1.45;color:var(--fg-2)">그런데 <b style="color:var(--fg-1)">어딘가 어색하다면</b> — 어디가, 왜 어색한가?</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="한계 ① 경계가 지형을 모른다" data-screen-label="09" data-speaker-notes="첫 번째 한계. 주택이 빽빽한 곳에서는 클러스터 경계가 길을 무시하고 그냥 갈라 버린다. 사람 눈에는 대로를 경계로 나누는 게 자연스러운데 알고리즘은 거리만 본다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="boundaryProblem"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계 ①</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">경계가 지형을<br>모른다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">K-means는 <b style="color:var(--fg-1)">거리만</b> 본다. 큰 길도, 하천도, 행정경계도 모른다.</p>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">빽빽한 곳에서는 <b style="color:#D93636">직선으로 잘라</b> 버린다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="한계 ② 답이 없어도 답을 한다" data-screen-label="10" data-speaker-notes="두 번째 한계이자 더 심각한 것. K-means는 모든 점을 반드시 어딘가에 소속시킨다. 강원도에 집 하나가 있어도 가장 가까운 강동구 클러스터에 넣어 버린다. 답이 없어도 답을 하는 성격이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:70px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">한계 ②</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">답이 없어도<br>답을 한다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">모든 점은 <b style="color:#fff">반드시</b> 어느 센트로이드엔가 소속된다. 소속될 곳이 없어도 가장 가까운 데로 간다.</p>
+    <div style="padding:28px 34px;background:rgba(255,122,162,.14);border:2px solid rgba(255,122,162,.4);border-radius:14px;font-size:var(--type-body);line-height:1.45">강원도의 주택 한 채가 <b style="color:#FF7AA2">강동구 클러스터</b>에 들어간다.</div>
+  </div>
+  <div style="height:720px"><span data-dc-slot="outlierProblem"></span></div>
+</section>
+
+<section data-deck="0" data-label="DBSCAN — 파라미터 둘" data-screen-label="11" data-speaker-notes="두 번째 알고리즘. K-means와 달리 클러스터 개수를 안 정한다. 대신 두 가지를 정한다. 얼마나 가까워야 이웃인가(eps), 몇 개가 모여야 클러스터로 쳐 주는가(min_samples). 노트북은 50미터, 10개다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">DBSCAN</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">개수를 정하지 않는다.<br>대신 두 가지를 정한다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:12px">
+    <div style="background:#fff;border-radius:16px;padding:48px 52px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">eps = 50</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">여기까지는 <b style="color:var(--fg-1)">이웃</b>으로 친다. 좌표라면 미터, 가격이라면 원 차이가 된다.</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:48px 52px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">min_samples = 10</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">이만큼 모여야 <b style="color:var(--fg-1)">클러스터로 인정</b>한다. 못 채우면 잡음으로 남긴다.</p>
+    </div>
+  </div>
+  <div style="font-family:var(--font-display);font-size:30px;color:var(--fg-2);background:var(--neutral-black);color:#EDEBF5;border-radius:14px;padding:28px 34px">DBSCAN(eps=<span style="color:#00E49B">50</span>, min_samples=<span style="color:#00E49B">10</span>)</div>
+</section>
+
+<section data-deck="0" data-label="DBSCAN — 팔을 뻗는다" data-screen-label="12" data-speaker-notes="동작 방식. 한 점에서 eps만큼 팔을 뻗어 닿는 애들을 우리 편으로 만든다. 그 편이 된 애들이 다시 팔을 뻗는다. 옆으로 나란히 하듯 계속 이어 나가다가 더 이상 안 들어오면 그 클러스터는 끝. 다음 점으로 건너뛴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">동작</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">팔을 뻗어 손을 잡는다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="dbscanReach"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">닿은 점이 다시 팔을 뻗는다. 더 이상 안 들어오면 <b style="color:var(--fg-1)">그 클러스터는 거기서 끝</b>이고, 남은 점으로 건너뛴다.</p>
+</section>
+
+<section data-deck="0" data-label="DBSCAN 장점 — 잡음을 남긴다" data-screen-label="13" data-speaker-notes="DBSCAN의 가장 큰 장점. 최소 개수를 못 채운 점들은 어느 클러스터에도 안 넣고 잡음으로 남긴다. K-means가 억지로 소속시키던 그 점들이 여기서는 회색으로 빠진다. 이상치 탐지에 그대로 쓸 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px"><span data-dc-slot="dbscanNoise"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">장점</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">묶지 않을 자유</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">최소 개수를 못 채운 점은 <b style="color:var(--fg-1)">어디에도 넣지 않는다.</b> 회색이 그 잡음이다.</p>
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-2);line-height:1.45">이 성질 하나로 <b style="color:#00B37A">이상치 탐지</b>에 그대로 쓸 수 있다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="DBSCAN 단점 — 이어져 버린다" data-screen-label="14" data-speaker-notes="대신 DBSCAN의 단점. 점들이 아슬아슬하게 줄로 이어져 있으면 끝까지 손을 잡고 가서 전혀 다른 두 덩어리가 한 클러스터가 된다. 러시아와 캐나다가 이어지는 격이다. 이럴 땐 차라리 K-means가 낫다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px"><span data-dc-slot="chaining"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">단점</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 줄만 이어져도<br>한 몸이 된다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">가느다란 다리 하나로 <b style="color:#D93636">전혀 다른 두 덩어리</b>가 한 클러스터가 된다.</p>
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-2);line-height:1.45">러시아와 캐나다가 이어지는 격이다. 이럴 땐 차라리 K-means가 낫다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="좌표가 아닌 데이터" data-screen-label="15" data-speaker-notes="이번엔 지도가 아니라 면적과 연한. 이것도 2차원 좌표다. K-means로 나누면 면적이 50, 100, 150 근처에서, 연한이 15년과 25년 근처에서 끊긴다. 주택 가격을 분석할 때 이 구분은 꽤 쓸 만하다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">지도가 아닌 축에서</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">면적과 연한으로 묶으면</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="areaAge"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">같은 데이터인데 <b style="color:var(--primary-main)">K-means</b>는 면적·연한 구간으로 갈라 주고, <b style="color:var(--secondary-dark)">DBSCAN</b>은 줄이 이어져 <b style="color:#D93636">전부 한 덩어리</b>가 된다.</p>
+</section>
+
+<section data-deck="0" data-label="완벽한 알고리즘은 없다" data-screen-label="16" data-speaker-notes="정리하면 완벽한 알고리즘은 없다. 무엇을 목적으로 만들어진 알고리즘인지에 따라 결과가 다르다. 그러니 데이터를 보고 내가 어떤 의도로 나눌 것인지를 먼저 정해야 한다. 여기가 주관이 들어가는 자리다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">정리 ①</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.2;letter-spacing:-0.02em">완벽한 알고리즘은 없다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:8px">
+    <div style="background:rgba(255,255,255,.06);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--primary-lighter)">K-means</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">덩어리가 <b style="color:#fff">고르게</b> 퍼져 있을 때 강하다. 개수를 내가 정한다. 모두를 소속시킨다.</p>
+    </div>
+    <div style="background:rgba(255,255,255,.06);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--accent-green)">DBSCAN</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">밀도가 <b style="color:#fff">다를</b> 때 강하다. 개수를 안 정한다. 잡음을 남긴다.</p>
+    </div>
+  </div>
+  <p style="margin:12px 0 0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1560px">알고리즘이 <b style="color:#fff">무엇을 목적으로 만들어졌는지</b>에 따라 답이 달라진다. 데이터를 보고 <b style="color:var(--accent-green)">내가 어떤 의도로 나눌 것인지</b>를 먼저 정해야 한다.</p>
+</section>
+
+<section data-deck="0" data-label="모든 것이 벡터가 된다" data-screen-label="17" data-speaker-notes="이 장의 마지막 논점이자 앞으로의 예고. 딥러닝을 하다 보면 얼굴도, 음성도, 문장도, 이미지도 전부 벡터가 된다. 벡터가 되면 공간에 뿌릴 수 있고, 뿌리면 은하처럼 뭉쳐 있다. 그다음에 할 일이 클러스터링이다. 그래서 이걸 잘 익혀 두면 계속 쓴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary-dark);font-weight:600">앞으로</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">모든 것이 벡터가 되고 나면</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="embedding"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1620px">얼굴도, 음성도, 문장도, 이미지도 결국 <b style="color:var(--fg-1)">숫자 몇십 개짜리 벡터</b>가 된다. 벡터를 공간에 뿌리면 은하처럼 뭉쳐 있고 — <b style="color:var(--secondary-dark)">그다음에 할 일이 클러스터링</b>이다.</p>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="18" data-speaker-notes="2주차 전체 정리. 회귀, 주성분, 클러스터링 세 가지를 봤다. 이 셋은 앞으로 계속 다시 나온다. 뒤에 나오는 기계학습 기법들이 이 사상을 훨씬 다양하게 만들 뿐, 쓰는 용도는 거의 비슷하다. 그러니 여기서 정확하게 익히고 넘어갈 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 20% 80%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">2주차 정리</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.2;letter-spacing:-0.02em">이 셋은 계속 다시 나온다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:38px 40px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;margin-bottom:14px">회귀분석</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">정답을 맞힌다</p>
+    </div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:38px 40px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;margin-bottom:14px">주성분분석</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">차원을 줄인다</p>
+    </div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:38px 40px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;margin-bottom:14px">클러스터링</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">비슷한 것을 묶는다</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.55;max-width:1620px">앞으로 나올 기계학습 기법들은 이 사상을 <b style="color:#fff">훨씬 다양하게</b> 만들 뿐, 쓰는 용도는 거의 비슷하다.</p>
+  <div style="padding:30px 38px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1620px">다음 주 — <b style="color:#fff">앙상블 알고리즘</b><br><span style="color:var(--neutral-medium);font-size:var(--type-small)">예습: 04_Dtree.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">도시빅데이터와 머신러닝 — 2주차 클러스터링</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">18</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">지금까지는 정답이 있었다</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">정답이 없는 문제</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">모든 데이터는 좌표다</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">K-means 한 단계씩</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">송파구 주택</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">K-means 결과와 질문</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">한계 ① 경계가 지형을 모른다</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">한계 ② 답이 없어도 답을 한다</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">DBSCAN — 파라미터 둘</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">DBSCAN — 팔을 뻗는다</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">DBSCAN 장점 — 잡음을 남긴다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">DBSCAN 단점 — 이어져 버린다</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">좌표가 아닌 데이터</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">완벽한 알고리즘은 없다</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">모든 것이 벡터가 된다</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  state = { km: 0 };
+
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', VIO = '#9E5DF9', GRN = '#00B37A', RED = '#D93636';
+    const PAL = ['#4434E2', '#00B37A', '#F59E0B', '#D93636', '#9E5DF9',
+                 '#0EA5E9', '#EC4899', '#65A30D', '#7C3AED', '#0891B2'];
+
+    const rng = (seed) => () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    const gauss = (r) => {
+      const u = Math.max(r(), 1e-9), v = r();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    const blob = (r, cx, cy, sx, sy, n, out) => {
+      for (let i = 0; i < n; i++) out.push([cx + gauss(r) * sx, cy + gauss(r) * sy]);
+      return out;
+    };
+    const mkScale = (W, H, pad, rx, ry) => ({
+      x: v => pad + (v - rx[0]) / (rx[1] - rx[0]) * (W - pad * 2),
+      y: v => H - pad - (v - ry[0]) / (ry[1] - ry[0]) * (H - pad * 2),
+    });
+    const dots = (pts, s, col, r, op, key) => h('g', { key: key || 'd' },
+      pts.map((p, i) => h('circle', { key: i, cx: s.x(p[0]), cy: s.y(p[1]),
+        r: r, fill: typeof col === 'function' ? col(i) : col, opacity: op })));
+
+    // ── 송파구 개념도: 실제 좌표가 없으므로 강의가 짚는 구조만 살린다 —
+    //    빽빽한 주택지, 가운데 빈 호수, 대로로 갈라진 블록, 외따로 떨어진 점 몇.
+    const SONGPA = (() => {
+      const r = rng(5179), p = [];
+      blob(r, 0.30, 0.66, 0.085, 0.075, 150, p);
+      blob(r, 0.52, 0.72, 0.070, 0.060, 120, p);
+      blob(r, 0.74, 0.66, 0.075, 0.070, 130, p);
+      blob(r, 0.26, 0.34, 0.080, 0.070, 130, p);
+      blob(r, 0.50, 0.28, 0.065, 0.055, 100, p);
+      blob(r, 0.76, 0.34, 0.085, 0.075, 140, p);
+      blob(r, 0.62, 0.50, 0.030, 0.028, 40, p);
+      const keep = p.filter(q => Math.hypot(q[0] - 0.44, q[1] - 0.50) > 0.085
+                                 && q[0] > 0.04 && q[0] < 0.96
+                                 && q[1] > 0.06 && q[1] < 0.94);
+      keep.push([0.09, 0.90], [0.94, 0.09], [0.06, 0.12], [0.95, 0.92], [0.5, 0.95]);
+      return keep;
+    })();
+
+    const nearest = (p, cs) => {
+      let bi = 0, bd = 1e9;
+      cs.forEach((c, i) => {
+        const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2;
+        if (d < bd) { bd = d; bi = i; }
+      });
+      return bi;
+    };
+    const lloyd = (pts, cs, iters) => {
+      let C = cs.map(c => c.slice());
+      for (let t = 0; t < iters; t++) {
+        const sum = C.map(() => [0, 0, 0]);
+        pts.forEach(p => {
+          const i = nearest(p, C);
+          sum[i][0] += p[0]; sum[i][1] += p[1]; sum[i][2] += 1;
+        });
+        C = C.map((c, i) => sum[i][2] ? [sum[i][0] / sum[i][2], sum[i][1] / sum[i][2]] : c);
+      }
+      return C;
+    };
+
+    // ── 02 감독학습 도해 ────────────────────────────────────────
+    const supervised = (() => {
+      const box = (t, sub, col, bg) => h('div', { key: t, style: { flex: 1,
+        background: bg, border: '3px solid ' + col, borderRadius: '16px',
+        padding: '30px 26px', textAlign: 'center' } },
+        h('div', { style: { fontFamily: KR, fontSize: '32px', fontWeight: 800,
+          color: col, lineHeight: 1.2 } }, t),
+        h('div', { style: { fontFamily: KR, fontSize: '22px', color: MUT,
+          marginTop: '10px' } }, sub));
+      const arr = (k) => h('div', { key: k, style: { fontFamily: EN, fontSize: '38px',
+        color: 'var(--border-1)', fontWeight: 700 } }, '→');
+      return h('div', { style: { display: 'flex', alignItems: 'center', gap: '20px',
+          width: '100%' } },
+        box('독립변수', '면적 · 층수 · 역거리', MUT, '#fff'), arr(1),
+        box('모델', '관계를 학습', ACC, 'var(--primary-pale)'), arr(2),
+        box('예측값', 'ŷ', ACC, '#fff'), arr(3),
+        box('정답', '거래가', GRN, 'rgba(0,179,122,.10)'));
+    })();
+
+    // ── 03 비감독 ───────────────────────────────────────────────
+    const unsupervised = (() => {
+      const W = 800, H = 660, pad = 60;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const r = rng(777), p = [];
+      blob(r, 0.28, 0.70, 0.09, 0.08, 70, p);
+      blob(r, 0.72, 0.72, 0.08, 0.09, 70, p);
+      blob(r, 0.50, 0.28, 0.10, 0.08, 70, p);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        dots(p, s, MUT, 6, 0.6, 'p'),
+        h('text', { key: 't', x: W / 2, y: 46, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 28, fontWeight: 700, fill: INK }, '색이 없다 — 정답표가 없다'));
+    })();
+
+    // ── 04 좌표 두 종류 ─────────────────────────────────────────
+    const everythingCoord = (() => {
+      const W = 1660, H = 460, pad = 62, cw = 790;
+      const panel = (pts, xl, yl, title, x0, col) => {
+        const s = mkScale(cw, H, pad, [0, 1], [0, 1]);
+        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
+          h('rect', { width: cw, height: H, fill: '#fff', rx: 14,
+            stroke: 'var(--border-1)' }),
+          h('line', { x1: pad, y1: H - pad, x2: cw - pad, y2: H - pad,
+            stroke: AX, strokeWidth: 2 }),
+          h('line', { x1: pad, y1: pad, x2: pad, y2: H - pad, stroke: AX, strokeWidth: 2 }),
+          dots(pts, s, col, 4.4, 0.55, 'p' + title),
+          h('text', { x: cw - pad, y: H - 20, textAnchor: 'end', fontFamily: KR,
+            fontSize: 24, fill: MUT }, xl),
+          h('text', { x: pad - 14, y: pad - 16, textAnchor: 'end', fontFamily: KR,
+            fontSize: 24, fill: MUT }, yl),
+          h('text', { x: cw / 2, y: 40, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 27, fontWeight: 700, fill: col }, title));
+      };
+      const r1 = rng(11), a = [];
+      blob(r1, 0.3, 0.7, 0.1, 0.09, 60, a); blob(r1, 0.7, 0.35, 0.11, 0.1, 60, a);
+      const r2 = rng(22), b2 = [];
+      for (let i = 0; i < 140; i++) {
+        const x = Math.min(0.95, Math.abs(gauss(r2)) * 0.28 + 0.12);
+        b2.push([x, Math.min(0.95, x * 0.7 + Math.abs(gauss(r2)) * 0.18 + 0.06)]);
+      }
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        panel(a, '경도', '위도', '지도 위의 위치', 0, ACC),
+        panel(b2, '전용면적', '거래가', '면적과 거래가', 870, VIO));
+    })();
+
+    // ── 05 질문용 산점도 ────────────────────────────────────────
+    const questionScatter = (() => {
+      const W = 880, H = 880, pad = 60;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: 'rgba(255,255,255,.05)', rx: 18 }),
+        dots(SONGPA, s, '#B9B6CC', 4.4, 0.85, 'p'));
+    })();
+
+    // ── 06 K-means 인터랙티브 ───────────────────────────────────
+    const kmeansDemo = (() => {
+      const PTS = (() => {
+        const r = rng(2468), p = [];
+        blob(r, 0.28, 0.70, 0.085, 0.075, 60, p);
+        blob(r, 0.72, 0.66, 0.080, 0.085, 60, p);
+        blob(r, 0.50, 0.26, 0.090, 0.070, 60, p);
+        return p.filter(q => q[0] > 0.03 && q[0] < 0.97 && q[1] > 0.03 && q[1] < 0.97);
+      })();
+      const INIT = [[0.20, 0.30], [0.34, 0.42], [0.46, 0.50]];   // 일부러 나쁘게 던진다
+      const STEPS = [
+        { t: '데이터만 있다', n: '정답도 색도 없다. 세 덩어리로 나누고 싶다.', show: 'none' },
+        { t: '① 센트로이드를 던진다', n: 'k = 3. 위치는 아무래도 좋다 — 정말 아무 데나 던진다.', show: 'cent', it: 0 },
+        { t: '② 가장 가까운 곳에 귀속', n: '각 점이 세 센트로이드까지 거리를 재고 가까운 쪽으로 간다.', show: 'assign', it: 0 },
+        { t: '③ 센트로이드를 중앙으로', n: '자기에게 귀속된 점들의 평균 자리로 옮긴다.', show: 'move', it: 1 },
+        { t: '반복 — 2회차', n: '옮겼더니 소속이 바뀌는 점들이 생긴다. 다시 귀속시키고 다시 옮긴다.', show: 'move', it: 2 },
+        { t: '반복 — 4회차', n: '움직임이 점점 작아진다.', show: 'move', it: 4 },
+        { t: '수렴', n: '더 이상 움직이지 않는다. 여기서 멈춘다.', show: 'move', it: 14 },
+      ];
+      const i = Math.min(this.state.km, STEPS.length - 1), st = STEPS[i];
+      const C = st.it === undefined ? INIT : lloyd(PTS, INIT, st.it);
+      const colored = st.show === 'assign' || st.show === 'move';
+
+      const W = 800, H = 640, pad = 48;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const svg = h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('g', { key: 'pts' }, PTS.map((p, k) => h('circle', { key: k,
+          cx: s.x(p[0]), cy: s.y(p[1]), r: 6,
+          fill: colored ? PAL[nearest(p, C)] : '#B9B6CC',
+          opacity: colored ? 0.62 : 0.7 }))),
+        st.show !== 'none' ? h('g', { key: 'c' }, C.map((c, k) => h('g', { key: k },
+          h('circle', { cx: s.x(c[0]), cy: s.y(c[1]), r: 20, fill: '#fff',
+            stroke: PAL[k], strokeWidth: 6 }),
+          h('circle', { cx: s.x(c[0]), cy: s.y(c[1]), r: 7, fill: PAL[k] })))) : null);
+
+      const btn = (label, onClick, primary, dis) => h('button', { key: label,
+        onClick: onClick, disabled: !!dis,
+        style: { fontFamily: KR, fontSize: '23px', fontWeight: 700,
+          padding: '13px 26px', borderRadius: '10px', whiteSpace: 'nowrap',
+          cursor: dis ? 'default' : 'pointer', opacity: dis ? 0.4 : 1,
+          border: '2px solid ' + ACC, background: primary ? ACC : '#fff',
+          color: primary ? '#fff' : ACC } }, label);
+
+      return h('div', { style: { display: 'grid', gridTemplateColumns: '1.1fr 1fr',
+          gap: '48px', alignItems: 'center', width: '100%' } },
+        svg,
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '26px' } },
+          h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '18px' } },
+            h('span', { style: { fontFamily: EN, fontSize: '28px', fontWeight: 800,
+              color: ACC } }, (i + 1) + ' / ' + STEPS.length),
+            h('span', { style: { fontSize: '38px', fontWeight: 800, color: INK,
+              lineHeight: 1.2 } }, st.t)),
+          h('div', { style: { background: 'var(--surface-app)', borderLeft: '6px solid ' + ACC,
+            borderRadius: '12px', padding: '28px 32px', fontSize: '28px',
+            color: 'var(--fg-3)', lineHeight: 1.5, minHeight: '160px' } }, st.n),
+          h('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+            btn('◀ 이전', () => this.setState(s2 => ({ km: Math.max(0, s2.km - 1) })),
+                false, i === 0),
+            btn('다음 ▶', () => this.setState(s2 => ({ km: Math.min(STEPS.length - 1, s2.km + 1) })),
+                true, i === STEPS.length - 1),
+            btn('처음부터', () => this.setState({ km: 0 })))));
+    })();
+
+    // ── 07 · 08 송파구 ──────────────────────────────────────────
+    const songpaPanel = (colorFn, note) => {
+      const W = 900, H = 800, pad = 46;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#FCFCFD', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('g', { key: 'p' }, SONGPA.map((p, i) => h('circle', { key: i,
+          cx: s.x(p[0]), cy: s.y(p[1]), r: 4.4, fill: colorFn(p, i), opacity: 0.8 }))),
+        note ? h('text', { key: 'n', x: W / 2, y: H - 16, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fill: MUT }, note) : null);
+    };
+    const KM10 = lloyd(SONGPA, [[0.3, 0.66], [0.52, 0.72], [0.74, 0.66], [0.26, 0.34],
+      [0.5, 0.28], [0.76, 0.34], [0.62, 0.5], [0.15, 0.5], [0.88, 0.5], [0.4, 0.9]], 24);
+    const songpaRaw = songpaPanel(() => '#8D8DFB', '석촌호수 자리가 비어 있다');
+    const songpaKmeans = songpaPanel(p => PAL[nearest(p, KM10)], 'k = 10');
+
+    // ── 09 경계 문제 ────────────────────────────────────────────
+    const boundaryProblem = (() => {
+      const W = 880, H = 780, pad = 52;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const r = rng(3131), p = [];
+      blob(r, 0.32, 0.5, 0.10, 0.19, 200, p);
+      blob(r, 0.68, 0.5, 0.10, 0.19, 200, p);
+      const keep = p.filter(q => Math.abs(q[0] - 0.5) > 0.045
+        && q[0] > 0.05 && q[0] < 0.95 && q[1] > 0.05 && q[1] < 0.95);
+      const C = lloyd(keep, [[0.42, 0.72], [0.58, 0.28]], 24);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#FCFCFD', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('rect', { key: 'rd', x: s.x(0.455), y: pad, width: s.x(0.545) - s.x(0.455),
+          height: H - pad * 2, fill: '#E8E6EF' }),
+        h('text', { key: 'rl', x: s.x(0.5), y: pad + 30, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fill: MUT }, '대로'),
+        h('g', { key: 'p' }, keep.map((q, i) => h('circle', { key: i, cx: s.x(q[0]),
+          cy: s.y(q[1]), r: 5, fill: PAL[nearest(q, C)], opacity: 0.7 }))),
+        h('text', { key: 'n', x: W / 2, y: H - 18, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: RED },
+          '길을 따라 갈리지 않고, 길을 가로질러 갈린다'));
+    })();
+
+    // ── 10 이상치 문제 ──────────────────────────────────────────
+    const outlierProblem = (() => {
+      const W = 860, H = 720, pad = 56;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const r = rng(808), p = [];
+      blob(r, 0.30, 0.66, 0.075, 0.075, 90, p);
+      blob(r, 0.66, 0.58, 0.075, 0.075, 90, p);
+      const far = [[0.90, 0.10], [0.94, 0.16], [0.86, 0.07]];
+      const all = p.concat(far);
+      const C = lloyd(all, [[0.3, 0.66], [0.66, 0.58]], 24);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: 'rgba(255,255,255,.05)', rx: 18 }),
+        h('g', { key: 'p' }, all.map((q, i) => h('circle', { key: i, cx: s.x(q[0]),
+          cy: s.y(q[1]), r: 6, fill: PAL[nearest(q, C)], opacity: 0.72 }))),
+        h('g', { key: 'ln' }, far.map((q, i) => {
+          const c = C[nearest(q, C)];
+          return h('line', { key: i, x1: s.x(q[0]), y1: s.y(q[1]),
+            x2: s.x(c[0]), y2: s.y(c[1]), stroke: '#FF7AA2', strokeWidth: 2.5,
+            strokeDasharray: '9 8' });
+        })),
+        h('circle', { key: 'hl', cx: s.x(0.90), cy: s.y(0.11), r: 62, fill: 'none',
+          stroke: '#FF7AA2', strokeWidth: 3, strokeDasharray: '10 8' }),
+        h('text', { key: 't', x: s.x(0.90), y: s.y(0.11) + 96, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 24, fontWeight: 700, fill: '#FF7AA2' },
+          '멀리 있어도 어딘가에 소속된다'));
+    })();
+
+    // ── 12 DBSCAN 도달 ──────────────────────────────────────────
+    const dbscanReach = (() => {
+      const W = 1660, H = 470, pad = 52;
+      const s = mkScale(W, H, pad, [0, 1], [0, 0.28]);
+      const pts = [];
+      for (let i = 0; i < 26; i++) pts.push([0.08 + i * 0.031, 0.14 + Math.sin(i) * 0.045]);
+      const eps = 0.052;
+      const wave = [0, 1, 2, 3];
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 14,
+          stroke: 'var(--border-1)' }),
+        h('g', { key: 'c' }, wave.map(k => h('circle', { key: k,
+          cx: s.x(pts[k][0]), cy: s.y(pts[k][1]),
+          r: (s.x(eps) - s.x(0)), fill: ACC, opacity: 0.07,
+          stroke: ACC, strokeWidth: 2, strokeDasharray: '8 7' }))),
+        h('g', { key: 'p' }, pts.map((p, i) => h('circle', { key: i, cx: s.x(p[0]),
+          cy: s.y(p[1]), r: 9, fill: i <= 4 ? ACC : (i <= 8 ? '#8D8DFB' : '#C9C7D6') }))),
+        h('text', { key: 't1', x: s.x(pts[0][0]), y: s.y(pts[0][1]) - 76,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 24, fontWeight: 700,
+          fill: ACC }, '여기서 시작'),
+        h('text', { key: 't2', x: s.x(0.55), y: 54, fontFamily: KR, fontSize: 26,
+          fill: MUT }, 'eps 만큼 팔을 뻗어 닿는 점을 우리 편으로 → 그 점이 다시 팔을 뻗는다'));
+    })();
+
+    // ── 13 DBSCAN 잡음 ──────────────────────────────────────────
+    const dbscanNoise = (() => {
+      const W = 880, H = 780, pad = 50;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const noise = (p) => Math.hypot(p[0] - 0.5, p[1] - 0.5) > 0.44
+        || (p[0] > 0.86 && p[1] < 0.2);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#FCFCFD', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('g', { key: 'p' }, SONGPA.map((p, i) => h('circle', { key: i, cx: s.x(p[0]),
+          cy: s.y(p[1]), r: 4.4,
+          fill: noise(p) ? '#C9C7D6' : PAL[nearest(p, KM10) % PAL.length],
+          opacity: noise(p) ? 0.9 : 0.8 }))),
+        h('text', { key: 'n', x: W / 2, y: H - 16, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: MUT }, '회색 = 어느 클러스터에도 넣지 않은 잡음'));
+    })();
+
+    // ── 14 체이닝 ───────────────────────────────────────────────
+    const chaining = (() => {
+      const W = 880, H = 760, pad = 54;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const r = rng(6161), p = [];
+      blob(r, 0.24, 0.68, 0.075, 0.075, 90, p);
+      blob(r, 0.76, 0.32, 0.075, 0.075, 90, p);
+      const bridge = [];
+      for (let i = 0; i <= 14; i++)
+        bridge.push([0.30 + i * 0.0315, 0.62 - i * 0.0215]);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#FCFCFD', rx: 16,
+          stroke: 'var(--border-1)' }),
+        dots(p, s, ACC, 5.4, 0.62, 'p'),
+        dots(bridge, s, ACC, 5.4, 0.9, 'b'),
+        h('path', { key: 'hl',
+          d: 'M ' + s.x(0.295) + ' ' + s.y(0.635) + ' L ' + s.x(0.755) + ' ' + s.y(0.315),
+          stroke: RED, strokeWidth: 4, strokeDasharray: '12 10', fill: 'none' }),
+        h('text', { key: 't', x: W / 2, y: H - 18, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: RED },
+          '가느다란 다리 하나로 두 덩어리가 한 클러스터'));
+    })();
+
+    // ── 15 면적 × 연한 ──────────────────────────────────────────
+    const areaAge = (() => {
+      const W = 1660, H = 500, pad = 74, cw = 790;
+      const r = rng(1357), pts = [];
+      for (let i = 0; i < 400; i++) {
+        const a = 30 + Math.abs(gauss(r)) * 38 + r() * 26;
+        const y = 5 + Math.abs(gauss(r)) * 10 + (a - 30) * 0.10 + r() * 5;
+        if (a < 185 && y < 44) pts.push([a, y]);
+      }
+      const C = lloyd(pts.map(p => [p[0] / 185, p[1] / 44]),
+        [[0.25, 0.25], [0.25, 0.62], [0.55, 0.3], [0.55, 0.7], [0.85, 0.4]], 30);
+      const panel = (colorFn, title, x0, note) => {
+        const s = mkScale(cw, H, pad, [20, 190], [0, 46]);
+        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
+          h('rect', { width: cw, height: H, fill: '#fff', rx: 14,
+            stroke: 'var(--border-1)' }),
+          h('line', { x1: pad, y1: H - pad, x2: cw - pad, y2: H - pad,
+            stroke: AX, strokeWidth: 2 }),
+          h('line', { x1: pad, y1: pad, x2: pad, y2: H - pad, stroke: AX, strokeWidth: 2 }),
+          [50, 100, 150].map(v => h('text', { key: 'x' + v, x: s.x(v), y: H - pad + 32,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 21, fill: MUT }, v)),
+          [10, 20, 30, 40].map(v => h('text', { key: 'y' + v, x: pad - 14, y: s.y(v) + 8,
+            textAnchor: 'end', fontFamily: EN, fontSize: 21, fill: MUT }, v)),
+          h('g', { key: 'p' }, pts.map((p, i) => h('circle', { key: i, cx: s.x(p[0]),
+            cy: s.y(p[1]), r: 4.4, fill: colorFn(p, i), opacity: 0.72 }))),
+          h('text', { x: cw / 2, y: 38, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 27, fontWeight: 700, fill: INK }, title),
+          h('text', { x: cw / 2, y: H - 16, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 22, fill: MUT }, note),
+          h('text', { x: cw - pad, y: H - 44, textAnchor: 'end', fontFamily: KR,
+            fontSize: 22, fill: MUT }, '전용면적 (㎡)'));
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        panel(p => PAL[nearest([p[0] / 185, p[1] / 44], C)], 'K-means (k=5)', 0,
+              '면적·연한 구간으로 갈린다'),
+        panel(() => VIO, 'DBSCAN (eps=50)', 870, '전부 한 덩어리 — 줄이 이어져 있다'));
+    })();
+
+    // ── 17 임베딩 은하 ──────────────────────────────────────────
+    const embedding = (() => {
+      const W = 1660, H = 470, pad = 44;
+      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
+      const r = rng(24680), p = [], lab = [
+        [0.16, 0.68, '얼굴'], [0.38, 0.32, '음성'], [0.60, 0.72, '문장'],
+        [0.82, 0.38, '이미지']];
+      lab.forEach(([cx, cy]) => blob(r, cx, cy, 0.052, 0.10, 90, p));
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { key: 'bg', width: W, height: H, fill: '#0C0B17', rx: 16 }),
+        h('g', { key: 'p' }, p.map((q, i) => h('circle', { key: i, cx: s.x(q[0]),
+          cy: s.y(q[1]), r: 3.4, fill: PAL[Math.floor(i / 90) % PAL.length],
+          opacity: 0.75 }))),
+        h('g', { key: 'l' }, lab.map(([cx, cy, t], i) => h('text', { key: i,
+          x: s.x(cx), y: s.y(cy) + (i % 2 ? -1 : 1) * 128, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 27, fontWeight: 700,
+          fill: PAL[i % PAL.length] }, t))),
+        h('text', { key: 'n', x: W / 2, y: H - 18, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: '#8F8AA6' },
+          '벡터 공간에 뿌리면 은하처럼 뭉친다 — 그다음이 클러스터링'));
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      supervised, unsupervised, everythingCoord, questionScatter, kmeansDemo,
+      songpaRaw, songpaKmeans, boundaryProblem, outlierProblem, dbscanReach,
+      dbscanNoise, chaining, areaAge, embedding,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

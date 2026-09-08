@@ -1,0 +1,10 @@
+# 빌드 입력은 산출물이 아니다 — 덱 원본과 빌드 계획은 상위 작업 폴더에 있다.
+*.dc.html
+decks.json
+
+# 로컬 전용
+.venv/
+__pycache__/
+.DS_Store
+.idea/
+.print.html

@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도시빅데이터와 머신러닝 — 2주차 주성분분석</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:96px; --type-title:64px; --type-subtitle:44px; --type-formula:48px;
+  --type-body:34px; --type-small:28px; --type-eyebrow:26px; --type-note:24px;
+  --pad-top:100px; --pad-bottom:80px; --pad-x:100px;
+  --gap-title:52px; --gap-item:28px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="회귀분석에 이어 주성분분석. 오래된 기법인데 지금도 많이 쓴다. 그리고 뒤에 나올 딥러닝이 하는 일과 사상이 거의 같다 — 그래서 여기서 제대로 보고 간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 78% 22%,rgba(68,52,226,.30),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">2주차 · 데이터 분석 기초</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">주성분분석</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">고차원을 저차원으로 — 무엇을 버리고 무엇을 남길 것인가</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:12px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">02_PCA_주성분분석.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="차원이란 무엇인가" data-screen-label="02" data-speaker-notes="회귀분석에서 독립변수를 29개까지 썼다. 그 29개가 곧 29차원이다. 여러분 한 명한테 키·몸무게·나이·성별·혈액형이 있으면 그게 5차원 데이터다. 속성 하나가 차원 하나." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">되짚기</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">속성 하나가 차원 하나다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.25fr 1fr;gap:70px;align-items:center">
+    <div style="height:560px"><span data-dc-slot="dimTable"></span></div>
+    <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">회귀분석에서 우리는 독립변수를 <b style="color:var(--fg-1)">29개</b>까지 넣었다. 그 29개가 곧 <b style="color:var(--primary-main)">29차원</b>이다.</p>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">사람 한 명에게 키·몸무게·나이·성별·혈액형이 있으면 그 사람은 <b style="color:var(--fg-1)">5차원 공간의 점 하나</b>다.</p>
+      <p style="margin:24px 0 0;font-size:var(--type-subtitle);font-weight:700;line-height:1.3">데이터 하나하나가<br>좌표 하나다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="빈 공간" data-screen-label="03" data-speaker-notes="5차원이라고 해서 그 5차원이 꽉 차 있는 게 아니다. 이 교실에 키 1cm 단위로 모든 학생이 있지 않고, 성별×혈액형 모든 조합이 다 있지도 않다. 관측된 데이터는 고차원 공간의 아주 얇은 껍질만 차지한다. 그러면 굳이 5차원을 다 들고 있을 이유가 있나?" style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">관찰</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em;max-width:1500px">차원은 5개인데,<br>데이터는 그 공간을 다 채우지 않는다</h2>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.6;max-width:1400px">이 교실에 키가 1cm 단위로 다 있지 않다. 성별 × 혈액형의 모든 조합이 다 앉아 있지도 않다.<br>관측된 데이터는 고차원 공간의 <b style="color:var(--fg-1)">아주 얇은 껍질</b>만 차지한다.</p>
+  <div style="margin-top:20px;padding:36px 44px;background:#fff;border-radius:16px;border-left:8px solid var(--primary-main);font-size:var(--type-subtitle);font-weight:600;line-height:1.35;max-width:1500px">그렇다면 5차원을 그대로 들고 있을 이유가 있을까?</div>
+</section>
+
+<section data-deck="0" data-label="세 가지 분포" data-screen-label="04" data-speaker-notes="난수로 2차원 데이터를 만든다. X는 표준정규, Y는 X에 잡음을 더한 것. 계수를 +1, 0, -1로 바꾸면 세 가지 모양이 나온다. 앞으로 쓸 건 맨 왼쪽." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">데이터 만들기 · 1,000개</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">2차원 데이터 세 가지</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="threeDists"></span></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);font-family:var(--font-display)">X = np.random.normal(0,1,1000) · Y = X * <b>계수</b> + np.random.normal(0,1,1000)</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="05" data-speaker-notes="여기가 오늘의 핵심 질문. 이 2차원 데이터를 1차원으로 줄인다면 — 1번 직선인가 2번 직선인가? 먼저 물어보고, 왜 그렇게 생각하는지 듣고 나서 진도를 나간다. 답을 먼저 주지 말 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+  <div style="height:800px"><span data-dc-slot="twoLines"></span></div>
+  <div style="display:flex;flex-direction:column;gap:32px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">오늘의 질문</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.2;letter-spacing:-0.02em">이 2차원을<br>1차원으로 줄인다면?</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">1차원으로 줄인다는 건 <b style="color:#fff">직선 하나로 바꾼다</b>는 뜻이다.</p>
+    <div style="display:flex;gap:20px;margin-top:8px">
+      <div style="flex:1;padding:28px 32px;border-radius:14px;background:rgba(68,52,226,.22);border:2px solid var(--primary-lighter);font-size:var(--type-subtitle);font-weight:700;text-align:center">1번</div>
+      <div style="flex:1;padding:28px 32px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid var(--neutral-dark);font-size:var(--type-subtitle);font-weight:700;text-align:center">2번</div>
+    </div>
+    <p style="margin:8px 0 0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">왜 그렇게 생각했는지가 오늘 배울 내용이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="수직으로 떨군다" data-screen-label="06" data-speaker-notes="직선으로 바꾼다는 게 무슨 뜻이냐. 점을 그 직선 위로 수직으로 내려찍는다는 뜻이다. 파란 점은 여기로, 저 점은 저기로 갈 수밖에 없다. 그러면 각 점은 직선 위의 위치 하나 — 숫자 하나로 표현된다. 그게 1차원." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:800px"><span data-dc-slot="projectDemo"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1차원으로 줄인다 =</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">직선 위로<br>수직으로 떨군다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">각 점은 그 직선 위의 <b style="color:var(--fg-1)">한 지점</b>으로 간다. (x, y) 두 개였던 값이 <b style="color:var(--primary-main)">숫자 하나</b>가 된다.</p>
+    <div style="margin-top:12px;padding:28px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">떨구는 순간 원래 위치의 일부는 사라진다.<br><b style="color:var(--fg-1)">무엇을 잃을지</b>를 우리가 고르는 것이다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="기준 — 가장 넓게 퍼지는 직선" data-screen-label="07" data-speaker-notes="어느 직선이 좋은가에 대한 기준. 떨군 점들 중 양 끝 사이가 가장 긴 직선. 각도를 돌려 보면 퍼짐이 줄어드는 걸 볼 수 있다. 이건 증명된 진리가 아니라 우리가 정한 기준이라는 점을 짚을 것 — 강의에서도 '가설이 아닐 수도 있죠'라고 말한 부분." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">기준을 정한다</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">떨군 점들이 가장 넓게 퍼지는 직선</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="spreadCompare"></span></div>
+  <div style="padding:26px 34px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">퍼짐이 넓다 = 점들이 서로 <b style="color:var(--fg-1)">구별된다</b>. 좁으면 여러 점이 한 자리에 겹쳐 원래 차이를 잃는다.</div>
+</section>
+
+<section data-deck="0" data-label="공분산 행렬" data-screen-label="08" data-speaker-notes="그럼 그 직선을 어떻게 찾나. 공분산 행렬을 구한다. 2×2인데 대각선은 각 축이 얼마나 퍼졌는지, 비대각선은 두 축이 함께 얼마나 퍼졌는지다. 대칭이라 양쪽 값이 같다. 수식 유도는 넘어가고 의미만 잡으면 된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:80px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">어떻게 찾나</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">공분산 행렬</h2>
+    <div style="font-family:var(--font-display);font-size:var(--type-formula);color:var(--primary-main);font-weight:500">공분산 = np.cov(X, Y)</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">값이 2개면 2×2. 대각선은 <b style="color:var(--fg-1)">각 축이 얼마나 퍼졌는가</b>, 나머지는 <b style="color:var(--fg-1)">두 축이 함께 얼마나 퍼졌는가</b>.</p>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">대칭 행렬이라 좌하와 우상은 항상 같은 값이다.</p>
+  </div>
+  <div style="height:760px"><span data-dc-slot="covMatrix"></span></div>
+</section>
+
+<section data-deck="0" data-label="좌표계를 곱해 본다" data-screen-label="09" data-speaker-notes="공분산 행렬의 의미를 눈으로 보는 방법. 균등한 격자 좌표를 만들어서 공분산 행렬을 곱한다. 그러면 격자가 데이터가 퍼진 방향으로 늘어난다. 행렬이 공간을 어떻게 잡아당기는지가 보인다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">공분산 행렬이 하는 일</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">균등한 격자에 곱해 보면</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="gridTransform"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">격자가 <b style="color:var(--fg-1)">데이터가 퍼진 방향으로 늘어난다.</b> 행렬이 공간을 잡아당기는 방향과 세기가 곧 데이터의 분산 구조다.</p>
+</section>
+
+<section data-deck="0" data-label="단위원을 곱하면" data-screen-label="10" data-speaker-notes="이번엔 길이가 전부 1인 벡터 360개, 즉 단위원을 곱해 본다. 원이 타원으로 바뀐다. 대부분의 벡터는 방향이 틀어지는데 — 다음 장이 핵심." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px"><span data-dc-slot="unitCircle"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">길이가 1인 벡터 360개</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">원이 타원이 된다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">공분산 행렬을 곱하면 대부분의 벡터는 <b style="color:var(--fg-1)">길이도 방향도</b> 바뀐다.</p>
+    <div style="margin-top:8px;padding:28px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">그런데 <b style="color:var(--secondary-dark)">방향이 그대로인 벡터</b>가 있다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="고유벡터" data-screen-label="11" data-speaker-notes="변환 전후로 각도가 똑같은 벡터. 길이만 늘어나고 방향은 그대로인 애들. 이게 고유벡터다. 2차원이면 두 방향이 나온다. 그리고 이 방향이 바로 아까 우리가 찾던 '가장 넓게 퍼지는 직선'의 방향이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">EIGENVECTOR</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">방향이 바뀌지 않는 벡터</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="eigenFind"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">변환해도 <b style="color:var(--fg-1)">각도가 그대로</b>인 벡터 — 이것이 <b style="color:var(--secondary-dark)">고유벡터</b>이자 주성분의 방향이다.</div>
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">늘어난 <b style="color:var(--fg-1)">길이</b>가 <b style="color:var(--secondary-dark)">고유치</b> — 그 방향이 설명하는 분산의 양이다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="데이터 위에 겹쳐 보기" data-screen-label="12" data-speaker-notes="파란색이 원본 데이터, 초록색이 단위원을 변환한 타원, 빨간 X가 방향이 유지된 고유벡터. 그 네 점을 이으면 두 개의 직선이 나온다. 긴 쪽이 1번 주성분, 짧은 쪽이 2번이다. 아까 눈으로 고른 직선과 같은지 확인." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:800px"><span data-dc-slot="overlay"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">겹쳐 보면</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">두 개의 직선이 나온다</h2>
+    <div style="display:flex;flex-direction:column;gap:16px;font-size:var(--type-small);color:var(--fg-3)">
+      <div><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#8D8DFB;vertical-align:-4px;margin-right:12px"></span>원본 데이터 1,000개</div>
+      <div><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#00B37A;vertical-align:-4px;margin-right:12px"></span>단위원을 공분산으로 변환한 타원</div>
+      <div><span style="display:inline-block;width:22px;height:22px;background:#D93636;vertical-align:-4px;margin-right:12px"></span>방향이 유지된 고유벡터</div>
+    </div>
+    <p style="margin:16px 0 0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">긴 쪽이 <b style="color:var(--fg-1)">제1주성분</b>, 짧은 쪽이 제2주성분. 앞에서 눈으로 고른 직선과 같은가?</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="PCA 를 돌려 본다" data-screen-label="13" data-speaker-notes="손으로 구한 것과 sklearn PCA 결과가 같다는 걸 확인시키는 장면. 코드는 세 줄이면 끝난다. 중요한 건 결과가 손으로 구한 고유벡터와 일치한다는 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">sklearn</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">코드는 세 줄이다</h2>
+    <div style="background:var(--neutral-black);border-radius:16px;padding:34px 38px;font-family:var(--font-display);font-size:30px;line-height:1.65;color:#EDEBF5">
+      <div><span style="color:#9E5DF9">from</span> sklearn.decomposition <span style="color:#9E5DF9">import</span> PCA</div>
+      <div>pca = PCA(n_components=<span style="color:#00E49B">2</span>)</div>
+      <div>pca.fit(data)</div>
+      <div style="margin-top:14px;color:#8F8AA6">pca.components_&nbsp;&nbsp;&nbsp;<span style="color:#6E6890"># 주성분 방향</span></div>
+      <div style="color:#8F8AA6">pca.explained_variance_&nbsp;&nbsp;<span style="color:#6E6890"># 고유치</span></div>
+    </div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">중요한 건 코드가 아니라, 이 결과가 <b style="color:var(--fg-1)">앞에서 손으로 구한 고유벡터와 같다</b>는 것이다.</p>
+  </div>
+  <div style="height:780px"><span data-dc-slot="pcaResult"></span></div>
+</section>
+
+<section data-deck="0" data-label="설명 비율" data-screen-label="14" data-speaker-notes="고유치를 비율로 바꾸면 각 주성분이 전체 분산의 몇 퍼센트를 설명하는지가 나온다. 이 데이터는 1번이 87퍼센트, 2번이 13퍼센트. 난수라서 실행할 때마다 소수점은 조금씩 달라진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">EXPLAINED VARIANCE</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">각 주성분이 설명하는 몫</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="explained"></span></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">Y = X + 잡음 으로 만든 데이터의 이론값이다. 난수라 실행할 때마다 소수점 아래는 조금씩 달라진다.</p>
+</section>
+
+<section data-deck="0" data-label="몇 개를 쓸 것인가" data-screen-label="15" data-speaker-notes="변수 20개를 넣으면 주성분도 20개가 나온다. 그중 몇 개를 쓸 거냐. 고유치 1 이상만 쓰자는 기준도 있고, 누적 설명력이 일정 수준을 넘을 때까지 쓰자는 기준도 있다. 정답은 없고 목적에 따라 고르는 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">선택</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">주성분 몇 개까지 쓸까</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:stretch">
+    <div style="background:var(--surface-app);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">고유치 ≥ 1</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">변수 하나만큼도 설명하지 못하는 주성분은 버린다.</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">누적 설명력</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">누적이 목표치(예: 80%)를 넘을 때까지만 쓴다.</p>
+    </div>
+  </div>
+  <div style="padding:30px 38px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45">2차원을 주성분 2개로 줄이면 <b style="color:var(--accent-green)">원본과 똑같다</b> — 줄인 게 아니다. 변수가 다섯 개, 백 개일 때 두세 개로 줄이는 것이 목적이다.</div>
+</section>
+
+<section data-deck="0" data-label="아파트 실거래" data-screen-label="16" data-speaker-notes="이제 진짜 데이터. 회귀분석에서 쓴 아파트 실거래를 그대로 쓴다. 면적과 연한 두 축으로 주성분을 구하면 데이터가 퍼진 방향이 나온다. 화살표 길이는 고유치의 제곱근으로 그렸다 — 노트북 코드가 그렇게 되어 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:800px"><span data-dc-slot="aptPca"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실거래 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">면적과 연한</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">회귀분석에서 쓰던 그 데이터다. 두 축으로 주성분을 구하면 데이터가 퍼진 <b style="color:var(--fg-1)">주된 방향</b>이 나온다.</p>
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5;font-family:var(--font-display)">단위가 다른 축을 그대로 쓰면 <b>큰 단위 쪽이 주성분을 독차지</b>한다. 표준화 여부를 항상 확인할 것.</div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium)">02_PCA_주성분분석.ipynb · cell 33–34</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="활용 · 격자 인구" data-screen-label="17" data-speaker-notes="여기가 이 장의 도시 데이터 사례. 격자 하나마다 0-4세부터 70-74세까지 15개 연령대 인구가 있다. 15차원이다. 주성분을 구하면 격자들의 연령 구조를 대표하는 축이 나오고, 그 축 위에 격자를 뿌리면 비슷한 인구 구조를 가진 곳끼리 모인다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">도시 데이터 사례</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">격자 하나가 15차원이다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="gridAge"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">격자마다 <b style="color:var(--fg-1)">0–4세부터 70–74세까지 15개</b> 연령대 인구가 있다. 이 15차원을 두세 개 주성분으로 줄이면 <b style="color:var(--primary-main)">연령 구조가 비슷한 격자</b>끼리 모인다.</p>
+</section>
+
+<section data-deck="0" data-label="행과 열을 바꿔 보면" data-screen-label="18" data-speaker-notes="여기가 학생들이 제일 헷갈리는 부분이자 제일 중요한 부분. 행이 무엇이고 열이 무엇이냐에 따라 주성분의 의미가 완전히 달라진다. 사람×속성이면 주성분은 사람의 유형이고, 격자×연령대면 인구구조 패턴이고, 주식×날짜면 시장 전체의 공통 움직임이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">관점</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">행이 무엇이냐에 따라<br>주성분의 뜻이 달라진다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;align-items:stretch">
+    <div style="background:var(--surface-app);border-radius:16px;padding:38px 40px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">행 = 사람 · 열 = 속성</div>
+      <div style="font-size:var(--type-subtitle);font-weight:700;line-height:1.25">사람의 유형</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">키·몸무게·나이를 아우르는 축</p>
+    </div>
+    <div style="background:var(--primary-pale);border-radius:16px;padding:38px 40px;display:flex;flex-direction:column;gap:18px;border:2px solid var(--primary-lighter)">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);color:var(--primary-dark)">행 = 격자 · 열 = 연령대</div>
+      <div style="font-size:var(--type-subtitle);font-weight:700;line-height:1.25;color:var(--primary-dark)">인구 구조 패턴</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">고령 편중 / 청년 편중 같은 축</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:38px 40px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">행 = 주식 · 열 = 날짜</div>
+      <div style="font-size:var(--type-subtitle);font-weight:700;line-height:1.25">시장의 공통 움직임</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">제1주성분 = 지수처럼 움직이는 축</p>
+    </div>
+  </div>
+  <div style="padding:28px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45">같은 알고리즘인데 <b style="color:var(--accent-green)">데이터를 어떻게 눕혔느냐</b>가 결론을 바꾼다.</div>
+</section>
+
+<section data-deck="0" data-label="차원을 줄여 이름을 붙인다" data-screen-label="19" data-speaker-notes="주성분 분석을 도시 연구에서 쓰는 전형적인 방식. 도시별 변수 100개를 모아서 주성분 5개로 줄이면 전체 분산의 상당 부분이 설명된다. 그 5차원 공간에 도시를 뿌리면 뭉치는 곳이 생기고, 거기에 사람이 이름을 붙인다. 성장형 산업도시, 고령 정체도시 같은 식으로. 다음 시간 클러스터링과 바로 이어진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">왜 하는가</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">줄이고 나서, 이름을 붙인다</h2>
+  <div style="height:300px"><span data-dc-slot="pipeline"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.55;max-width:1560px">도시별 변수 100개 → 주성분 5개 → 그 공간에 도시를 뿌리면 뭉치는 곳이 생긴다. 거기에 <b style="color:var(--fg-1)">사람이 이름을 붙인다</b> — “산업 기반 성장형”, “고령 정체형”. 마지막 한 걸음은 <b style="color:var(--primary-main)">알고리즘이 아니라 연구자</b>의 몫이다.</p>
+</section>
+
+<section data-deck="0" data-label="한계" data-screen-label="20" data-speaker-notes="주성분분석은 직선이다. 선형 결합만 한다. 그래서 휘어진 구조는 못 잡는다. 그럼에도 오래 쓰이는 이유는 결과를 사람이 해석할 수 있기 때문이다. 뒤에 나올 오토인코더는 이 한계를 비선형으로 푼다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:70px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:600">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">직선밖에 못 긋는다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">주성분은 원래 변수들의 <b style="color:#fff">선형 결합</b>이다. 휘어진 구조는 직선으로 펴지지 않는다.</p>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">그럼에도 오래 쓰이는 이유는 <b style="color:var(--accent-green)">결과를 사람이 읽을 수 있어서</b>다.</p>
+  </div>
+  <div style="height:720px"><span data-dc-slot="nonlinear"></span></div>
+</section>
+
+<section data-deck="0" data-label="딥러닝으로 이어진다" data-screen-label="21" data-speaker-notes="이 장의 마무리. 대용량 데이터를 줄여서 의미를 해석한다 — 이건 딥러닝이 하는 일과 같은 사상이다. 오토인코더는 그냥 비선형 PCA라고 봐도 크게 틀리지 않는다. 그래서 여기를 제대로 이해하고 넘어가야 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">앞으로</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em;max-width:1560px">줄여서 의미를 꺼낸다 —<br>딥러닝이 하는 일도 결국 같다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:12px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700">PCA</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">직선으로 줄인다. 축의 의미를 사람이 읽을 수 있다.</p>
+    </div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-lighter);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--primary-dark)">오토인코더 · 임베딩</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">휘어진 채로 줄인다. 훨씬 잘 줄이지만 축의 뜻은 읽기 어렵다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="22" data-speaker-notes="세 줄 요약. 그리고 다음은 클러스터링 — 줄여 놓은 공간에서 비슷한 것끼리 묶는 일이다. 오늘 던진 질문에 답이 됐는지 확인하고 넘어간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 20% 80%,rgba(158,93,249,.26),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:30px;font-size:var(--type-subtitle);line-height:1.4;max-width:1560px">
+    <li>차원을 줄인다는 건 <b style="color:var(--accent-green)">직선에 수직으로 떨군다</b>는 뜻이다.</li>
+    <li>어느 직선이냐 — <b style="color:var(--accent-green)">떨군 점들이 가장 넓게 퍼지는</b> 직선. 그게 공분산 행렬의 고유벡터다.</li>
+    <li>줄인 다음에 <b style="color:var(--accent-green)">이름을 붙이는 일</b>은 사람이 한다.</li>
+  </ol>
+  <div style="margin-top:20px;padding:32px 40px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1560px">다음 — <b style="color:#fff">클러스터링</b>. 줄여 놓은 공간에서 비슷한 것끼리 묶는다.<br><span style="color:var(--neutral-medium);font-size:var(--type-small)">예습: 03_클러스터링.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">도시빅데이터와 머신러닝 — 2주차 주성분분석</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">22</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">차원이란 무엇인가</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">빈 공간</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">세 가지 분포</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">수직으로 떨군다</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">기준 — 가장 넓게 퍼지는 직선</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">공분산 행렬</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">좌표계를 곱해 본다</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">단위원을 곱하면</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">고유벡터</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">데이터 위에 겹쳐 보기</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">PCA 를 돌려 본다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">설명 비율</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">몇 개를 쓸 것인가</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">아파트 실거래</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">활용 · 격자 인구</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">행과 열을 바꿔 보면</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">차원을 줄여 이름을 붙인다</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">한계</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">딥러닝으로 이어진다</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', VIO = '#9E5DF9', GRN = '#00B37A', RED = '#D93636';
+
+    // ── 데이터는 노트북과 같은 생성식으로 만든다. 다만 난수를 고정해
+    //    모든 슬라이드가 같은 그림을 쓰도록 한다 (강의 중 앞뒤가 안 맞으면 곤란).
+    //    X ~ N(0,1), Y = X*계수 + N(0,1)
+    const rng = (seed) => () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    const gauss = (r) => {
+      const u = Math.max(r(), 1e-9), v = r();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    const makeData = (coef, seed, n) => {
+      const r = rng(seed), out = [];
+      for (let i = 0; i < n; i++) {
+        const x = gauss(r), y = x * coef + gauss(r);
+        out.push([x, y]);
+      }
+      return out;
+    };
+    const DATA = makeData(1, 20260907, 1000);   // 노트북과 같은 개수
+
+    // 이론 공분산: Var(X)=1, Var(Y)=Var(X)+Var(noise)=2, Cov(X,Y)=1
+    const COV = [[1, 1], [1, 2]];
+    // 고유치 (3±√5)/2 — 황금비가 나온다
+    const L1 = (3 + Math.sqrt(5)) / 2, L2 = (3 - Math.sqrt(5)) / 2;
+    const PHI = (1 + Math.sqrt(5)) / 2;              // 제1주성분 기울기
+    const N1 = Math.hypot(1, PHI);
+    const V1 = [1 / N1, PHI / N1];                   // 제1고유벡터 (단위)
+    const V2 = [-V1[1], V1[0]];                      // 직교하는 제2고유벡터
+    const P1 = L1 / (L1 + L2), P2 = L2 / (L1 + L2);
+
+    // ── 좌표 도우미 ─────────────────────────────────────────────
+    const mkScale = (W, H, pad, rx, ry) => ({
+      x: v => pad + (v - rx[0]) / (rx[1] - rx[0]) * (W - pad * 2),
+      y: v => H - pad - (v - ry[0]) / (ry[1] - ry[0]) * (H - pad * 2),
+    });
+    const axes = (s, W, H, pad, xl, yl) => h('g', { key: 'ax' },
+      h('line', { x1: pad, y1: s.y(0), x2: W - pad, y2: s.y(0), stroke: AX, strokeWidth: 1.5 }),
+      h('line', { x1: s.x(0), y1: pad, x2: s.x(0), y2: H - pad, stroke: AX, strokeWidth: 1.5 }),
+      xl ? h('text', { x: W - pad, y: s.y(0) + 34, textAnchor: 'end', fontFamily: EN,
+        fontSize: 24, fill: MUT }, xl) : null,
+      yl ? h('text', { x: s.x(0) + 14, y: pad + 6, fontFamily: EN, fontSize: 24,
+        fill: MUT }, yl) : null);
+    // 직선은 좌표 범위를 넘어가므로 패널마다 잘라 낸다. 안 그러면 카드
+    // 밖으로 삐져나가 옆 패널을 침범한다.
+    let clipN = 0;
+    const clipBox = (W, H, pad) => {
+      const id = 'pcaclip' + (++clipN);
+      return [id, h('defs', { key: 'cd' + id }, h('clipPath', { id: id },
+        h('rect', { x: pad * 0.35, y: pad * 0.35,
+          width: W - pad * 0.7, height: H - pad * 0.7 })))];
+    };
+    const dots = (pts, s, color, r, op, key) => h('g', { key: key || 'd' },
+      pts.map((p, i) => h('circle', { key: i, cx: s.x(p[0]), cy: s.y(p[1]),
+        r: r, fill: color, opacity: op })));
+
+    // ── 02 차원 표 ──────────────────────────────────────────────
+    const dimTable = (() => {
+      const COLS = ['키', '몸무게', '나이', '성별', '혈액형'];
+      const ROWS = [['학생 A', '172', '65', '23', '남', 'A'],
+                    ['학생 B', '158', '49', '21', '여', 'O'],
+                    ['학생 C', '181', '78', '25', '남', 'B']];
+      const cell = (t, head, first) => h('td', { key: t + Math.random(),
+        style: { fontFamily: first ? KR : EN, fontSize: head ? '25px' : '30px',
+          fontWeight: head || first ? 700 : 400, textAlign: first ? 'left' : 'center',
+          padding: '20px 10px', color: head ? MUT : INK,
+          borderBottom: head ? '2px solid ' + INK : '1px solid var(--border-1)' } }, t);
+      return h('div', { style: { width: '100%' } },
+        h('table', { style: { width: '100%', borderCollapse: 'collapse' } },
+          h('thead', null, h('tr', null,
+            cell('', true, true), COLS.map(c => cell(c, true)))),
+          h('tbody', null, ROWS.map((r, i) => h('tr', { key: i },
+            r.map((v, j) => cell(v, false, j === 0)))))),
+        h('div', { style: { marginTop: '34px', textAlign: 'center', fontFamily: EN,
+          fontSize: '30px', color: ACC, fontWeight: 700 } },
+          '속성 5개  →  5차원 공간의 점 하나'));
+    })();
+
+    // ── 04 세 가지 분포 ─────────────────────────────────────────
+    const threeDists = (() => {
+      const W = 1680, H = 430, pad = 46, cw = 520;
+      const panel = (coef, label, x0, k) => {
+        const pts = makeData(coef, 771 + k * 97, 320);
+        const s = mkScale(cw, H, pad, [-3.4, 3.4], [-3.4, 3.4]);
+        return h('g', { key: k, transform: 'translate(' + x0 + ',0)' },
+          h('rect', { width: cw, height: H, fill: '#fff', stroke: 'var(--border-1)',
+            rx: 14 }),
+          axes(s, cw, H, pad),
+          dots(pts, s, coef === 1 ? ACC : '#8D8DFB', 3, 0.45, 'p' + k),
+          h('text', { x: cw / 2, y: 34, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 26, fontWeight: 700, fill: coef === 1 ? ACC : MUT }, label));
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        panel(1, 'Y = X + 잡음', 0, 0),
+        panel(0, 'Y = 잡음 (무관)', 580, 1),
+        panel(-1, 'Y = −X + 잡음', 1160, 2));
+    })();
+
+    // ── 05 두 후보 직선 ─────────────────────────────────────────
+    const twoLines = (() => {
+      const W = 900, H = 900, pad = 70;
+      const s = mkScale(W, H, pad, [-4, 4], [-4.6, 4.6]);
+      const [cid, cdef] = clipBox(W, H, pad);
+      const line = (slope, color, dash, lab, lx) => {
+        const t = 4.2;
+        return h('g', { key: lab },
+          h('line', { x1: s.x(-t), y1: s.y(-t * slope), x2: s.x(t), y2: s.y(t * slope),
+            stroke: color, strokeWidth: 6, strokeDasharray: dash || 'none',
+            strokeLinecap: 'round' }),
+          h('text', { x: s.x(lx), y: s.y(lx * slope) - 22, fontFamily: EN, fontSize: 34,
+            fontWeight: 800, fill: color }, lab));
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        cdef,
+        h('rect', { key: 'bg', width: W, height: H, fill: 'rgba(255,255,255,.04)', rx: 18 }),
+        axes(s, W, H, pad, 'X', 'Y'),
+        dots(DATA, s, '#8D8DFB', 3.4, 0.45),
+        h('g', { key: 'ls', clipPath: 'url(#' + cid + ')' },
+          line(PHI, '#00E49B', null, '1번', 1.9),
+          line(-0.55, '#FFC000', '14 12', '2번', 2.9)));
+    })();
+
+    // ── 06 수직 투영 ────────────────────────────────────────────
+    const projectDemo = (() => {
+      const W = 900, H = 900, pad = 70;
+      const s = mkScale(W, H, pad, [-4, 4], [-4.6, 4.6]);
+      const [cid, cdef] = clipBox(W, H, pad);
+      const u = V1;
+      const some = DATA.filter((_, i) => i % 26 === 0).slice(0, 22);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        cdef,
+        axes(s, W, H, pad, 'X', 'Y'),
+        dots(DATA, s, '#C9C7D6', 3, 0.5, 'bg'),
+        h('line', { key: 'ln', clipPath: 'url(#' + cid + ')', x1: s.x(-4 * u[0] / Math.abs(u[0]) * 0.95),
+          y1: s.y(-4 * u[1] / Math.abs(u[0]) * 0.95),
+          x2: s.x(4 * u[0] / Math.abs(u[0]) * 0.95),
+          y2: s.y(4 * u[1] / Math.abs(u[0]) * 0.95),
+          stroke: ACC, strokeWidth: 6, strokeLinecap: 'round' }),
+        h('g', { key: 'pr' }, some.map((p, i) => {
+          const t = p[0] * u[0] + p[1] * u[1];
+          const q = [t * u[0], t * u[1]];
+          return h('g', { key: i },
+            h('line', { x1: s.x(p[0]), y1: s.y(p[1]), x2: s.x(q[0]), y2: s.y(q[1]),
+              stroke: VIO, strokeWidth: 2, strokeDasharray: '5 5' }),
+            h('circle', { cx: s.x(p[0]), cy: s.y(p[1]), r: 7, fill: VIO }),
+            h('circle', { cx: s.x(q[0]), cy: s.y(q[1]), r: 7, fill: ACC }));
+        })));
+    })();
+
+    // ── 07 퍼짐 비교 ────────────────────────────────────────────
+    const spreadCompare = (() => {
+      const W = 1680, H = 470, pad = 44, cw = 800;
+      const panel = (u, title, good, x0) => {
+        const s = mkScale(cw, H, pad, [-4, 4], [-3.4, 3.4]);
+        const [cid, cdef] = clipBox(cw, H, pad);
+        let lo = 1e9, hi = -1e9;
+        const proj = DATA.map(p => {
+          const t = p[0] * u[0] + p[1] * u[1];
+          lo = Math.min(lo, t); hi = Math.max(hi, t);
+          return [t * u[0], t * u[1]];
+        });
+        const col = good ? ACC : '#B9B6CC';
+        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
+          cdef,
+          h('rect', { key: 'bg', width: cw, height: H, fill: '#fff', rx: 14,
+            stroke: good ? ACC : 'var(--border-1)', strokeWidth: good ? 3 : 1 }),
+          axes(s, cw, H, pad),
+          h('g', { key: 'in', clipPath: 'url(#' + cid + ')' },
+            dots(DATA, s, '#E3E2EA', 2.4, 0.9, 't' + title),
+            dots(proj, s, col, 3.2, 0.75, 'q' + title),
+            h('line', { key: 'sp', x1: s.x(lo * u[0]), y1: s.y(lo * u[1]),
+              x2: s.x(hi * u[0]), y2: s.y(hi * u[1]),
+              stroke: col, strokeWidth: 5, strokeLinecap: 'round' })),
+          h('text', { x: cw / 2, y: 36, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 28, fontWeight: 700, fill: good ? ACC : MUT }, title),
+          h('text', { x: cw / 2, y: H - 18, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 26, fontWeight: 700, fill: col },
+            '퍼진 길이 ' + (hi - lo).toFixed(2)));
+      };
+      const ang = (deg) => [Math.cos(deg * Math.PI / 180), Math.sin(deg * Math.PI / 180)];
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        panel(V1, '가장 넓게 퍼지는 방향', true, 0),
+        panel(ang(-20), '다른 각도로 돌리면', false, 880));
+    })();
+
+    // ── 08 공분산 행렬 ──────────────────────────────────────────
+    const covMatrix = (() => {
+      const cell = (v, r, c) => {
+        const diag = r === c;
+        return h('div', { key: r + '' + c, style: { display: 'flex',
+          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '10px', padding: '30px 12px', borderRadius: '14px',
+          background: diag ? 'var(--primary-pale)' : '#fff',
+          border: '2px solid ' + (diag ? 'var(--primary-lighter)' : 'var(--border-1)') } },
+          h('div', { style: { fontFamily: EN, fontSize: '52px', fontWeight: 800,
+            color: diag ? 'var(--primary-dark)' : INK } }, v.toFixed(2)),
+          h('div', { style: { fontFamily: KR, fontSize: '21px', color: MUT,
+            textAlign: 'center', lineHeight: 1.3 } },
+            diag ? (r === 0 ? 'X 가 퍼진 정도' : 'Y 가 퍼진 정도') : '함께 퍼진 정도'));
+      };
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '26px' } },
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: '20px' } },
+          cell(COV[0][0], 0, 0), cell(COV[0][1], 0, 1),
+          cell(COV[1][0], 1, 0), cell(COV[1][1], 1, 1)),
+        h('div', { style: { padding: '26px 30px', background: 'var(--surface-app)',
+          borderRadius: '14px', fontFamily: KR, fontSize: '25px', color: 'var(--fg-3)',
+          lineHeight: 1.5 } },
+          'Y = X + 잡음 이므로 Y 의 분산은 X 의 분산 + 잡음의 분산 = 2 가 된다. ' +
+          'X 와 Y 가 같이 움직이므로 비대각 값은 1.'));
+    })();
+
+    // ── 09 격자 변환 ────────────────────────────────────────────
+    const gridTransform = (() => {
+      const W = 1680, H = 460, pad = 40, cw = 780;
+      const g = [];
+      for (let i = -10; i <= 10; i++)
+        for (let j = -10; j <= 10; j++) g.push([i * 0.2, j * 0.2]);
+      const mul = p => [p[0] * COV[0][0] + p[1] * COV[1][0],
+                        p[0] * COV[0][1] + p[1] * COV[1][1]];
+      const panel = (pts, title, x0, col) => {
+        const s = mkScale(cw, H, pad, [-4.4, 4.4], [-2.6, 2.6]);
+        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
+          h('rect', { width: cw, height: H, fill: '#fff', rx: 14,
+            stroke: 'var(--border-1)' }),
+          axes(s, cw, H, pad),
+          dots(pts, s, col, 2.6, 0.75, 'g' + title),
+          h('text', { x: cw / 2, y: 34, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 27, fontWeight: 700, fill: col }, title));
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        panel(g, '균등한 격자', 0, MUT),
+        h('text', { key: 'op', x: 830, y: H / 2 + 12, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 44, fontWeight: 800, fill: ACC }, '×'),
+        h('text', { key: 'op2', x: 830, y: H / 2 + 48, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fill: MUT }, '공분산'),
+        panel(g.map(mul), '늘어난 격자', 900, ACC));
+    })();
+
+    // ── 10 단위원 ───────────────────────────────────────────────
+    const unitCircle = (() => {
+      const W = 880, H = 880, pad = 74;
+      const s = mkScale(W, H, pad, [-3.2, 3.2], [-3.2, 3.2]);
+      const circle = [], ell = [];
+      for (let d = 0; d < 360; d += 2) {
+        const a = d * Math.PI / 180, p = [Math.cos(a), Math.sin(a)];
+        circle.push(p);
+        ell.push([p[0] * COV[0][0] + p[1] * COV[1][0],
+                  p[0] * COV[0][1] + p[1] * COV[1][1]]);
+      }
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        axes(s, W, H, pad),
+        dots(circle, s, MUT, 3, 0.8, 'c'),
+        dots(ell, s, GRN, 3, 0.85, 'e'),
+        h('circle', { key: 'o', cx: s.x(0), cy: s.y(0), r: 7, fill: INK }),
+        h('text', { key: 't1', x: s.x(1.05), y: s.y(-1.55), fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: MUT }, '단위원'),
+        h('text', { key: 't2', x: s.x(0.9), y: s.y(2.55), fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: GRN }, '변환 후'));
+    })();
+
+    // ── 11 고유벡터 찾기 ────────────────────────────────────────
+    const eigenFind = (() => {
+      const W = 1680, H = 480, pad = 44, cw = 800;
+      const mk = (transform) => {
+        const out = [];
+        for (let d = 0; d < 360; d += 2) {
+          const a = d * Math.PI / 180;
+          let p = [Math.cos(a), Math.sin(a)];
+          if (transform) p = [p[0] * COV[0][0] + p[1] * COV[1][0],
+                              p[0] * COV[0][1] + p[1] * COV[1][1]];
+          out.push(p);
+        }
+        return out;
+      };
+      const marks = [V1, [-V1[0], -V1[1]], V2, [-V2[0], -V2[1]]];
+      const panel = (pts, hot, title, x0, col) => {
+        const s = mkScale(cw, H, pad, [-3.2, 3.2], [-2.1, 2.1]);
+        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
+          h('rect', { width: cw, height: H, fill: '#fff', rx: 14,
+            stroke: 'var(--border-1)' }),
+          axes(s, cw, H, pad),
+          dots(pts, s, col, 2.8, 0.7, 'u' + title),
+          h('g', { key: 'm' }, hot.map((p, i) => h('path', {
+            key: i, d: 'M-9,-9 L9,9 M-9,9 L9,-9', stroke: RED, strokeWidth: 4,
+            strokeLinecap: 'round',
+            transform: 'translate(' + s.x(p[0]) + ',' + s.y(p[1]) + ')' }))),
+          h('text', { x: cw / 2, y: 34, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 27, fontWeight: 700, fill: col }, title));
+      };
+      const tf = p => [p[0] * COV[0][0] + p[1] * COV[1][0],
+                       p[0] * COV[0][1] + p[1] * COV[1][1]];
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        panel(mk(false), marks, '변환 전 — 각도 표시', 0, MUT),
+        panel(mk(true), marks.map(tf), '변환 후 — 각도 그대로', 880, GRN));
+    })();
+
+    // ── 12 겹쳐 보기 ────────────────────────────────────────────
+    const overlay = (() => {
+      const W = 900, H = 900, pad = 70;
+      const s = mkScale(W, H, pad, [-4, 4], [-4.6, 4.6]);
+      const [cid, cdef] = clipBox(W, H, pad);
+      const ell = [];
+      for (let d = 0; d < 360; d += 2) {
+        const a = d * Math.PI / 180, p = [Math.cos(a), Math.sin(a)];
+        ell.push([p[0] * COV[0][0] + p[1] * COV[1][0],
+                  p[0] * COV[0][1] + p[1] * COV[1][1]]);
+      }
+      const seg = (u, len, col, wdt) => h('line', { key: col + len,
+        x1: s.x(-u[0] * len), y1: s.y(-u[1] * len),
+        x2: s.x(u[0] * len), y2: s.y(u[1] * len),
+        stroke: col, strokeWidth: wdt, strokeLinecap: 'round' });
+      const tf = p => [p[0] * COV[0][0] + p[1] * COV[1][0],
+                       p[0] * COV[0][1] + p[1] * COV[1][1]];
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        cdef,
+        axes(s, W, H, pad, 'X', 'Y'),
+        dots(DATA, s, '#8D8DFB', 3.2, 0.35, 'd'),
+        dots(ell, s, GRN, 2.6, 0.85, 'e'),
+        h('g', { key: 'pcs', clipPath: 'url(#' + cid + ')' },
+          seg(V1, 3.9, RED, 5), seg(V2, 1.6, RED, 4)),
+        h('g', { key: 'x' }, [V1, [-V1[0], -V1[1]], V2, [-V2[0], -V2[1]]].map(tf)
+          .map((p, i) => h('path', { key: i, d: 'M-10,-10 L10,10 M-10,10 L10,-10',
+            stroke: RED, strokeWidth: 5, strokeLinecap: 'round',
+            transform: 'translate(' + s.x(p[0]) + ',' + s.y(p[1]) + ')' }))),
+        h('text', { key: 'l1', x: s.x(V1[0] * 3.2) + 26, y: s.y(V1[1] * 3.2),
+          fontFamily: EN, fontSize: 30, fontWeight: 800, fill: RED }, 'PC1'),
+        h('text', { key: 'l2', x: s.x(V2[0] * 1.7) - 74, y: s.y(V2[1] * 1.7) - 12,
+          fontFamily: EN, fontSize: 30, fontWeight: 800, fill: RED }, 'PC2'));
+    })();
+
+    // ── 13 PCA 결과 ─────────────────────────────────────────────
+    const pcaResult = (() => {
+      const W = 880, H = 880, pad = 74;
+      const s = mkScale(W, H, pad, [-4, 4], [-4.4, 4.4]);
+      const arrow = (u, len, col, lab) => h('g', { key: lab },
+        h('line', { x1: s.x(0), y1: s.y(0), x2: s.x(u[0] * len), y2: s.y(u[1] * len),
+          stroke: col, strokeWidth: 7, strokeLinecap: 'round',
+          markerEnd: 'url(#pca-a)' }),
+        h('text', { x: s.x(u[0] * len) + (u[0] > 0 ? 20 : -96),
+          y: s.y(u[1] * len) - 16, fontFamily: EN, fontSize: 30, fontWeight: 800,
+          fill: col }, lab));
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('defs', null, h('marker', { id: 'pca-a', viewBox: '0 0 10 10', refX: 8,
+            refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse' },
+          h('path', { d: 'M0,0 L10,5 L0,10 z', fill: RED }))),
+        axes(s, W, H, pad, 'X', 'Y'),
+        dots(DATA, s, '#8D8DFB', 3.6, 0.4, 'd'),
+        arrow(V1, Math.sqrt(L1) * 2, RED, 'PC1'),
+        arrow(V2, Math.sqrt(L2) * 2, RED, 'PC2'),
+        h('text', { key: 'n', x: W / 2, y: H - 22, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fill: MUT }, '화살표 길이 = √고유치 (노트북 cell 34 방식)'));
+    })();
+
+    // ── 14 설명 비율 ────────────────────────────────────────────
+    const explained = (() => {
+      const rows = [['PC1', L1, P1, ACC], ['PC2', L2, P2, '#B9B6CC']];
+      return h('div', { style: { display: 'flex', flexDirection: 'column',
+          gap: '26px', width: '100%' } },
+        rows.map(([nm, lam, pct, col]) => h('div', { key: nm,
+          style: { display: 'grid', gridTemplateColumns: '120px 1fr 250px',
+            alignItems: 'center', gap: '30px' } },
+          h('div', { style: { fontFamily: EN, fontSize: '38px', fontWeight: 800,
+            color: col } }, nm),
+          h('div', { style: { height: '76px', background: 'var(--surface-app)',
+            borderRadius: '10px', overflow: 'hidden' } },
+            h('div', { style: { width: (pct * 100).toFixed(1) + '%', height: '100%',
+              background: col, borderRadius: '10px' } })),
+          h('div', { style: { textAlign: 'right' } },
+            h('div', { style: { fontFamily: EN, fontSize: '44px', fontWeight: 800,
+              color: col } }, (pct * 100).toFixed(1) + '%'),
+            h('div', { style: { fontFamily: EN, fontSize: '23px', color: MUT } },
+              '고유치 ' + lam.toFixed(3))))),
+        h('div', { style: { marginTop: '14px', padding: '26px 32px',
+          background: 'var(--surface-app)', borderRadius: '14px', fontFamily: KR,
+          fontSize: '27px', color: 'var(--fg-3)', lineHeight: 1.45 } },
+          '제1주성분 하나만 남겨도 전체 분산의 ' + (P1 * 100).toFixed(0) +
+          '% 를 지킨다. 나머지 ' + (P2 * 100).toFixed(0) + '% 를 버리는 대신 차원이 절반이 된다.'));
+    })();
+
+    // ── 16 아파트 면적×연한 ─────────────────────────────────────
+    //     실제 실거래 파일이 없으므로 축의 눈금은 노트북이 만드는 범위를
+    //     따라 두되, 점은 '개념도'임을 캡션에 밝힌다.
+    const aptPca = (() => {
+      const W = 900, H = 880, pad = 96;
+      const s = mkScale(W, H, pad, [20, 190], [0, 46]);
+      const r = rng(4242), pts = [];
+      for (let i = 0; i < 420; i++) {
+        const a = 40 + Math.abs(gauss(r)) * 34 + r() * 22;
+        const y = 6 + Math.abs(gauss(r)) * 9 + (a - 40) * 0.11 + r() * 6;
+        if (a < 190 && y < 46) pts.push([a, y]);
+      }
+      const mx = pts.reduce((s2, p) => s2 + p[0], 0) / pts.length;
+      const my = pts.reduce((s2, p) => s2 + p[1], 0) / pts.length;
+      const grid = (v, ax) => h('line', { key: ax + v,
+        x1: ax === 'x' ? s.x(v) : pad, y1: ax === 'x' ? pad : s.y(v),
+        x2: ax === 'x' ? s.x(v) : W - pad, y2: ax === 'x' ? H - pad : s.y(v),
+        stroke: '#EEEDF3', strokeWidth: 1 });
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        [50, 100, 150].map(v => grid(v, 'x')),
+        [10, 20, 30, 40].map(v => grid(v, 'y')),
+        h('line', { key: 'xa', x1: pad, y1: H - pad, x2: W - pad, y2: H - pad,
+          stroke: AX, strokeWidth: 2 }),
+        h('line', { key: 'ya', x1: pad, y1: pad, x2: pad, y2: H - pad,
+          stroke: AX, strokeWidth: 2 }),
+        [50, 100, 150].map(v => h('text', { key: 'tx' + v, x: s.x(v), y: H - pad + 38,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 24, fill: MUT }, v)),
+        [10, 20, 30, 40].map(v => h('text', { key: 'ty' + v, x: pad - 18, y: s.y(v) + 9,
+          textAnchor: 'end', fontFamily: EN, fontSize: 24, fill: MUT }, v)),
+        h('text', { key: 'xl', x: W - pad, y: H - 26, textAnchor: 'end', fontFamily: KR,
+          fontSize: 26, fill: MUT }, '전용면적 (㎡)'),
+        h('text', { key: 'yl', x: pad - 18, y: pad - 22, textAnchor: 'end',
+          fontFamily: KR, fontSize: 26, fill: MUT }, '연한 (년)'),
+        dots(pts, s, '#8D8DFB', 4, 0.45, 'p'),
+        h('circle', { key: 'c', cx: s.x(mx), cy: s.y(my), r: 9, fill: INK }),
+        h('line', { key: 'v1', x1: s.x(mx - 52), y1: s.y(my - 6.2),
+          x2: s.x(mx + 52), y2: s.y(my + 6.2), stroke: RED, strokeWidth: 6,
+          strokeLinecap: 'round' }),
+        h('line', { key: 'v2', x1: s.x(mx - 7), y1: s.y(my + 6),
+          x2: s.x(mx + 7), y2: s.y(my - 6), stroke: RED, strokeWidth: 5,
+          strokeLinecap: 'round' }),
+        h('text', { key: 'n', x: W / 2, y: 40, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: MUT }, '분포 개념도 — 실제 축척과 값은 노트북 실행 결과를 볼 것'));
+    })();
+
+    // ── 17 격자 × 연령대 ────────────────────────────────────────
+    const gridAge = (() => {
+      const AGES = ['0-4', '5-9', '10-14', '15-19', '20-24', '25-29', '30-34',
+                    '35-39', '40-44', '45-49', '50-54', '55-59', '60-64', '65-69', '70-74'];
+      const W = 1680, H = 400, x0 = 250, cw = (W - x0 - 40) / AGES.length;
+      const rows = [['다사604450', 0.9], ['다사602452', 0.45], ['다사602443', 0.15]];
+      const r = rng(9911);
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        AGES.map((a, i) => h('text', { key: 'a' + i, x: x0 + cw * (i + 0.5), y: 32,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 19, fill: MUT }, a)),
+        rows.map(([id, young], ri) => {
+          const y = 78 + ri * 100;
+          return h('g', { key: id },
+            h('text', { x: x0 - 26, y: y + 34, textAnchor: 'end', fontFamily: EN,
+              fontSize: 25, fontWeight: 700, fill: INK }, id),
+            AGES.map((a, i) => {
+              const t = i / (AGES.length - 1);
+              const v = Math.max(0.06, (young > 0.5 ? 1 - t : (young > 0.3 ? 1 - Math.abs(t - 0.45) * 1.6 : t))
+                        * (0.75 + r() * 0.45));
+              return h('rect', { key: i, x: x0 + cw * i + 3, y: y + 60 - v * 56,
+                width: cw - 6, height: Math.max(3, v * 56), rx: 3,
+                fill: ri === 0 ? ACC : (ri === 1 ? VIO : '#00B37A'), opacity: 0.85 });
+            }));
+        }),
+        h('text', { key: 'n', x: W / 2, y: H - 14, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: MUT },
+          '연령 구조가 다른 격자 세 곳 — 15개 값이 격자 하나의 좌표다 (노트북 cell 38–40)'));
+    })();
+
+    // ── 19 파이프라인 ───────────────────────────────────────────
+    const pipeline = (() => {
+      const STEPS = [['변수 100개', '도시별 지표', MUT],
+                     ['주성분 5개', 'PCA', ACC],
+                     ['뭉치는 곳', '클러스터링', VIO],
+                     ['이름 붙이기', '연구자', '#00B37A']];
+      return h('div', { style: { display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: '18px', width: '100%' } },
+        STEPS.map(([t, s2, col], i) => [
+          h('div', { key: t, style: { flex: 1, background: '#fff',
+            border: '3px solid ' + col, borderRadius: '16px', padding: '34px 20px',
+            textAlign: 'center' } },
+            h('div', { style: { fontFamily: KR, fontSize: '34px', fontWeight: 800,
+              color: col, lineHeight: 1.2 } }, t),
+            h('div', { style: { fontFamily: EN, fontSize: '23px', color: MUT,
+              marginTop: '10px' } }, s2)),
+          i < STEPS.length - 1 ? h('div', { key: t + 'a', style: { fontFamily: EN,
+            fontSize: '40px', color: 'var(--border-1)', fontWeight: 700 } }, '→') : null,
+        ]));
+    })();
+
+    // ── 20 비선형 한계 ──────────────────────────────────────────
+    const nonlinear = (() => {
+      const W = 860, H = 720, pad = 70;
+      const s = mkScale(W, H, pad, [-3.4, 3.4], [-3.0, 3.0]);
+      const r = rng(31337), pts = [];
+      for (let i = 0; i < 420; i++) {                 // 초승달 두 개
+        const a = Math.PI * r(), rad = 2 + gauss(r) * 0.16;
+        const flip = i % 2 === 0;
+        pts.push(flip ? [Math.cos(a) * rad, Math.sin(a) * rad - 0.8]
+                      : [2 - Math.cos(a) * rad, 0.8 - Math.sin(a) * rad]);
+      }
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('rect', { width: W, height: H, fill: 'rgba(255,255,255,.05)', rx: 18 }),
+        dots(pts, s, '#8D8DFB', 4, 0.6, 'p'),
+        h('line', { key: 'l', x1: s.x(-3.1), y1: s.y(-0.2), x2: s.x(3.1), y2: s.y(0.2),
+          stroke: '#FF7AA2', strokeWidth: 6, strokeLinecap: 'round',
+          strokeDasharray: '16 12' }),
+        h('text', { key: 't', x: W / 2, y: H - 26, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: '#FF7AA2' },
+          '이런 구조는 직선 하나로 펴지지 않는다'));
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      dimTable, threeDists, twoLines, projectDemo, spreadCompare, covMatrix,
+      gridTransform, unitCircle, eigenFind, overlay, pcaResult, explained,
+      aptPca, gridAge, pipeline, nonlinear,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

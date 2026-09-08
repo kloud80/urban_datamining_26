@@ -1,0 +1,80 @@
+/* ============================================================
+   BigValue — Color tokens
+   Source: Official CI Guideline (Pantone + RGB + CMYK) +
+           product build (Tailwind Primary/Secondary/Neutral scales).
+   ============================================================ */
+:root {
+  /* --- Official brand colors (from CI Guideline) --- */
+  --bv-blue:   #4434E2;   /* Pantone 2736C  — BigValue BLUE (primary) */
+  --bv-violet: #9E5DF9;   /* Pantone 2583C  — BigValue VIOLET (secondary) */
+  --bv-green:  #00E49B;   /* Pantone 3395C  — BigValue GREEN (accent) */
+
+  /* --- Primary (extracted from product build: Primary-*) --- */
+  --primary-pale:     #ECEBFC;
+  --primary-lightest: #DCDBFD;
+  --primary-lighter:  #8D8DFB;
+  --primary-light:    #6867FE;
+  --primary-main:     #4434E2;  /* Brand BLUE */
+  --primary-dark:     #3526C7;
+  --primary-darkest:  #1A0F86;
+
+  /* --- Secondary (brand VIOLET scale) --- */
+  --secondary-pale:     #F5EFFE;
+  --secondary-lightest: #E8D8FE;
+  --secondary-lighter:  #C299FB;
+  --secondary-main:     #9E5DF9;  /* Brand VIOLET */
+  --secondary-dark:     #864FD4;
+  --secondary-darkest:  #432268;
+
+  /* --- Accent GREEN --- */
+  --accent-green:      #00E49B;  /* Brand GREEN */
+  --accent-green-soft: #3CEEB5;  /* gradient stop */
+
+  /* --- Neutrals (cool, blue-purple tint; from product build: Neutral-*) --- */
+  --neutral-white:    #FFFFFF;
+  --neutral-pale:     #EEEDF1;
+  --neutral-lightest: #E3E2E9;
+  --neutral-lighter:  #D4D3DD;
+  --neutral-light:    #A8A7BB;
+  --neutral-medium:   #9291A5;
+  --neutral-dark:     #646371;
+  --neutral-darker:   #3F3F49;
+  --neutral-darkest:  #25252F;
+  --neutral-black:    #0C0B17;
+
+  /* --- Soft app surfaces --- */
+  --surface-app:  #F8F8F8;
+  --surface-app2: #F5F4FF;
+
+  /* --- Semantic --- */
+  --bg-blue:    #5251FA;   /* link/accent blue used in product */
+  --error:      #D14141;
+  --error-soft: #FDE6E6;
+  --success:    #00E49B;
+  --warning:    #F5A623;
+
+  /* --- Foreground / background aliases --- */
+  --fg-1: var(--neutral-black);     /* primary text */
+  --fg-2: var(--neutral-darker);    /* body text */
+  --fg-3: var(--neutral-dark);      /* secondary */
+  --fg-4: var(--neutral-medium);    /* muted */
+  --fg-5: var(--neutral-light);     /* placeholder */
+  --fg-inverse: var(--neutral-white);
+
+  --bg-1: var(--neutral-white);
+  --bg-2: var(--neutral-pale);      /* app surface */
+  --bg-3: var(--neutral-lightest);  /* subtle fill */
+  --bg-inverse: var(--neutral-darkest);
+
+  --border-1: var(--neutral-lightest);
+  --border-2: var(--neutral-lighter);
+  --border-strong: var(--neutral-light);
+
+  /* --- Signature gradient (used on CTAs and hero backdrops) --- */
+  --gradient-hero: linear-gradient(276deg, #3CEEB5 -9.75%, #B179FF 49.67%, #4434E2 109.08%);  /* @kind color */
+  --gradient-fade-white: linear-gradient(to bottom, rgba(255,255,255,0), #fff 19.67%, #fff);  /* @kind color */
+  --gradient-symbol: linear-gradient(135deg, var(--accent-green), var(--primary-main));  /* @kind color */
+
+  /* --- Scrim / overlay --- */
+  --scrim: rgba(73, 72, 87, 0.8);  /* @kind color */
+}
