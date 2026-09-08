@@ -28,6 +28,8 @@
 ### 3주차 · 앙상블 알고리즘
 > 약한 모델을 여럿 모으면 왜 강해지는가?
 
+- 📊 **강의안** — [W03_앙상블](https://kloud80.github.io/urban_datamining_26/W03_%EC%95%99%EC%83%81%EB%B8%94/slides/W03_%EC%95%99%EC%83%81%EB%B8%94.html)
+- 📊 **강의안** — [W03_의사결정나무](https://kloud80.github.io/urban_datamining_26/W03_%EC%95%99%EC%83%81%EB%B8%94/slides/W03_%EC%9D%98%EC%82%AC%EA%B2%B0%EC%A0%95%EB%82%98%EB%AC%B4.html)
 - 📊 **강의안(PPTX)** — [기계학습.pptx](./W03_%EC%95%99%EC%83%81%EB%B8%94/slides/%EA%B8%B0%EA%B3%84%ED%95%99%EC%8A%B5.pptx)
 - 📓 [04_Dtree](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W03_%EC%95%99%EC%83%81%EB%B8%94/notebooks/04_Dtree.ipynb)
 - 📓 [05_Bagging_RF](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W03_%EC%95%99%EC%83%81%EB%B8%94/notebooks/05_Bagging_RF.ipynb)
