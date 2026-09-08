@@ -38,6 +38,8 @@
 ### 4주차 · 인공신경망
 > 직선 하나로 가를 수 없는 문제를 어떻게 푸는가?
 
+- 📊 **강의안** — [W04_심층신경망](https://kloud80.github.io/urban_datamining_26/W04_%EC%9D%B8%EA%B3%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D/slides/W04_%EC%8B%AC%EC%B8%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D.html)
+- 📊 **강의안** — [W04_인공신경망](https://kloud80.github.io/urban_datamining_26/W04_%EC%9D%B8%EA%B3%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D/slides/W04_%EC%9D%B8%EA%B3%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D.html)
 - 📓 [07 SLP](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W04_%EC%9D%B8%EA%B3%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D/notebooks/07%20SLP.ipynb)
 - 📓 [08 MLP](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W04_%EC%9D%B8%EA%B3%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D/notebooks/08%20MLP.ipynb)
 - 📓 [09 NeuralNetwork](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W04_%EC%9D%B8%EA%B3%B5%EC%8B%A0%EA%B2%BD%EB%A7%9D/notebooks/09%20NeuralNetwork.ipynb)

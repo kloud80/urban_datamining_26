@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>도시빅데이터와 머신러닝 — 4주차 심층신경망</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+    --t-mega: 190px; --t-huge: 116px; --t-title: 76px; --t-sub: 48px;
+    --t-body: 32px; --t-small: 26px; --t-cap: 24px;
+    --pad-x: 100px; --pad-t: 88px; --pad-b: 88px;
+    --ink: #0C0B17; --mut: #56556B; --line: #E3E2EA;
+    --acc: #4434E2; --amber: #F59E0B; --ok: #00996F; --no: #CE3A3A;
+    --wbg: #E3E8F1; --wink: #22304A; --wmut: #5A6885; --dark: #14122B;
+    --kr: 'Pretendard Variable', Pretendard, -apple-system, sans-serif;
+    --en: 'Mona Sans', 'Pretendard Variable', Pretendard, sans-serif;
+  }
+#stage > section[data-deck="0"] a { color: var(--acc); }
+#stage > section[data-deck="0"] a:hover { color: #3526C7; }
+@keyframes bv-descend {
+  0.00%, 5.40% { transform: translate(118px, 84px); }
+  7.14%, 12.54% { transform: translate(196px, 148px); }
+  14.29%, 19.69% { transform: translate(252px, 214px); }
+  21.43%, 26.83% { transform: translate(330px, 250px); }
+  28.57%, 33.97% { transform: translate(378px, 306px); }
+  35.71%, 41.11% { transform: translate(442px, 328px); }
+  42.86%, 48.26% { transform: translate(486px, 362px); }
+  50.00%, 55.40% { transform: translate(526px, 376px); }
+  57.14%, 62.54% { transform: translate(558px, 390px); }
+  64.29%, 69.69% { transform: translate(582px, 396px); }
+  71.43%, 76.83% { transform: translate(601px, 400px); }
+  78.57%, 83.97% { transform: translate(612px, 401px); }
+  85.71%, 91.11% { transform: translate(618px, 402px); }
+  92.86%, 98.26% { transform: translate(621px, 402px); }
+}
+@keyframes bv-lamp { 0%, 100% { opacity: .92 } 50% { opacity: 1 } }
+@keyframes bv-step { 0%, 3% { opacity: 0 } 7%, 95% { opacity: .6 } 100% { opacity: 0 } }
+@keyframes bv-trail { from { stroke-dashoffset: 900 } to { stroke-dashoffset: 0 } }
+#stage > section[data-deck="0"] .gd-walk { animation: bv-descend 12s ease-in-out infinite; }
+#stage > section[data-deck="0"] .gd-lamp { animation: bv-lamp 2.4s ease-in-out infinite; }
+#stage > section[data-deck="0"] .gd-trail { stroke-dasharray: 900; animation: bv-trail 12s ease-in-out infinite; }
+#stage > section[data-deck="0"] .gd-step { opacity: 0; animation: bv-step 12s ease-in-out infinite backwards; }
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="4주차 인공신경망. 오늘 다루는 알고리즘은 1957년에 나왔고, 1986년에 학습 방법이 완성된 뒤로 지금까지 원리가 바뀌지 않았다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;display:flex;flex-direction:column;justify-content:center;gap:34px;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 22%,rgba(68,52,226,.32),transparent 60%)">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:#3CEEB5;font-weight:700">4주차 · 인공신경망 ② 깊게 쌓으면</div>
+  <h1 style="margin:0;font-size:var(--t-huge);font-weight:800;line-height:1.05;letter-spacing:-0.03em">심층신경망</h1>
+  <p style="margin:0;font-size:var(--t-sub);font-weight:500;color:#B9B6CC;line-height:1.35">층을 늘리자 생긴 세 가지 한계와 그 해법</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:10px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--t-small);color:#8F8AA6">10 DeepNN.ipynb</p>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">01</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="입력을 110개로 늘리면" data-screen-label="02" data-speaker-notes="3주차에 쓰던 S-DoT 센서 데이터를 그대로 쓴다. 독립변수 110개, 데이터 135건, 출력은 고온/저온 하나. 이걸 신경망에 넣으면 파라미터가 몇 개나 될지 보자." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">실습 데이터</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">입력 110 · 출력 1</h2>
+  <p style="font-size:var(--t-body);color:var(--mut);line-height:1.5;margin:24px 0 0;max-width:1620px">3주차에 쓰던 <b style="color:var(--ink)">S-DoT 센서</b> 데이터 그대로. 반경 200m 의 토지이용·건축물 비율 110개로 그 지점이 상대적 고온인지 저온인지를 맞힌다.</p>
+  <div style="flex:1;min-height:0;display:flex;align-items:center;margin-top:22px"><span data-dc-slot="denseStack"></span></div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">02</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="왜 늘렸다 줄이는가" data-screen-label="03" data-speaker-notes="히든 레이어를 110에서 220, 440으로 늘렸다가 다시 220, 110, 20으로 줄인다. 왜 이렇게 하냐면, 데이터들이 서로 어떻게 결합될지 모르니 일단 쫙 풀어 헤쳐 놓고, 각자 의미를 전달하게 한 다음, 다시 조여서 정리된 상태로 끌어내리는 것이다. 이합집산이라고 생각하면 된다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">설계</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">풀었다가 조인다</h2>
+  <p style="font-size:var(--t-body);color:var(--mut);line-height:1.5;margin:24px 0 0;max-width:1620px">멀리 있는 변수끼리도 관계가 있을 수 있다. <b style="color:var(--ink)">일단 쫙 풀어 헤쳐</b> 각자 의미를 전달하게 한 뒤, <b style="color:var(--ink)">다시 조여서</b> 정리된 상태로 끌어내린다.</p>
+  <div style="flex:1;min-height:0;display:flex;align-items:center;margin-top:20px"><span data-dc-slot="funnel"></span></div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">03</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="가중치 24만 개" data-screen-label="04" data-speaker-notes="층을 이렇게 쌓았더니 파라미터가 246,061개가 된다. 아까 손으로 계산한 게 9개였다. 그 9차원 공간이 이제 24만 차원이 된 것이다. 학습이 어려운 이유가 여기 있다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(68,52,226,.30),transparent 60%)">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:#3CEEB5;font-weight:700">PARAMETERS</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.15;letter-spacing:-0.03em;margin:22px 0 0">9개였던 것이 246,061개가 된다</h2>
+  <div style="display:flex;align-items:baseline;gap:28px;margin-top:34px">
+    <span style="font-family:var(--en);font-size:150px;font-weight:800;color:#3CEEB5;line-height:0.9;letter-spacing:-0.04em">246,061</span>
+    <span style="font-size:var(--t-sub);font-weight:700">개</span>
+  </div>
+  <p style="font-size:var(--t-body);color:#B9B6CC;line-height:1.5;margin:30px 0 0;max-width:1620px">손으로 따라간 예제는 가중치가 <b style="color:#fff">9개</b>였다. 그 9차원 공간이 이제 <b style="color:#fff">24만 차원</b>이 된다.</p>
+  <p style="font-size:var(--t-small);color:#8F8AA6;line-height:1.5;margin:20px 0 0">10 DeepNN.ipynb · model.summary() 출력</p>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">04</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="단위가 다른 변수들" data-screen-label="05" data-speaker-notes="입력에 제곱미터짜리도 있고 0 또는 1짜리도 있다. 폭이 제각각이면 어떤 변수가 Affine 값을 혼자 끌고 다니면서 과한 영향을 준다. 게다가 시그모이드의 양끝, 즉 기울기가 없는 구간에 값이 놓일 수 있다. BatchNormalization은 변수별로 값을 다시 정리해 주는데, 그 정리 기준까지 학습으로 정한다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">BATCH NORMALIZATION</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">제곱미터와 0/1 을 같이 넣으면</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;margin-top:30px">
+    <div style="height:520px"><span data-dc-slot="scaleProblem"></span></div>
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <p style="margin:0;font-size:var(--t-body);color:var(--mut);line-height:1.5">폭이 큰 변수 하나가 <b style="color:var(--no)">Affine 값을 혼자 끌고 다닌다.</b></p>
+      <p style="margin:0;font-size:var(--t-body);color:var(--mut);line-height:1.5">게다가 그 값이 시그모이드의 <b style="color:var(--no)">기울기 없는 구간</b>에 놓이면 학습이 아예 안 된다.</p>
+      <div style="padding:26px 32px;background:#EDF9F4;border-radius:14px;font-size:var(--t-small);color:var(--mut);line-height:1.5">BatchNormalization 은 변수별로 값을 다시 맞춰 준다. <b style="color:var(--ok)">그 기준까지 학습으로 정한다.</b></div>
+    </div>
+  </div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">05</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="학습은 이어서 할 수 있다" data-screen-label="06" data-speaker-notes="한 번 돌리고 다시 누르면 처음부터가 아니라 멈춘 자리에서 이어서 내려간다. 가중치가 메모리에 남아 있기 때문이다. 이렇게 학습해 둔 가중치 덩어리를 사전학습 가중치라고 부른다. 나중에 나올 전이학습이 전부 여기서 출발한다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">PRE-TRAINED</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">멈춘 자리에서 이어서 내려간다</h2>
+  <p style="font-size:var(--t-body);color:var(--mut);line-height:1.5;margin:24px 0 0;max-width:1620px">다시 누르면 처음부터가 아니다. 가중치가 남아 있으니 <b style="color:var(--ink)">그 좌표에서 다시</b> 경사를 내려간다.</p>
+  <div style="flex:1;min-height:0;display:flex;align-items:center;margin-top:20px"><span data-dc-slot="resumeTrain"></span></div>
+  <div style="padding:26px 34px;background:#F4F5F9;border-radius:14px;font-size:var(--t-body);color:var(--mut);line-height:1.45">이렇게 쌓아 둔 가중치 덩어리를 <b style="color:var(--acc)">사전학습 가중치</b>라 한다 — 뒤에 나올 전이학습이 전부 여기서 출발한다.</div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">06</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="구조는 늘고 가중치는 불어났다" data-screen-label="07" data-speaker-notes="역전파가 자리를 잡자 구조가 갈라져 나온다. 순서를 기억하는 RNN, 그 기억을 길게 끄는 LSTM, 이미지를 보는 CNN. 가중치는 수백 개에서 수천만 개로 자릿수를 갈아치운다. 그런데 이상한 일이 벌어진다 — 깊게 쌓을수록 학습이 오히려 안 됐다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">1986 → 2012</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:22px 0 0">구조는 늘고, 가중치는 자릿수로 불어났다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.45fr 1fr;gap:56px;align-items:center;margin-top:32px">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;height:452px"><span data-dc-slot="nnGrowth"></span></div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:24px;font-size:var(--t-body);line-height:1.5;color:var(--mut)">
+      <li>역전파가 자리를 잡자 구조가 갈라져 나온다 — 순서를 기억하는 <b style="color:var(--ink)">RNN</b>,
+          기억을 길게 끄는 <b style="color:var(--ink)">LSTM</b>, 이미지를 보는 <b style="color:var(--ink)">CNN</b></li>
+      <li>가중치는 수백 개에서 <b style="color:var(--ink)">수천만 개</b>로, 자릿수를 갈아치운다</li>
+      <li style="font-weight:700;color:var(--no);border-top:2px solid var(--no);padding-top:22px">
+          그런데 깊게 쌓을수록 학습이 <b>오히려 안 됐다</b></li>
+    </ul>
+  </div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">07</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="심층신경망의 한계" data-screen-label="08" style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:var(--wbg);color:var(--wink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--wmut);font-weight:700">그러나 깊어지면 학습이 안 됐다</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:24px 0 0">심층신경망의 한계</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:64px">
+    <div style="background:#fff;border-radius:16px;padding:44px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
+      <div style="font-family:var(--en);font-size:32px;font-weight:700;color:var(--wmut)">01</div>
+      <div style="font-size:40px;font-weight:700;margin-top:24px;line-height:1.3">학습 시간</div>
+      <div style="font-size:var(--t-body);color:#4C5A73;margin-top:20px;line-height:1.5">네트워크가 깊어짐에 따라 학습 시간이 너무 느리다</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:44px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
+      <div style="font-family:var(--en);font-size:32px;font-weight:700;color:var(--wmut)">02</div>
+      <div style="font-size:40px;font-weight:700;margin-top:24px;line-height:1.3">Vanishing</div>
+      <div style="font-size:var(--t-body);color:#4C5A73;margin-top:20px;line-height:1.5">Sigmoid 함수가 극단치에서 변동성이 극히 작아 학습에서 Vanishing 현상 발생</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:44px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
+      <div style="font-family:var(--en);font-size:32px;font-weight:700;color:var(--wmut)">03</div>
+      <div style="font-size:40px;font-weight:700;margin-top:24px;line-height:1.3">Local Optimal</div>
+      <div style="font-size:var(--t-body);color:#4C5A73;margin-top:20px;line-height:1.5">초기 가중치로 인해 Local Optimal에 빠지거나 발산하는 문제</div>
+    </div>
+  </div>
+  <div style="margin-top:auto;display:flex;gap:32px;align-items:center">
+    <div style="width:420px;border-radius:12px;overflow:hidden;background:#fff;padding:12px">
+      <span data-dc-slot="deepNetSignal"></span>
+    </div>
+    <div style="font-size:var(--t-body);color:var(--wmut)">층을 더 쌓을수록 오차 신호가 앞쪽까지 닿지 않는다</div>
+  </div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:var(--wmut);font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">08</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="돌파 · AlexNet 2012" data-screen-label="09" style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#12100C;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--amber);font-weight:700">ImageNet Top-5 Error</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:24px 0 0">AlexNet(2012) — 판이 뒤집힌 순간</h2>
+  <div style="margin-top:30px">
+    <div style="font-size:var(--t-small);color:#BFBAAF;margin-bottom:16px">모델이 맞혀야 하는 것 — 라벨 1,000종 · 학습 이미지 120만 장 <span style="color:#8F8A7E">(개 품종만 120종이다)</span></div>
+    <div style="display:flex;gap:20px"><figure style="margin:0;width:180px;flex:none">
+      <img decoding="async" src="uploads/in_leopard.png" alt="표범" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block">
+      <figcaption style="margin-top:12px;font-size:24px;font-weight:700;color:#fff;line-height:1.25">표범<br><span style="font-family:var(--en);font-size:20px;font-weight:400;color:#9C968A">leopard</span></figcaption>
+    </figure><figure style="margin:0;width:180px;flex:none">
+      <img decoding="async" src="uploads/in_ship.png" alt="컨테이너선" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block">
+      <figcaption style="margin-top:12px;font-size:24px;font-weight:700;color:#fff;line-height:1.25">컨테이너선<br><span style="font-family:var(--en);font-size:20px;font-weight:400;color:#9C968A">container ship</span></figcaption>
+    </figure><figure style="margin:0;width:180px;flex:none">
+      <img decoding="async" src="uploads/in_scooter.png" alt="스쿠터" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block">
+      <figcaption style="margin-top:12px;font-size:24px;font-weight:700;color:#fff;line-height:1.25">스쿠터<br><span style="font-family:var(--en);font-size:20px;font-weight:400;color:#9C968A">motor scooter</span></figcaption>
+    </figure><figure style="margin:0;width:180px;flex:none">
+      <img decoding="async" src="uploads/in_mushroom.png" alt="버섯" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block">
+      <figcaption style="margin-top:12px;font-size:24px;font-weight:700;color:#fff;line-height:1.25">버섯<br><span style="font-family:var(--en);font-size:20px;font-weight:400;color:#9C968A">mushroom</span></figcaption>
+    </figure><figure style="margin:0;width:180px;flex:none">
+      <img decoding="async" src="uploads/in_retriever.png" alt="골든리트리버" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block">
+      <figcaption style="margin-top:12px;font-size:24px;font-weight:700;color:#fff;line-height:1.25">골든리트리버<br><span style="font-family:var(--en);font-size:20px;font-weight:400;color:#9C968A">golden retriever</span></figcaption>
+    </figure></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 460px;gap:72px;align-items:center;margin-top:34px">
+    <div style="background:#fff;border-radius:16px;padding:28px;height:404px;display:flex;align-items:center;justify-content:center">
+      <span data-dc-slot="imagenetChart"></span>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;gap:16px">
+        <span style="font-family:var(--en);font-size:130px;font-weight:800;color:var(--amber);line-height:0.9;letter-spacing:-0.04em">15.3</span>
+        <span style="font-family:var(--en);font-size:48px;font-weight:700;color:var(--amber)">%</span>
+      </div>
+      <div style="font-size:var(--t-body);color:#BFBAAF;margin-top:16px">직전 최고 기록 26.2%를 10%p 넘게 끌어내린다</div>
+      
+      <div data-dc-if="showCitations">
+        <div style="font-size:var(--t-cap);color:#8F8A80;margin-top:24px;line-height:1.5">Krizhevsky, A., Sutskever, I., Hinton, G. E. (2012). ImageNet Classification with Deep Convolutional Neural Networks. NIPS.</div>
+      </div>
+    </div>
+  </div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#7C776E;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">09</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="왜 GPU였나" data-screen-label="10" style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:600">병렬 연산</div>
+  <h2 style="font-size:var(--t-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em;margin:28px 0 0">왜 GPU였나</h2>
+  <div style="display:grid;grid-template-columns:1fr 800px;gap:80px;align-items:center;margin-top:56px">
+    <div style="display:flex;flex-direction:column;gap:40px">
+      <div>
+        <div style="font-size:40px;font-weight:700">3D 폴리곤 연산 ≈ 신경망 편미분 계산</div>
+        <div style="font-size:var(--t-body);color:var(--mut);margin-top:14px;line-height:1.5">둘 다 작고 단순한 float 연산을 아주 많이 반복한다</div>
+      </div>
+      <div>
+        <div style="font-size:40px;font-weight:700">폴리곤 단위 FLOAT 연산 &gt; Core 개수</div>
+        <div style="font-size:var(--t-body);color:var(--mut);margin-top:14px;line-height:1.5">GPU는 코어 수를 늘리는 방향으로 발전했다</div>
+      </div>
+      <div>
+        <div style="font-size:40px;font-weight:700">GPU &gt; CPU 연산 속도 = 병렬 연산</div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#0C0B17">
+      <span data-dc-slot="cpuGpuCores"></span>
+    </div>
+  </div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">10</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="부동소수점 형식" data-screen-label="11" style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:600">연산 정밀도</div>
+  <h2 style="font-size:var(--t-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em;margin:28px 0 0">CPU(float32) · GPU(float16) · TPU(bfloat16)</h2>
+  <div style="margin-top:56px;border:1px solid var(--line);border-radius:16px;background:#F8F8F8;padding:48px 64px;display:flex;justify-content:center">
+    <img decoding="async" src="assets/image30.png" alt="부동소수점 비트 구조 비교" style="max-width:100%;max-height:360px;display:block">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:48px;margin-top:48px;margin-bottom:64px">
+    <div>
+      <div style="font-family:var(--en);font-size:40px;font-weight:700;color:var(--acc)">float32</div>
+      <div style="font-size:var(--t-body);color:var(--mut);margin-top:12px">지수 8비트 · 소수 23비트</div>
+    </div>
+    <div>
+      <div style="font-family:var(--en);font-size:40px;font-weight:700;color:var(--acc)">float16</div>
+      <div style="font-size:var(--t-body);color:var(--mut);margin-top:12px">지수 5비트 · 소수 10비트</div>
+    </div>
+    <div>
+      <div style="font-family:var(--en);font-size:40px;font-weight:700;color:var(--acc)">bfloat16</div>
+      <div style="font-size:var(--t-body);color:var(--mut);margin-top:12px">지수 8비트 · 소수 7비트</div>
+    </div>
+  </div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">11</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="한계① 해결 · ReLU" data-screen-label="12" data-speaker-notes="Sigmoid는 양끝에서 기울기가 0에 수렴한다. 층을 거슬러 올라갈수록 기울기가 곱해지며 사라진다. ReLU는 양수 구간에서 기울기가 정확히 1이라 아무리 곱해도 줄지 않는다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:var(--wbg);color:var(--wink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--wmut);font-weight:700">한계 ② VANISHING 을 풀다</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:24px 0 0">ReLU — 기울기를 살려서 깊게 쌓는다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.15fr;gap:64px;align-items:center;margin-top:44px">
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:26px;font-size:var(--t-body);line-height:1.5;color:#4C5A73">
+      <li>역전파는 층을 거슬러 오르며 <b style="color:var(--wink)">기울기를 계속 곱한다</b></li>
+      <li>Sigmoid는 양끝에서 기울기가 0에 가깝다 → 곱할수록 <b style="color:var(--no)">0으로 사라진다</b></li>
+      <li>ReLU는 양수 구간에서 기울기가 <b style="color:var(--ok)">정확히 1</b> → 아무리 곱해도 줄지 않는다</li>
+      <li style="font-weight:700;color:var(--wink);border-top:2px solid var(--wink);padding-top:24px">깊이를 늘려도 학습이 되기 시작했다</li>
+    </ul>
+    <div style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 12px rgba(34,48,74,0.12);align-self:center"><span data-dc-slot="reluChart"></span></div>
+  </div>
+  <div>
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">12</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="과적합 해결 · Dropout" data-screen-label="13" data-speaker-notes="파라미터가 6천만 개인 망을 120만 장으로 학습시키면 외워버린다. Dropout은 매 스텝마다 뉴런 일부를 꺼서, 사실상 서로 다른 망 여러 개를 학습하고 평균 내는 효과를 낸다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">외워버리는 문제를 풀다</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:24px 0 0">Dropout — 매번 다른 망을 학습한다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.25fr 1fr;gap:64px;align-items:center;margin-top:40px">
+    <div style="height:100%;display:flex;align-items:center"><span data-dc-slot="dropoutNets"></span></div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:26px;font-size:var(--t-body);line-height:1.5;color:var(--mut)">
+      <li>AlexNet은 파라미터가 <b style="color:var(--ink)">약 6,000만 개</b>, 학습 이미지는 120만 장</li>
+      <li>그대로 두면 답을 <b style="color:var(--ink)">외워버린다</b> — 학습 성능만 오르고 평가 성능은 멈춘다</li>
+      <li>매 스텝마다 뉴런 절반을 <b style="color:var(--ink)">임의로 끈다</b></li>
+      <li style="font-weight:700;color:var(--ink);border-top:2px solid var(--ink);padding-top:24px">서로 다른 망 여러 개를 학습해 평균 내는 효과</li>
+    </ul>
+  </div>
+  <div>
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">13</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="한계③ 해결 · Optimizer" data-screen-label="14" data-speaker-notes="산을 내려오는 방법의 문제다. 전부 계산하면 느리고, 조금만 보면 흔들린다. 관성을 주면 빨라지고, 스텝 크기를 좌표별로 조절하면 좁은 골짜기도 빠져나온다. Adam은 그 둘을 합친 것이다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:var(--dark);color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:#3CEEB5;font-weight:700">한계 ③ LOCAL OPTIMAL 을 풀다</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:24px 0 0">Optimizer — 산을 내려오는 길을 고른다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:640px 1fr;gap:64px;align-items:center;margin-top:40px">
+    <div style="height:700px;border-radius:16px;overflow:hidden">
+      <img decoding="async" src="uploads/n4_descent.png" alt="네 갈래 하강 경로" style="width:100%;height:100%;object-fit:cover;display:block">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:30px">
+      <div style="font-size:var(--t-body);line-height:1.5;color:#B9B6CC">바닥이 울퉁불퉁하면 <b style="color:#fff">어떻게 내려가느냐</b>가 어디에 도착하는지를 바꾼다</div>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;gap:22px;align-items:baseline"><span style="font-family:var(--en);font-weight:700;font-size:30px;color:#fff;min-width:190px">GD → SGD</span><span style="font-size:28px;color:#B9B6CC;line-height:1.4">전부 보면 느리다 → 조금만 보고 빨리 판단한다</span></div>
+        <div style="display:flex;gap:22px;align-items:baseline"><span style="font-family:var(--en);font-weight:700;font-size:30px;color:#9E5DF9;min-width:190px">Momentum</span><span style="font-size:28px;color:#B9B6CC;line-height:1.4">내려오던 방향의 <b style="color:#fff">관성</b>을 얹어 얕은 골짜기를 넘는다</span></div>
+        <div style="display:flex;gap:22px;align-items:baseline"><span style="font-family:var(--en);font-weight:700;font-size:30px;color:#F59E0B;min-width:190px">Adagrad<br>RMSProp</span><span style="font-size:28px;color:#B9B6CC;line-height:1.4">많이 움직인 좌표는 <b style="color:#fff">보폭을 줄인다</b></span></div>
+        <div style="display:flex;gap:22px;align-items:baseline"><span style="font-family:var(--en);font-weight:700;font-size:30px;color:#00E49B;min-width:190px">Adam</span><span style="font-size:28px;color:#fff;font-weight:600;line-height:1.4">방향은 Momentum, 보폭은 RMSProp — 지금의 기본값</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">14</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="어디서 시작할 것인가" data-screen-label="15" data-speaker-notes="가중치를 처음에 랜덤으로 잡는다고 했는데, 그 랜덤도 아무렇게나가 아니다. 평균 0의 균등분포나 정규분포를 따르게 하고, 입력 노드가 많으면 그만큼 값을 줄여 준다. 안 그러면 Affine 값이 너무 커져서 시그모이드 양끝에 처음부터 놓이기 때문이다. He, Xavier 같은 이름이 붙어 있다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">WEIGHT INITIALIZATION</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">랜덤에도 규칙이 있다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:stretch;margin-top:34px">
+    <div style="background:#F4F5F9;border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--en);font-size:var(--t-sub);font-weight:700;color:var(--acc)">평균 0 · 일정한 폭</div>
+      <p style="margin:0;font-size:var(--t-body);color:var(--mut);line-height:1.5">균등분포나 정규분포를 따르게 해 <b style="color:var(--ink)">한쪽으로 쏠리지 않게</b> 한다.</p>
+    </div>
+    <div style="background:#F4F5F9;border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--en);font-size:var(--t-sub);font-weight:700;color:var(--acc)">입력이 많으면 더 작게</div>
+      <p style="margin:0;font-size:var(--t-body);color:var(--mut);line-height:1.5">110개가 각각 0.5씩 더해지면 Affine 값이 <b style="color:var(--no)">시그모이드 양끝</b>으로 날아간다.</p>
+    </div>
+  </div>
+  <div style="margin-top:28px;padding:26px 34px;background:#F4F5F9;border-radius:14px;font-size:var(--t-small);color:var(--mut);line-height:1.5;font-family:var(--en)">He · Xavier(Glorot) — 활성화 함수가 무엇이냐에 따라 고른다.</div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">15</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리 · 세 한계와 해법" data-screen-label="16" data-speaker-notes="AlexNet은 새 알고리즘이 아니다. 24번 슬라이드에서 세워둔 세 한계가 각각 풀렸고, 그것이 같은 해에 겹쳤을 뿐이다. 다음 시간에는 이 위에서 CNN으로 넘어간다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:var(--wbg);color:var(--wink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--wmut);font-weight:700">정리</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:24px 0 0">AlexNet은 새 알고리즘이 아니었다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:36px;margin-top:56px">
+    <div style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
+      <div style="font-family:var(--en);font-size:30px;font-weight:700;color:var(--no)">01 학습 시간</div>
+      <div style="font-size:34px;font-weight:700;margin-top:20px;color:var(--acc)">GPU · 병렬 연산</div>
+      <div style="font-size:var(--t-small);color:#4C5A73;margin-top:16px;line-height:1.5">같은 연산을 수천 코어가 동시에</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
+      <div style="font-family:var(--en);font-size:30px;font-weight:700;color:var(--no)">02 Vanishing</div>
+      <div style="font-size:34px;font-weight:700;margin-top:20px;color:var(--acc)">ReLU</div>
+      <div style="font-size:var(--t-small);color:#4C5A73;margin-top:16px;line-height:1.5">양수 구간 기울기 1 — 곱해도 사라지지 않는다</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
+      <div style="font-family:var(--en);font-size:30px;font-weight:700;color:var(--no)">03 Local Optimal</div>
+      <div style="font-size:34px;font-weight:700;margin-top:20px;color:var(--acc)">Momentum · Adam</div>
+      <div style="font-size:var(--t-small);color:#4C5A73;margin-top:16px;line-height:1.5">관성과 적응적 보폭으로 얕은 골짜기를 넘는다</div>
+    </div>
+  </div>
+  <div style="margin-top:44px;padding:32px 40px;background:#fff;border-radius:16px;border-left:8px solid var(--ok);font-size:var(--t-body);line-height:1.5">
+    여기에 <b>Dropout</b>(과적합)과 <b>ImageNet 120만 장</b>(데이터)이 더해졌다.
+    <b style="color:var(--ok)">따로 풀리던 것들이 2012년에 한꺼번에 맞물렸다</b> — 그것이 AlexNet이다.
+  </div>
+  <div>
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">16</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="17" data-speaker-notes="2교시 정리. 층을 깊게 쌓으니 세 가지 한계가 생겼고, 2012년 AlexNet에서 한꺼번에 풀렸다. GPU는 편미분이 노드별로 독립이라 쓸 수 있었던 것이고, ReLU는 기울기 소실을, Dropout은 지역 최적해를 푼다. 다음 주부터는 이 구조를 이미지에 맞게 바꾼 CNN으로 간다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(68,52,226,.30),transparent 60%)">
+  <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:#3CEEB5;font-weight:700">2교시 정리</div>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.15;letter-spacing:-0.03em;margin:22px 0 0">세 한계가 한꺼번에 풀린 해</h2>
+  <ol style="margin:26px 0 0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:24px;font-size:var(--t-sub);line-height:1.4;max-width:1620px">
+    <li>느리다 → <b style="color:#3CEEB5">GPU</b>. 편미분이 노드별로 독립이라 쓸 수 있었다.</li>
+    <li>기울기가 사라진다 → <b style="color:#3CEEB5">ReLU</b>. 양수 구간 기울기가 정확히 1.</li>
+    <li>지역 최적해에 갇힌다 → <b style="color:#3CEEB5">Dropout · Optimizer</b>.</li>
+  </ol>
+  <div style="margin-top:30px;padding:30px 38px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--t-body);line-height:1.45;max-width:1620px">다음 주 — <b style="color:#fff">이미지 분석</b>. 같은 구조를 이미지에 맞게 바꾼다.<br><span style="color:#8F8AA6;font-size:var(--t-small)">예습: 11 ConvolutionLayer.ipynb · 12 이미지구조.ipynb</span></div>
+  <div data-dc-if="showFooter">
+    <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">17</span></div>
+  </div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">도시빅데이터와 머신러닝 — 4주차 심층신경망</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">17</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">입력을 110개로 늘리면</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">왜 늘렸다 줄이는가</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">가중치 24만 개</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">단위가 다른 변수들</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">학습은 이어서 할 수 있다</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">구조는 늘고 가중치는 불어났다</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">심층신경망의 한계</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">돌파 · AlexNet 2012</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">왜 GPU였나</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">부동소수점 형식</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">한계① 해결 · ReLU</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">과적합 해결 · Dropout</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">한계③ 해결 · Optimizer</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">어디서 시작할 것인가</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">정리 · 세 한계와 해법</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  // Animated GIFs play only while their slide is on screen: deck-stage deep-clones
+  // every slide into the thumbnail rail, and 27 simultaneously animating clones
+  // lock up the main thread. Clones are made at mount, so they keep the still frame.
+  state = { slp: 0, slpAuto: false, bp: 0 };
+  componentDidMount() {
+    setTimeout(() => this._wireAnims(), 400);
+    // 이 슬라이드가 화면에 있을 때만 진행시킨다. 매 틱마다 renderVals() 가
+    // 다시 돌기 때문에, 안 보이는 동안에도 돌리면 덱 전체 차트를 헛돌린다.
+    this._slpTimer = setInterval(() => {
+      if (this.state.slpAuto &&
+          document.querySelector('#stage > section[data-label="SLP 학습 루프"][data-deck-active]'))
+        this.setState(s => ({ slp: s.slp + 1 }));
+    }, 650);
+  }
+  componentWillUnmount() {
+    (this._obs || []).forEach(o => o.disconnect());
+    clearInterval(this._slpTimer);
+  }
+  _wireAnims() {
+    const imgs = Array.from(document.querySelectorAll('img[data-anim]'));
+    this._obs = [];
+    imgs.forEach(img => {
+      const section = img.closest('section[data-label]');
+      if (!section) return;
+      const sync = () => {
+        const live = section.hasAttribute('data-deck-active');
+        const want = live ? img.dataset.anim : img.dataset.static;
+        if (!img.src.endsWith(want)) img.src = want;
+      };
+      const obs = new MutationObserver(sync);
+      obs.observe(section, { attributes: true, attributeFilter: ['data-deck-active'] });
+      this._obs.push(obs);
+      sync();
+    });
+  }
+  renderVals() {
+    // ── 새 슬라이드용 도표. 곡선과 망 구조는 데이터·기하이므로 그림이 아니라 SVG로 그린다.
+    const h = React.createElement;
+    const AX = 'var(--wmut)', INK = 'var(--wink)';
+
+    const curvePanel = (title, pts, grad, note, noteColor, x0) => {
+      const W = 300, H = 150, pad = 26;
+      const sx = t => pad + t * (W - pad * 2);
+      const sy = v => H - pad - v * (H - pad * 2);
+      const path = f => {
+        let d = '';
+        for (let i = 0; i <= 60; i++) { const t = i / 60;
+          d += (i ? ' L' : 'M') + sx(t).toFixed(1) + ',' + sy(f(t * 12 - 6)).toFixed(1); }
+        return d;
+      };
+      return h('g', { transform: 'translate(' + x0 + ',0)' },
+        h('text', { x: W / 2, y: 16, textAnchor: 'middle', fontSize: 19, fontWeight: 700,
+          fill: INK, fontFamily: 'var(--en)' }, title),
+        h('line', { x1: pad, y1: H - pad, x2: W - pad, y2: H - pad, stroke: AX, strokeWidth: 2 }),
+        h('line', { x1: W / 2, y1: pad, x2: W / 2, y2: H - pad, stroke: AX, strokeWidth: 2, strokeOpacity: 0.45 }),
+        h('path', { d: path(pts), fill: 'none', stroke: 'var(--acc)', strokeWidth: 4 }),
+        h('path', { d: path(grad), fill: 'none', stroke: noteColor, strokeWidth: 4, strokeDasharray: '9 7' }),
+        h('text', { x: W / 2, y: H - 4, textAnchor: 'middle', fontSize: 17, fill: noteColor,
+          fontWeight: 700, fontFamily: 'var(--kr)' }, note));
+    };
+
+    const sig = x => 1 / (1 + Math.exp(-x));
+    const reluChart = h('svg', { viewBox: '0 0 620 210', preserveAspectRatio: 'xMidYMid meet',
+        style: { width: '100%', height: 'auto', display: 'block' } },
+      curvePanel('Sigmoid', sig, x => sig(x) * (1 - sig(x)) * 4, '양끝 기울기 ≈ 0', 'var(--no)', 0),
+      curvePanel('ReLU', x => Math.max(0, x) / 6, x => (x > 0 ? 1 : 0), '양수 기울기 = 1', 'var(--ok)', 310),
+      h('text', { x: 310, y: 205, textAnchor: 'middle', fontSize: 16, fill: AX,
+        fontFamily: 'var(--kr)' }, '실선 = 함수 · 점선 = 기울기'));
+
+    const net = (drop, x0) => {
+      const cols = [3, 4, 4, 2], gapX = 66, gapY = 34, out = [];
+      const pos = [];
+      cols.forEach((n, c) => {
+        const col = [];
+        for (let r = 0; r < n; r++) col.push([x0 + 30 + c * gapX, 100 - (n - 1) * gapY / 2 + r * gapY]);
+        pos.push(col);
+      });
+      // deterministic mask so the picture never changes between runs
+      const off = (c, r) => drop && c > 0 && c < 3 && ((c * 7 + r * 5) % 3 === 0);
+      for (let c = 0; c < pos.length - 1; c++)
+        pos[c].forEach((a, ra) => pos[c + 1].forEach((b, rb) => {
+          if (off(c, ra) || off(c + 1, rb)) return;
+          out.push(h('line', { key: 'e' + x0 + c + ra + rb, x1: a[0], y1: a[1], x2: b[0], y2: b[1],
+            stroke: INK, strokeWidth: 1.2, strokeOpacity: 0.34 }));
+        }));
+      pos.forEach((col, c) => col.forEach((p, r) => {
+        const dead = off(c, r);
+        out.push(h('circle', { key: 'n' + x0 + c + r, cx: p[0], cy: p[1], r: 11,
+          fill: dead ? '#fff' : 'var(--acc)', stroke: dead ? 'var(--no)' : 'var(--acc)',
+          strokeWidth: 2.5, strokeDasharray: dead ? '4 3' : 'none' }));
+        if (dead) out.push(h('path', { key: 'x' + x0 + c + r,
+          d: 'M' + (p[0] - 6) + ',' + (p[1] - 6) + 'l12,12M' + (p[0] + 6) + ',' + (p[1] - 6) + 'l-12,12',
+          stroke: 'var(--no)', strokeWidth: 2.5 }));
+      }));
+      return out;
+    };
+    const dropoutNets = h('svg', { viewBox: '0 0 660 230', preserveAspectRatio: 'xMidYMid meet',
+        style: { width: '100%', height: 'auto', display: 'block' } },
+      net(false, 0), net(true, 340),
+      h('text', { x: 130, y: 208, textAnchor: 'middle', fontSize: 20, fontWeight: 700,
+        fill: INK, fontFamily: 'var(--kr)' }, '학습 전 — 전체 망'),
+      h('text', { x: 470, y: 208, textAnchor: 'middle', fontSize: 20, fontWeight: 700,
+        fill: 'var(--no)', fontFamily: 'var(--kr)' }, '매 스텝 — 일부를 끈다'));
+
+    // ── 원본 PPTX에서 넘어온 스크린샷/스캔을 대체하는 네이티브 도표.
+    const EN = 'var(--en)', KR = 'var(--kr)';
+
+    // #78 CPU vs GPU — 코어의 크기와 개수 대비. 숫자보다 밀도로 읽히게 한다.
+    const coreGrid = (cols, rows, size, gap, x0, y0, fill) => {
+      const out = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
+        out.push(h('rect', { key: 'g' + x0 + r + c, x: x0 + c * (size + gap), y: y0 + r * (size + gap),
+          width: size, height: size, rx: Math.min(3, size / 4), fill: fill }));
+      return out;
+    };
+    const cpuGpuCores = (() => {
+      const chip = (x0, label, sub, price, cols, rows, size, gap, fill, accent) => {
+        const w = cols * size + (cols - 1) * gap;
+        const bx = x0 + (218 - w) / 2, by = 96 + (218 - (rows * size + (rows - 1) * gap)) / 2;
+        return h('g', { key: label },
+          h('text', { x: x0 + 109, y: 40, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 30, fontWeight: 700, fill: accent }, label),
+          h('text', { x: x0 + 109, y: 70, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 20, fill: '#9998A8' }, price),
+          h('rect', { x: x0, y: 96, width: 218, height: 218, rx: 14, fill: 'none',
+            stroke: '#3A3850', strokeWidth: 2 }),
+          coreGrid(cols, rows, size, gap, bx, by, fill),
+          h('text', { x: x0 + 109, y: 348, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 34, fontWeight: 700, fill: '#fff' }, sub),
+          h('text', { x: x0 + 109, y: 376, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 20, fill: '#9998A8' }, '코어'));
+      };
+      return h('svg', { viewBox: '0 0 900 430', preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        chip(96, 'Ryzen 9 7900X', '12', '출시가 $549', 4, 3, 46, 12, '#6867FE', '#fff'),
+        chip(546, 'RTX 4070', '5,888', '출시가 $599', 28, 22, 6, 2, '#00E49B', '#00E49B'),
+        h('text', { x: 430, y: 212, textAnchor: 'middle', fontFamily: EN, fontSize: 34,
+          fontWeight: 700, fill: '#9998A8' }, 'vs'),
+        h('text', { x: 450, y: 416, textAnchor: 'middle', fontFamily: KR, fontSize: 21,
+          fill: '#B9B6CC' },
+          '거의 같은 값을 주고 코어는 약 490배 — 신경망 학습은 같은 곱셈·덧셈의 반복이다'));
+    })();
+
+    // #71 앙상블 — 영어 교과서 도해를 한국어 흐름도로.
+    const ensembleFlow = (() => {
+      const box = (x, y, w, hh, label, sub, fill, stroke) => h('g', { key: 'b' + x + y },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 12, fill: fill, stroke: stroke, strokeWidth: 2 }),
+        h('text', { x: x + w / 2, y: y + (sub ? 30 : hh / 2 + 8), textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 700, fill: 'var(--ink)' }, label),
+        sub ? h('text', { x: x + w / 2, y: y + 58, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 19, fill: 'var(--mut)' }, sub) : null);
+      const arrow = (x1, y1, x2, y2, k) => h('line', { key: 'a' + k, x1: x1, y1: y1, x2: x2, y2: y2,
+        stroke: 'var(--mut)', strokeWidth: 2.5, markerEnd: 'url(#ens-arrow)' });
+      const models = [['모델 A', '의사결정나무'], ['모델 B', '회귀'], ['모델 C', 'SVM']];
+      return h('svg', { viewBox: '0 0 860 420', preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        h('defs', null, h('marker', { id: 'ens-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5,
+            markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' },
+          h('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--mut)' }))),
+        box(330, 14, 200, 54, '학습 데이터', null, '#EDF0F6', 'var(--line)'),
+        models.map((m, i) => arrow(430, 68, 150 + i * 280, 118, 'd' + i)),
+        models.map((m, i) => box(50 + i * 280, 118, 200, 80, m[0], m[1], '#fff', 'var(--acc)')),
+        models.map((m, i) => arrow(150 + i * 280, 198, 430, 258, 'v' + i)),
+        box(310, 258, 240, 54, '투표 · 평균', null, '#EFEBFD', 'var(--acc)'),
+        arrow(430, 312, 430, 348, 'f'),
+        h('rect', { x: 300, y: 348, width: 260, height: 56, rx: 12, fill: 'var(--acc)' }),
+        h('text', { x: 430, y: 385, textAnchor: 'middle', fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: '#fff' }, '최종 예측'));
+    })();
+
+    // #77 ImageNet ILSVRC Top-5 오차율. 슬라이드 본문의 15.3% / 26.2% 서술과 맞춘 값.
+    const imagenetChart = (() => {
+      const rows = [[2010, 28.2, ''], [2011, 25.8, ''], [2012, 15.3, 'AlexNet'],
+                    [2013, 11.7, ''], [2014, 6.7, ''], [2015, 3.6, ''],
+                    [2016, 3.0, ''], [2017, 2.3, '']];
+      const W = 820, H = 430, L = 62, B = 74, T = 26;
+      const sy = v => H - B - (v / 30) * (H - B - T);
+      const bw = 66, step = (W - L - 30) / rows.length;
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        [0, 10, 20, 30].map(v => h('g', { key: 'y' + v },
+          h('line', { x1: L, y1: sy(v), x2: W - 20, y2: sy(v), stroke: '#E7E7EC', strokeWidth: 2 }),
+          h('text', { x: L - 12, y: sy(v) + 7, textAnchor: 'end', fontFamily: EN, fontSize: 19,
+            fill: 'var(--mut)' }, v + '%'))),
+        h('line', { x1: L, y1: sy(5.1), x2: W - 20, y2: sy(5.1), stroke: 'var(--no)',
+          strokeWidth: 2.5, strokeDasharray: '10 8' }),
+        h('text', { x: W - 24, y: sy(5.1) - 12, textAnchor: 'end', fontFamily: KR, fontSize: 19,
+          fontWeight: 700, fill: 'var(--no)' }, '사람 5.1%'),
+        rows.map((r, i) => {
+          const x = L + 16 + i * step, hot = !!r[2];
+          return h('g', { key: 'b' + r[0] },
+            h('rect', { x: x, y: sy(r[1]), width: bw, height: sy(0) - sy(r[1]), rx: 5,
+              fill: hot ? 'var(--amber)' : '#C9CBD6' }),
+            h('text', { x: x + bw / 2, y: sy(r[1]) - 10, textAnchor: 'middle', fontFamily: EN,
+              fontSize: hot ? 24 : 19, fontWeight: 700,
+              fill: hot ? 'var(--ink)' : 'var(--mut)' }, r[1].toFixed(1)),
+            h('text', { x: x + bw / 2, y: H - B + 26, textAnchor: 'middle', fontFamily: EN,
+              fontSize: 19, fontWeight: hot ? 700 : 400, fill: 'var(--mut)' }, r[0]),
+            hot ? h('text', { x: x + bw / 2, y: H - B + 52, textAnchor: 'middle', fontFamily: EN,
+              fontSize: 20, fontWeight: 700, fill: 'var(--amber)' }, r[2]) : null);
+        }),
+        h('text', { x: L - 46, y: (sy(0) + T) / 2, fontFamily: KR, fontSize: 19, fill: 'var(--mut)',
+          textAnchor: 'middle', transform: 'rotate(-90 ' + (L - 46) + ' ' + ((sy(0) + T) / 2) + ')' },
+          'Top-5 오차율'));
+    })();
+
+    // #70 SVM — 마진이 주인공이므로 마진 띠를 칠하고 서포트 벡터를 크게.
+    const svmMargin = (() => {
+      const A = [[95, 300], [140, 250], [120, 348], [180, 300], [86, 218], [168, 372], [215, 244]];
+      const B = [[330, 128], [382, 176], [300, 74], [420, 118], [360, 60], [436, 200], [268, 116]];
+      const sv = [[215, 244], [268, 116]];
+      const line = (dx, col, w, dash) => h('line', { x1: 40 + dx, y1: 420, x2: 400 + dx, y2: 20,
+        stroke: col, strokeWidth: w, strokeDasharray: dash || 'none' });
+      const dot = (p, col, r, k) => h('circle', { key: k, cx: p[0], cy: p[1], r: r,
+        fill: col, stroke: '#fff', strokeWidth: 2 });
+      return h('svg', { viewBox: '0 0 520 460', preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        h('path', { d: 'M40,420 L400,20 L474,20 L114,420 Z', fill: 'var(--acc)', fillOpacity: 0.10 }),
+        line(0, 'var(--mut)', 2.5, '9 8'),
+        line(74, 'var(--mut)', 2.5, '9 8'),
+        line(37, 'var(--acc)', 5),
+        A.map((p, i) => dot(p, 'var(--acc)', sv.some(s => s[0] === p[0]) ? 13 : 9, 'a' + i)),
+        B.map((p, i) => dot(p, 'var(--no)', sv.some(s => s[0] === p[0]) ? 13 : 9, 'b' + i)),
+        sv.map((p, i) => h('circle', { key: 's' + i, cx: p[0], cy: p[1], r: 20, fill: 'none',
+          stroke: 'var(--ink)', strokeWidth: 2.5 })),
+        h('text', { x: 250, y: 262, fontFamily: KR, fontSize: 22, fontWeight: 700,
+          fill: 'var(--acc)', textAnchor: 'middle' }, '마진'),
+        h('text', { x: 300, y: 300, fontFamily: KR, fontSize: 20, fill: 'var(--ink)' }, '서포트 벡터'),
+        h('line', { x1: 296, y1: 294, x2: 276, y2: 132, stroke: 'var(--ink)', strokeWidth: 1.5 }),
+        h('line', { x1: 296, y1: 294, x2: 228, y2: 256, stroke: 'var(--ink)', strokeWidth: 1.5 }));
+    })();
+
+    // #65 MYCIN — 채팅 UI 스크린샷 대신 규칙 그 자체만.
+    const ruleLine = (t, ind, col, bold) => h('div', { key: t,
+      style: { paddingLeft: (ind * 26) + 'px', color: col || '#3F3F49',
+               fontWeight: bold ? 700 : 400, lineHeight: 1.75 } }, t);
+    const mycinRule = h('div', { style: { fontFamily: 'var(--mono, ui-monospace, Menlo, monospace)',
+        fontSize: '22px', background: '#fff', border: '1px solid var(--line)',
+        borderRadius: '10px', padding: '26px 30px' } },
+      ruleLine('IF', 0, 'var(--acc)', true),
+      ruleLine('환자에게 고열이 있고,', 1),
+      ruleLine('백혈구 수치가 높으며,', 1),
+      ruleLine('균 배양에서 그람음성균이 검출됐다면', 1),
+      ruleLine('THEN', 0, 'var(--acc)', true),
+      ruleLine('세균 감염 가능성 = 0.8', 1, 'var(--ok)', true));
+
+    // #76 깊어질수록 앞쪽으로 갈수록 신호가 흐려지는 것을 그대로 보여준다.
+    const deepNetSignal = (() => {
+      const L = 6, N = 4, gx = 74, gy = 40, x0 = 42, cy = 108, out = [];
+      const px = c => x0 + c * gx, py = r => cy - (N - 1) * gy / 2 + r * gy;
+      const fade = c => 0.12 + 0.88 * (c / (L - 1));      // 앞쪽(c=0)일수록 흐리게
+      for (let c = 0; c < L - 1; c++)
+        for (let a = 0; a < N; a++) for (let b = 0; b < N; b++)
+          out.push(h('line', { key: 'e' + c + a + b, x1: px(c), y1: py(a), x2: px(c + 1), y2: py(b),
+            stroke: 'var(--acc)', strokeWidth: 1, strokeOpacity: fade(c) * 0.5 }));
+      for (let c = 0; c < L; c++) for (let r = 0; r < N; r++)
+        out.push(h('circle', { key: 'n' + c + r, cx: px(c), cy: py(r), r: 8,
+          fill: 'var(--acc)', fillOpacity: fade(c) }));
+      return h('svg', { viewBox: '0 0 440 210', preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        out,
+        h('line', { x1: 400, y1: 30, x2: 60, y2: 30, stroke: 'var(--no)', strokeWidth: 2.5,
+          markerEnd: 'url(#dn-a)' }),
+        h('defs', null, h('marker', { id: 'dn-a', viewBox: '0 0 10 10', refX: 9, refY: 5,
+            markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' },
+          h('path', { d: 'M0,0 L10,5 L0,10 z', fill: 'var(--no)' }))),
+        h('text', { x: 230, y: 22, textAnchor: 'middle', fontFamily: KR, fontSize: 17,
+          fontWeight: 700, fill: 'var(--no)' }, '오차 신호는 뒤에서 앞으로'),
+        h('text', { x: 42, y: 196, textAnchor: 'start', fontFamily: KR, fontSize: 17,
+          fill: 'var(--no)', fontWeight: 700 }, '앞쪽 — 거의 안 닿는다'),
+        h('text', { x: 398, y: 196, textAnchor: 'end', fontFamily: KR, fontSize: 17,
+          fill: 'var(--acc)', fontWeight: 700 }, '출력 — 선명'));
+    })();
+
+    // ── 시그모이드: 가운데는 가파르고 양끝은 눌린다. 같은 기울기의 직선을 겹쳐
+    //    그려 "곡선이라 눌린다"가 눈으로 보이게 한다. 이 눌림이 뒤의 Vanishing 원인.
+    const sigmoidCurve = (() => {
+      const L = 78, R = 612, T = 52, B = 344;
+      const sx = x => L + (x + 8) / 16 * (R - L);
+      const sy = v => B - v * (B - T);
+      const f = x => 1 / (1 + Math.exp(-x));
+      let d = '';
+      for (let i = 0; i <= 120; i++) { const x = -8 + i * 16 / 120;
+        d += (i ? ' L' : 'M') + sx(x).toFixed(1) + ',' + sy(f(x)).toFixed(1); }
+      const marks = [-6, -3, 0, 3, 6];
+      return h('svg', { viewBox: '0 0 660 430', preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        [0, 0.5, 1].map(v => h('g', { key: 'y' + v },
+          h('line', { x1: L, y1: sy(v), x2: R, y2: sy(v),
+            stroke: v === 1 ? 'var(--mut)' : '#E9E9EE', strokeWidth: 2,
+            strokeDasharray: v === 1 ? '9 8' : 'none' }),
+          h('text', { x: L - 14, y: sy(v) + 8, textAnchor: 'end', fontFamily: EN,
+            fontSize: 21, fill: 'var(--mut)' }, v.toFixed(1)))),
+        h('line', { x1: sx(0), y1: T - 8, x2: sx(0), y2: B + 8, stroke: '#E9E9EE', strokeWidth: 2 }),
+        // 같은 기울기(0.25)의 직선 — 곡선과 달리 계속 올라간다
+        h('line', { x1: sx(-2), y1: sy(0), x2: sx(2), y2: sy(1),
+          stroke: 'var(--mut)', strokeWidth: 3, strokeDasharray: '10 8' }),
+        h('path', { d: d, fill: 'none', stroke: 'var(--acc)', strokeWidth: 6 }),
+        marks.map(x => h('circle', { key: 'm' + x, cx: sx(x), cy: sy(f(x)), r: 8,
+          fill: 'var(--acc)', stroke: '#fff', strokeWidth: 2.5 })),
+        marks.map(x => h('text', { key: 't' + x, x: sx(x), y: B + 34, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fill: 'var(--mut)' }, x)),
+        h('text', { x: sx(7.8), y: sy(1) - 26, textAnchor: 'end', fontFamily: KR,
+          fontSize: 21, fontWeight: 700, fill: 'var(--acc)' }, '1을 넘지 않는다'),
+        h('text', { x: sx(-7.8), y: sy(0.17), textAnchor: 'start', fontFamily: KR,
+          fontSize: 21, fontWeight: 700, fill: 'var(--acc)' }, '0 아래로 안 간다'),
+        h('text', { x: sx(-2.3), y: sy(0.66), textAnchor: 'end', fontFamily: KR,
+          fontSize: 20, fontWeight: 700, fill: 'var(--mut)' }, '같은 기울기의 직선'),
+        h('text', { x: (L + R) / 2, y: 404, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fontWeight: 700, fill: 'var(--ink)' },
+          '가운데는 가파르고 양끝은 평평하다 — 그래서 비선형이다'),
+        h('text', { x: R, y: B + 34, textAnchor: 'end', fontFamily: KR, fontSize: 20,
+          fill: 'var(--mut)' }, 'z'));
+    })();
+
+    // ── 경사하강법은 곡면 전체를 보지 못한다. 지형은 그려두되 움직이는 램프로
+    //    마스킹해서, 발밑 한 뼘 외에는 어둠으로 남긴다. 발걸음은 CSS 키프레임이라
+    //    확대해도 선명하고, 인쇄 시에는 중간 지점에서 멈춘 프레임이 남는다.
+    const blindDescent = (() => {
+      const PTS = [[118,84],[196,148],[252,214],[330,250],[378,306],[442,328],[486,362],[526,376],[558,390],[582,396],[601,400],[612,401],[618,402],[621,402]];
+      const MID = PTS[6];
+      const contours = [];
+      // 진짜 지형: 골짜기를 감싸는 등고선. 램프 밖에서는 보이지 않는다.
+      for (let k = 1; k <= 16; k++)
+        contours.push(h('ellipse', { key: 'c' + k, cx: 622, cy: 402,
+          rx: 44 * k, ry: 27 * k, transform: 'rotate(-24 622 402)',
+          fill: 'none', stroke: '#9C94F0', strokeWidth: 2.5, strokeOpacity: 1 }));
+      const lampBody = (cls) => h('g', { className: cls,
+        style: { transform: 'translate(' + MID[0] + 'px,' + MID[1] + 'px)' } },
+        h('circle', { r: 96, fill: 'url(#gd-lampfill)' }));
+      return h('svg', { viewBox: '0 0 760 470', preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        h('defs', null,
+          h('radialGradient', { id: 'gd-lampfill' },
+            h('stop', { offset: '0%', stopColor: '#fff', stopOpacity: 1 }),
+            h('stop', { offset: '62%', stopColor: '#fff', stopOpacity: 0.55 }),
+            h('stop', { offset: '100%', stopColor: '#fff', stopOpacity: 0 })),
+          h('radialGradient', { id: 'gd-glow' },
+            h('stop', { offset: '0%', stopColor: '#00E49B', stopOpacity: 0.20 }),
+            h('stop', { offset: '100%', stopColor: '#00E49B', stopOpacity: 0 })),
+          h('mask', { id: 'gd-mask' },
+            h('rect', { x: 0, y: 0, width: 760, height: 470, fill: '#000' }),
+            lampBody('gd-walk'))),
+        // 램프 불빛은 지형보다 먼저 깔아야 등고선을 덮어 지우지 않는다
+        h('g', { className: 'gd-walk',
+            style: { transform: 'translate(' + MID[0] + 'px,' + MID[1] + 'px)' } },
+          h('circle', { className: 'gd-lamp', r: 104, fill: 'url(#gd-glow)' })),
+        // 어둠 속에 묻힌 지형
+        h('g', { mask: 'url(#gd-mask)' }, contours,
+          h('polyline', { points: '118,84 196,148 252,214 330,250 378,306 442,328 486,362 526,376 558,390 582,396 601,400 612,401 618,402 621,402', fill: 'none', stroke: '#8C84E0',
+            strokeWidth: 2, strokeOpacity: 0.35, strokeDasharray: '6 8' })),
+        // 지나온 자취
+        h('polyline', { className: 'gd-trail', points: '118,84 196,148 252,214 330,250 378,306 442,328 486,362 526,376 558,390 582,396 601,400 612,401 618,402 621,402', fill: 'none',
+          stroke: '#00E49B', strokeWidth: 3.5, strokeOpacity: 0.8,
+          strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        PTS.map((p, i) => h('circle', { key: 'p' + i, className: 'gd-step',
+          cx: p[0], cy: p[1], r: 4.5, fill: '#00E49B',
+          style: { animationDelay: (i * 12 / PTS.length).toFixed(2) + 's' } })),
+        // 램프와 현재 위치
+        h('g', { className: 'gd-walk',
+            style: { transform: 'translate(' + MID[0] + 'px,' + MID[1] + 'px)' } },
+          h('circle', { r: 11, fill: '#00E49B', stroke: '#0C0B17', strokeWidth: 3 })),
+        h('text', { x: 30, y: 40, fontFamily: 'var(--kr)', fontSize: 21, fontWeight: 700,
+          fill: '#6F6A93' }, '보이지 않는 오차 곡면'),
+        h('text', { x: 730, y: 448, textAnchor: 'end', fontFamily: 'var(--kr)', fontSize: 21,
+          fontWeight: 700, fill: '#00E49B' }, '발밑 기울기만 보고 한 걸음씩'));
+    })();
+
+    // ── 로그 축 성장 그래프. 6천만에서 5천억까지를 선형 축에 얹으면 앞쪽이
+    //    전부 바닥에 붙어 아무것도 안 보인다.
+    const growthChart = (rows, lo, hi, opt) => {
+      const o = opt || {};
+      const W = 880, H = 430, L = 96, B = 330, T = 68;
+      const lg = v => Math.log10(v);
+      const sy = v => B - (lg(v) - lo) / (hi - lo) * (B - T);
+      const x0 = rows[0].x, x1 = rows[rows.length - 1].x;
+      const sx = x => L + (x - x0) / (x1 - x0) * (W - L - 40);
+      const ticks = [];
+      for (let e = lo; e <= hi; e++) ticks.push(e);
+      const fmt = v => v >= 1e8 ? (v / 1e8).toLocaleString() + '억'
+                    : v >= 1e4 ? (v / 1e4).toLocaleString() + '만' : v.toLocaleString();
+      let d = '';
+      rows.forEach((r, i) => { d += (i ? ' L' : 'M') + sx(r.x).toFixed(1) + ',' + sy(r.v).toFixed(1); });
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        ticks.map(e => h('g', { key: 'g' + e },
+          h('line', { x1: L, y1: sy(Math.pow(10, e)), x2: W - 40, y2: sy(Math.pow(10, e)),
+            stroke: o.grid || '#E7E7EC', strokeWidth: 1.5 }),
+          h('text', { x: L - 14, y: sy(Math.pow(10, e)) + 7, textAnchor: 'end', fontFamily: EN,
+            fontSize: 18, fill: o.mut || 'var(--mut)' }, '10' ))),
+        ticks.map(e => h('text', { key: 'e' + e, x: L - 14 + 21, y: sy(Math.pow(10, e)) - 1,
+          textAnchor: 'start', fontFamily: EN, fontSize: 13, fill: o.mut || 'var(--mut)' }, e)),
+        o.band ? h('rect', { x: sx(o.band[0]), y: T - 10, width: sx(o.band[1]) - sx(o.band[0]),
+          height: B - T + 10, fill: o.bandFill || 'rgba(206,58,58,0.10)' }) : null,
+        h('path', { d: d, fill: 'none', stroke: o.line || 'var(--acc)', strokeWidth: 5,
+          strokeLinejoin: 'round' }),
+        rows.map((r, i) => h('g', { key: 'p' + i },
+          h('circle', { cx: sx(r.x), cy: sy(r.v), r: r.hot ? 11 : 7,
+            fill: r.hot ? (o.hot || 'var(--amber)') : (o.line || 'var(--acc)'),
+            stroke: o.dotStroke || '#fff', strokeWidth: 2.5 }),
+          h('text', { x: Math.max(L + 40, Math.min(W - 76, sx(r.x))),
+            y: sy(r.v) - (r.below ? -34 : 22), textAnchor: 'middle',
+            fontFamily: KR, fontSize: 21, fontWeight: 700,
+            fill: r.hot ? (o.hot || 'var(--amber)') : (o.ink || 'var(--ink)') }, r.name),
+          h('text', { x: Math.max(L + 40, Math.min(W - 76, sx(r.x))),
+            y: sy(r.v) - (r.below ? -58 : 46), textAnchor: 'middle',
+            fontFamily: EN, fontSize: 19, fill: o.mut || 'var(--mut)' }, fmt(r.v)))),
+        rows.map((r, i) => r.noX ? null
+          : h('text', { key: 'x' + i, x: sx(r.x), y: B + 30, textAnchor: 'middle',
+              fontFamily: EN, fontSize: 19, fill: o.mut || 'var(--mut)' }, r.x)),
+        o.note ? h('text', { x: L + 8, y: T - 26, textAnchor: 'start', fontFamily: KR,
+          fontSize: 21, fontWeight: 700, fill: o.noteFill || 'var(--no)' }, o.note) : null,
+        h('text', { x: L - 66, y: (B + T) / 2, fontFamily: KR, fontSize: 19,
+          fill: o.mut || 'var(--mut)', textAnchor: 'middle',
+          transform: 'rotate(-90 ' + (L - 66) + ' ' + ((B + T) / 2) + ')' }, '가중치 수 (로그)'));
+    };
+
+    const nnGrowth = growthChart([
+      { x: 1958, v: 5e2,  name: '퍼셉트론' },
+      { x: 1986, v: 5e3,  name: '다층 퍼셉트론', below: true },
+      { x: 1990, v: 2e4,  name: 'RNN' },
+      { x: 1997, v: 8e4,  name: 'LSTM', below: true, noX: true },
+      { x: 1998, v: 6e4,  name: 'LeNet-5' },
+      { x: 2006, v: 2e6,  name: '심층 신뢰망', below: true },
+      { x: 2012, v: 6e7,  name: 'AlexNet', hot: true },
+    ], 2, 8, { band: [2006, 2012], note: '깊게 쌓을수록 학습이 안 됐다' });
+
+    const paramExplosion = growthChart([
+      { x: 2012, v: 6e7,   name: 'AlexNet' },
+      { x: 2014, v: 1.38e8, name: 'VGG-16', below: true },
+      { x: 2018, v: 3.4e8, name: 'BERT-L' },
+      { x: 2019, v: 1.5e9, name: 'GPT-2', below: true },
+      { x: 2020, v: 1.75e11, name: 'GPT-3' },
+      { x: 2022, v: 5.4e11, name: 'PaLM', below: true },
+      { x: 2024, v: 4.05e11, name: 'Llama 3.1', hot: true },
+    ], 7, 12, { line: '#00E49B', hot: '#F59E0B', ink: '#fff', mut: '#9998A8',
+                grid: '#241F3C', dotStroke: '#0C0B17',
+                note: '같은 벽이 풀리자 규모가 폭발했다', noteFill: '#00E49B' });
+
+    // ── 2012 이후 규모. 밀집 파라미터 곡선과 MoE 총/활성 파라미터를 함께 둔다.
+    //    프런티어 모델(GPT-5·Claude·Gemini)은 파라미터를 공개하지 않으므로
+    //    점을 찍지 않고 '비공개' 구간으로 남긴다 — 추정치를 그리면 없는 사실을
+    //    강의에서 사실처럼 제시하게 된다.
+    const scaleToday = (() => {
+      const W = 880, H = 430, L = 96, B = 320, T = 76;
+      const lo = 7, hi = 12.4;
+      const sy = v => B - (Math.log10(v) - lo) / (hi - lo) * (B - T);
+      const x0 = 2012, x1 = 2026;
+      const sx = x => L + (x - x0) / (x1 - x0) * (W - L - 44);
+      const fmt = v => v >= 1e12 ? (v / 1e12).toFixed(0) + '조'
+                     : v >= 1e8 ? (v / 1e8).toLocaleString() + '억'
+                     : (v / 1e4).toLocaleString() + '만';
+      const dense = [
+        { x: 2012, v: 6e7,    n: 'AlexNet' },
+        { x: 2014, v: 1.38e8, n: 'VGG-16', below: 1 },
+        { x: 2018, v: 3.4e8,  n: 'BERT-L' },
+        { x: 2019, v: 1.5e9,  n: 'GPT-2', below: 1 },
+        { x: 2020, v: 1.75e11, n: 'GPT-3' },
+        { x: 2022, v: 5.4e11, n: 'PaLM', below: 1 },
+        { x: 2024, v: 4.05e11, n: 'Llama 3.1', below: 1 },
+      ];
+      // MoE 점을 여러 개 찍으면 오른쪽 15% 안에 라벨 다섯 개가 뭉친다.
+      // 모델 하나만 남기고 총/활성을 세로로 대비시키는 편이 논점도 더 선명하다.
+      const MOE_X = 2025, MOE_TOT = 1e12, MOE_ACT = 3.2e10;
+      const path = rows => rows.map((r, i) =>
+        (i ? ' L' : 'M') + sx(r.x).toFixed(1) + ',' + sy(r.v).toFixed(1)).join('');
+      const clamp = x => Math.max(L + 40, Math.min(W - 84, x));
+      const pts = (rows, col, r0) => rows.map((r, i) => h('g', { key: r.n },
+        h('circle', { cx: sx(r.x), cy: sy(r.v), r: r0, fill: col,
+          stroke: '#0C0B17', strokeWidth: 2.5 }),
+        h('text', { x: clamp(sx(r.x)), y: sy(r.v) - (r.below ? -32 : 20), textAnchor: 'middle',
+          fontFamily: KR, fontSize: 20, fontWeight: 700, fill: col }, r.n),
+        h('text', { x: clamp(sx(r.x)), y: sy(r.v) - (r.below ? -54 : 42), textAnchor: 'middle',
+          fontFamily: EN, fontSize: 18, fill: '#9998A8' }, fmt(r.v))));
+      const yticks = [7, 8, 9, 10, 11, 12];
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        // 공개되지 않는 영역
+        h('rect', { x: sx(2025.1), y: T - 22, width: sx(x1) - sx(2025.1), height: B - T + 22,
+          fill: 'rgba(255,255,255,0.05)' }),
+        h('text', { x: (sx(2025.1) + sx(x1)) / 2, y: B - 16, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 19, fontWeight: 700, fill: '#8F8AA6' }, '비공개'),
+        yticks.map(e => h('g', { key: 'y' + e },
+          h('line', { x1: L, y1: sy(Math.pow(10, e)), x2: W - 44, y2: sy(Math.pow(10, e)),
+            stroke: '#241F3C', strokeWidth: 1.5 }),
+          h('text', { x: L - 14, y: sy(Math.pow(10, e)) + 7, textAnchor: 'end',
+            fontFamily: EN, fontSize: 18, fill: '#9998A8' }, '10'),
+          h('text', { x: L + 7, y: sy(Math.pow(10, e)) - 1, textAnchor: 'start',
+            fontFamily: EN, fontSize: 13, fill: '#9998A8' }, e))),
+        h('path', { d: path(dense), fill: 'none', stroke: '#00E49B', strokeWidth: 5,
+          strokeLinejoin: 'round' }),
+        h('path', { d: 'M' + sx(dense[6].x) + ',' + sy(dense[6].v) + ' L' + sx(MOE_X) + ',' + sy(MOE_TOT),
+          fill: 'none', stroke: '#9E5DF9', strokeWidth: 5, strokeDasharray: '11 8' }),
+        // 같은 모델의 총 파라미터와 활성 파라미터를 세로로 잇는다 — 이 간격이 요점
+        h('line', { x1: sx(MOE_X), y1: sy(MOE_TOT), x2: sx(MOE_X), y2: sy(MOE_ACT),
+          stroke: '#6F6A93', strokeWidth: 2.5, strokeDasharray: '6 6' }),
+        pts(dense, '#00E49B', 7),
+        h('circle', { cx: sx(MOE_X), cy: sy(MOE_TOT), r: 9, fill: '#9E5DF9',
+          stroke: '#0C0B17', strokeWidth: 2.5 }),
+        h('circle', { cx: sx(MOE_X), cy: sy(MOE_ACT), r: 9, fill: '#F59E0B',
+          stroke: '#0C0B17', strokeWidth: 2.5 }),
+        h('text', { x: sx(MOE_X) - 16, y: sy(MOE_TOT) - 32, textAnchor: 'end', fontFamily: KR,
+          fontSize: 20, fontWeight: 700, fill: '#9E5DF9' }, 'Kimi K2 (2025)'),
+        h('text', { x: sx(MOE_X) - 16, y: sy(MOE_TOT) - 10, textAnchor: 'end', fontFamily: EN,
+          fontSize: 19, fill: '#9998A8' }, '총 1조'),
+        h('text', { x: sx(MOE_X) - 16, y: sy(MOE_ACT) + 36, textAnchor: 'end', fontFamily: EN,
+          fontSize: 19, fontWeight: 700, fill: '#F59E0B' }, '활성 320억'),
+        h('text', { x: sx(MOE_X) + 16, y: (sy(MOE_TOT) + sy(MOE_ACT)) / 2, textAnchor: 'start',
+          fontFamily: KR, fontSize: 19, fontWeight: 700, fill: '#B9B6CC' }, '31배 차이'),
+        [2012, 2016, 2020, 2024, 2026].map(x => h('text', { key: 'x' + x, x: sx(x), y: B + 30,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 19, fill: '#9998A8' }, x)),
+        h('text', { x: L - 66, y: (B + T) / 2, fontFamily: KR, fontSize: 19, fill: '#9998A8',
+          textAnchor: 'middle',
+          transform: 'rotate(-90 ' + (L - 66) + ' ' + ((B + T) / 2) + ')' }, '파라미터 수 (로그)'),
+        // 범례
+        [['#00E49B', '밀집(dense)', 0], ['#9E5DF9', 'MoE 총', 210],
+         ['#F59E0B', 'MoE 활성', 350]].map(g => h('g', { key: g[1] },
+          h('rect', { x: L + g[2], y: B + 48, width: 26, height: 5, rx: 2.5, fill: g[0] }),
+          h('text', { x: L + g[2] + 36, y: B + 56, fontFamily: KR, fontSize: 19,
+            fill: '#B9B6CC' }, g[1]))));
+    })();
+
+    // ── 단층 퍼셉트론 학습 루프. 로젠블랫의 갱신식 w ← w + η(t − y)x 를
+    //    한 샘플씩 적용하며 결정 경계가 움직이는 것을 그대로 보여준다.
+    //    OR 로 수렴시킨 뒤 목표를 AND 로 바꾸면 같은 구조가 다시 학습한다.
+    const SLP = (() => {
+      const P = [[0, 0], [0, 1], [1, 0], [1, 1]];
+      const RUNS = [{ n: 'OR', t: [0, 1, 1, 1] }, { n: 'AND', t: [0, 0, 0, 1] }];
+      const LR = 0.35;
+      let w = [-0.9, 0.4], b = 0.55;          // 일부러 틀린 초기 가중치
+      const F = [];
+      RUNS.forEach(run => {
+        let ep = 0, done = false;
+        while (!done && ep < 12) {
+          let errs = 0;
+          for (let i = 0; i < 4; i++) {
+            const x = P[i], net = w[0] * x[0] + w[1] * x[1] + b;
+            const y = net >= 0 ? 1 : 0, e = run.t[i] - y;
+            F.push({ run: run.n, tgt: run.t, ep: ep + 1, cur: i,
+                     w: w.slice(), b: b, y: y, e: e });
+            if (e !== 0) { w = [w[0] + LR * e * x[0], w[1] + LR * e * x[1]]; b += LR * e; errs++; }
+          }
+          if (errs === 0) done = true;
+          ep++;
+        }
+        for (let k = 0; k < 4; k++)
+          F.push({ run: run.n, tgt: run.t, ep: ep, cur: -1, w: w.slice(), b: b, y: -1, e: 0, ok: true });
+      });
+      return { P: P, F: F };
+    })();
+
+    const slpDemo = (() => {
+      const f = SLP.F[this.state.slp % SLP.F.length];
+      const P = SLP.P, w = f.w, b = f.b;
+      const net = (x) => w[0] * x[0] + w[1] * x[1] + b;
+      const out = (x) => (net(x) >= 0 ? 1 : 0);
+
+      const L = 76, R = 470, T = 40, B = 400;          // 플롯 박스
+      const lo = -0.4, hi = 1.4;
+      const sx = v => L + (v - lo) / (hi - lo) * (R - L);
+      const sy = v => B - (v - lo) / (hi - lo) * (B - T);
+
+      // net >= 0 인 반평면을 플롯 박스로 잘라 다각형으로 만든다
+      const cs = [[lo, lo], [hi, lo], [hi, hi], [lo, hi]], poly = [];
+      for (let i = 0; i < 4; i++) {
+        const a = cs[i], c = cs[(i + 1) % 4], fa = net(a), fc = net(c);
+        if (fa >= 0) poly.push(a);
+        if ((fa >= 0) !== (fc >= 0)) {
+          const t = fa / (fa - fc);
+          poly.push([a[0] + t * (c[0] - a[0]), a[1] + t * (c[1] - a[1])]);
+        }
+      }
+      const pstr = poly.map(p => sx(p[0]).toFixed(1) + ',' + sy(p[1]).toFixed(1)).join(' ');
+
+      // 결정 경계선: w1·x + w2·y + b = 0
+      let seg = null;
+      if (Math.abs(w[1]) > 1e-6) {
+        seg = [[lo, -(w[0] * lo + b) / w[1]], [hi, -(w[0] * hi + b) / w[1]]];
+      } else if (Math.abs(w[0]) > 1e-6) {
+        seg = [[-b / w[0], lo], [-b / w[0], hi]];
+      }
+
+      const btn = (label, onClick, primary) => h('button', { key: label, onClick: onClick,
+        style: { fontFamily: 'var(--kr)', fontSize: '23px', fontWeight: 700,
+                 padding: '13px 24px', borderRadius: '10px', cursor: 'pointer',
+                 border: '2px solid var(--acc)', whiteSpace: 'nowrap',
+                 background: primary ? 'var(--acc)' : '#fff',
+                 color: primary ? '#fff' : 'var(--acc)' } }, label);
+
+      const row = (i) => {
+        const x = P[i], o = out(x), good = o === f.tgt[i], live = i === f.cur;
+        const cell = (v, col) => h('td', { style: { padding: '9px 12px', textAlign: 'center',
+          fontFamily: 'var(--en)', fontSize: '25px', color: col || 'var(--ink)' } }, v);
+        return h('tr', { key: 'r' + i, style: {
+            background: live ? 'rgba(68,52,226,.10)' : 'transparent',
+            outline: live ? '2px solid var(--acc)' : 'none' } },
+          cell(x[0]), cell(x[1]),
+          cell(f.tgt[i], 'var(--mut)'),
+          cell(o, good ? 'var(--ok)' : 'var(--no)'),
+          h('td', { style: { padding: '9px 12px', textAlign: 'center', fontSize: '25px',
+            color: good ? 'var(--ok)' : 'var(--no)', fontWeight: 700 } }, good ? '✓' : '✗'));
+      };
+      const th = (t) => h('th', { key: t, style: { padding: '8px 12px', fontSize: '20px',
+        color: 'var(--mut)', fontWeight: 700, borderBottom: '2px solid var(--line)' } }, t);
+
+      const stat = (k, v, col) => h('div', { key: k, style: { display: 'flex', gap: '10px',
+          alignItems: 'baseline' } },
+        h('span', { style: { fontFamily: 'var(--en)', fontSize: '22px', color: 'var(--mut)' } }, k),
+        h('span', { style: { fontFamily: 'var(--en)', fontSize: '30px', fontWeight: 700,
+          color: col || 'var(--ink)' } }, v));
+
+      return h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px',
+          alignItems: 'center', width: '100%' } },
+        h('svg', { viewBox: '0 0 520 470', preserveAspectRatio: 'xMidYMid meet',
+            style: { width: '100%', height: 'auto', display: 'block' } },
+          h('rect', { x: L, y: T, width: R - L, height: B - T, fill: '#F7F7FA' }),
+          poly.length ? h('polygon', { points: pstr, fill: 'var(--acc)', fillOpacity: 0.13 }) : null,
+          [0, 1].map(v => h('g', { key: 'g' + v },
+            h('line', { x1: sx(v), y1: T, x2: sx(v), y2: B, stroke: '#E4E4EA', strokeWidth: 1.5 }),
+            h('line', { x1: L, y1: sy(v), x2: R, y2: sy(v), stroke: '#E4E4EA', strokeWidth: 1.5 }),
+            h('text', { x: sx(v), y: B + 28, textAnchor: 'middle', fontFamily: EN,
+              fontSize: 20, fill: 'var(--mut)' }, v),
+            h('text', { x: L - 16, y: sy(v) + 7, textAnchor: 'end', fontFamily: EN,
+              fontSize: 20, fill: 'var(--mut)' }, v))),
+          seg ? h('line', { x1: sx(seg[0][0]), y1: sy(seg[0][1]), x2: sx(seg[1][0]), y2: sy(seg[1][1]),
+            stroke: 'var(--acc)', strokeWidth: 5 }) : null,
+          P.map((x, i) => h('circle', { key: 'p' + i, cx: sx(x[0]), cy: sy(x[1]),
+            r: i === f.cur ? 18 : 13,
+            fill: f.tgt[i] ? 'var(--acc)' : '#fff',
+            stroke: i === f.cur ? 'var(--amber)' : 'var(--acc)',
+            strokeWidth: i === f.cur ? 5 : 3 })),
+          h('text', { x: (L + R) / 2, y: B + 56, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 21, fill: 'var(--mut)' }, '채워진 점 = 목표 1'),
+          h('text', { x: L - 46, y: (T + B) / 2, fontFamily: EN, fontSize: 22, fill: 'var(--mut)',
+            textAnchor: 'middle',
+            transform: 'rotate(-90 ' + (L - 46) + ' ' + ((T + B) / 2) + ')' }, 'x2'),
+          h('text', { x: R + 16, y: B + 8, fontFamily: EN, fontSize: 22, fill: 'var(--mut)' }, 'x1')),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '22px' } },
+          h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '18px' } },
+            h('span', { style: { fontFamily: 'var(--en)', fontSize: '46px', fontWeight: 800,
+              color: 'var(--acc)' } }, f.run),
+            h('span', { style: { fontSize: '26px', color: f.ok ? 'var(--ok)' : 'var(--mut)',
+              fontWeight: 700 } }, f.ok ? '전부 맞춤 — 학습 완료'
+                                        : f.ep + '회차 순회 중')),
+          h('table', { style: { borderCollapse: 'collapse', width: '100%' } },
+            h('thead', null, h('tr', null, [th('x₁'), th('x₂'), th('목표'),
+              th('출력'), th('')])),
+            h('tbody', null, [0, 1, 2, 3].map(row))),
+          h('div', { style: { display: 'flex', gap: '30px', flexWrap: 'wrap',
+              borderTop: '2px solid var(--line)', paddingTop: '18px' } },
+            stat('w₁', w[0].toFixed(2)), stat('w₂', w[1].toFixed(2)),
+            stat('b', b.toFixed(2))),
+          h('div', { style: { fontFamily: 'var(--en)', fontSize: '24px', color: 'var(--mut)' } },
+            'w ← w + η (t − y) x'),
+          h('div', { style: { fontSize: '23px', lineHeight: 1.5,
+              color: f.e === 0 ? 'var(--mut)' : 'var(--no)', fontWeight: f.e === 0 ? 400 : 700 } },
+            f.cur < 0 ? '가중치가 고정됐다'
+              : (f.e === 0 ? '맞춰서 그대로 둔다'
+                           : '틀려서 가중치를 고친다')),
+          h('div', { style: { display: 'flex', gap: '14px', alignItems: 'center',
+              flexWrap: 'wrap', borderTop: '2px solid var(--line)', paddingTop: '20px' } },
+            btn('다음 스텝 →', () => this.setState(st => ({ slp: st.slp + 1, slpAuto: false })), true),
+            btn(this.state.slpAuto ? '⏸ 정지' : '▶ 자동',
+                () => this.setState(st => ({ slpAuto: !st.slpAuto }))),
+            btn('처음부터', () => this.setState({ slp: 0, slpAuto: false })),
+            h('span', { style: { fontFamily: 'var(--en)', fontSize: '22px',
+              color: 'var(--mut)', marginLeft: '4px' } },
+              ((this.state.slp % SLP.F.length) + 1) + ' / ' + SLP.F.length))));
+    })();
+
+    // ── 010 Neural Network.pptx p12–14 의 그 예제. 값은 전부 W1/B1/W2/B2 에서
+    //    유도한다 — 손으로 적은 숫자가 계산과 어긋나면 이 슬라이드는 해롭다.
+    //    (PPT 표의 Z1 0.04/0.05/0.11/0.12 … MSE 0.25094630 이 그대로 재현된다.)
+    const BP = (() => {
+      const sg = z => 1 / (1 + Math.exp(-z));
+      const X = [[0,0],[0,1],[1,0],[1,1]], Y = [0,1,1,0], LR = 0.5;
+      const W1 = [[0.07,0.09],[0.01,0.02]], B1 = [0.04,0.09];
+      const W2 = [0.07,0.05], B2 = 0.06;
+      const R = X.map((x, i) => {
+        const z10 = x[0]*W1[0][0] + x[1]*W1[1][0] + B1[0];
+        const z11 = x[0]*W1[0][1] + x[1]*W1[1][1] + B1[1];
+        const h0 = sg(z10), h1 = sg(z11);
+        const z2 = h0*W2[0] + h1*W2[1] + B2, yh = sg(z2), e = Y[i] - yh;
+        return { x0: x[0], x1: x[1], z10: z10, z11: z11, h0: h0, h1: h1,
+                 z2: z2, yh: yh, y: Y[i], e: e, se: e*e,
+                 d1: -2*(Y[i] - yh), d2: yh*(1-yh), d3: h0 };
+      });
+      R.forEach(r => { r.g = r.d1 * r.d2 * r.d3; });
+      const mse = R.reduce((s, r) => s + r.se, 0) / R.length;
+      const grad = R.reduce((s, r) => s + r.g, 0) / R.length;
+      return { R: R, mse: mse, grad: grad, LR: LR, W200: W2[0],
+               newW: W2[0] - LR * grad };
+    })();
+
+    // 각 단계가 어느 열까지 채우는지. 열은 한 번 채워지면 계속 보인다.
+    const BP_STEPS = [
+      { t: '데이터 — XOR', p: 'set', col: ['x0','x1','y'],
+        f: 'X[0], X[1] → Y[0]', n: '입력 2개로 XOR 를 맞춰야 한다. 4행이 한 배치다' },
+      { t: '순전파 ① Z1[0] — Affine', p: 'fwd', col: ['z10'],
+        f: 'Z1[0] = X[0]·W1[0,0] + X[1]·W1[1,0] + B1[0,0] = X[0]·0.07 + X[1]·0.01 + 0.04',
+        n: '첫 행은 0·0.07 + 0·0.01 + 0.04 = 0.04' },
+      { t: '순전파 ② Z1[1] — Affine', p: 'fwd', col: ['z11'],
+        f: 'Z1[1] = X[0]·W1[0,1] + X[1]·W1[1,1] + B1[1,0] = X[0]·0.09 + X[1]·0.02 + 0.09',
+        n: '같은 입력에 다른 가중치를 곱한다 — 그래서 은닉 노드가 2개다' },
+      { t: '순전파 ③ H — Sigmoid', p: 'fwd', col: ['h0','h1'],
+        f: 'H = Sigmoid(Z1) = 1 / (1 + e⁻ᶻ¹)',
+        n: '여기서 비선형이 들어간다. 이게 없으면 층을 쌓아도 직선 하나다' },
+      { t: '순전파 ④ Z2[0] — Affine', p: 'fwd', col: ['z2'],
+        f: 'Z2[0] = H[0]·W2[0,0] + H[1]·W2[1,0] + B2[0,0] = H[0]·0.07 + H[1]·0.05 + 0.06',
+        n: '은닉층의 두 값을 다시 하나로 모은다' },
+      { t: '순전파 ⑤ Yhat — Sigmoid', p: 'fwd', col: ['yh'],
+        f: 'Yhat[0] = Sigmoid(Z2[0])',
+        n: '네 행이 전부 0.53 — 아직 아무것도 구분하지 못한다' },
+      { t: 'Loss Function', p: 'err', col: ['e','se'],
+        f: 'error = Y − Yhat     Loss = MSE = 평균( error² )',
+        n: '이 하나의 숫자를 줄이는 것이 학습이다' },
+      { t: '역전파 — 연쇄법칙으로 쪼갠다', p: 'bwd', col: [],
+        f: '∂Loss/∂W2[0,0] = ① ∂Loss/∂Yhat × ② ∂Yhat/∂Z2 × ③ ∂Z2/∂W2[0,0]',
+        n: 'W2[0,0] 을 얼마나 줄이면 Loss 가 줄어드는지 — 한 번에 못 구하니 세 조각으로 나눈다' },
+      { t: '① ∂Loss/∂Yhat', p: 'bwd', col: ['d1'],
+        f: '① = ∂(Y − Yhat)² / ∂Yhat = 2(Y − Yhat)²⁻¹ × (−1) = −2(Y − Yhat)',
+        n: '맞히면 0에 가깝고, 틀릴수록 커진다' },
+      { t: '② ∂Yhat/∂Z2', p: 'bwd', col: ['d2'],
+        f: '② = Sigmoid(Z2)·(1 − Sigmoid(Z2)) = Yhat·(1 − Yhat)',
+        n: '시그모이드의 미분. 최대가 0.25 라 곱할수록 작아진다 — 나중에 Vanishing 의 원인' },
+      { t: '③ ∂Z2/∂W2[0,0]', p: 'bwd', col: ['d3'],
+        f: '③ = ∂( W2[0,0]·H[0] + W2[1,0]·H[1] + B2[0,0] ) / ∂W2[0,0] = H[0]',
+        n: 'W2[0,0] 이 붙어 있는 항만 남는다 — 나머지는 상수라 0' },
+      { t: '세 조각을 곱한다', p: 'bwd', col: ['g'],
+        f: '∂Loss/∂W2[0,0] = 평균( ① × ② × ③ )',
+        n: '행마다 기울기를 구하고 배치 전체로 평균한다' },
+      { t: '가중치 갱신', p: 'upd', col: [],
+        f: 'W2[0,0] ← W2[0,0] − η · ∂Loss/∂W2[0,0]',
+        n: '나머지 가중치도 같은 방식으로. 이 한 바퀴를 25만 번 돌린다' },
+    ];
+
+    const bpDemo = (() => {
+      const S = BP_STEPS, i = Math.min(this.state.bp, S.length - 1), st = S[i];
+      const COL = { set: 'var(--mut)', fwd: 'var(--acc)', err: 'var(--amber)',
+                    bwd: 'var(--no)', upd: 'var(--ok)' };
+      const C = COL[st.p];
+      // 열이 처음 등장한 단계를 기억해 둔다: 이전 단계면 회색, 이번 단계면 강조.
+      const bornAt = {};
+      S.forEach((s, k) => s.col.forEach(c => { if (!(c in bornAt)) bornAt[c] = k; }));
+      const shown = c => bornAt[c] !== undefined && bornAt[c] <= i;
+      const fresh = c => bornAt[c] === i;
+
+      const CELL = { fontFamily: EN, fontSize: '25px', textAlign: 'center',
+                     padding: '9px 4px', borderBottom: '1px solid var(--line)' };
+      const HEAD = { fontFamily: EN, fontSize: '21px', fontWeight: 700,
+                     textAlign: 'center', padding: '8px 4px', whiteSpace: 'nowrap',
+                     borderBottom: '2px solid var(--ink)' };
+
+      const table = (cols, rows, foot) => h('table',
+        { style: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' } },
+        h('thead', null, h('tr', null, cols.map(c => h('th',
+          { key: c[0], style: Object.assign({}, HEAD,
+            { color: fresh(c[0]) ? C : (shown(c[0]) ? 'var(--ink)' : '#BFBECC') }) },
+          c[1])))),
+        h('tbody', null, rows.map((r, k) => h('tr', { key: k }, cols.map(c => {
+          const ok = shown(c[0]), hot = fresh(c[0]);
+          return h('td', { key: c[0], style: Object.assign({}, CELL,
+            { background: hot ? (st.p === 'bwd' ? '#FDF0F0' : '#F0EEFD') : 'transparent',
+              fontWeight: hot ? 700 : 400,
+              color: hot ? C : (ok ? 'var(--ink)' : '#D6D5E0') }) },
+            ok ? c[2](r) : '·');
+        })))),
+        foot || null);
+
+      const A_COLS = [
+        ['x0', 'X[0]', r => r.x0], ['x1', 'X[1]', r => r.x1],
+        ['z10', 'Z1[0]', r => r.z10.toFixed(2)], ['z11', 'Z1[1]', r => r.z11.toFixed(2)],
+        ['h0', 'H[0]', r => r.h0.toFixed(4)], ['h1', 'H[1]', r => r.h1.toFixed(4)],
+        ['z2', 'Z2[0]', r => r.z2.toFixed(4)], ['yh', 'Yhat[0]', r => r.yh.toFixed(4)],
+        ['y', 'Y[0]', r => r.y], ['e', 'error', r => r.e.toFixed(4)],
+        ['se', 'error²', r => r.se.toFixed(4)],
+      ];
+      const B_COLS = [
+        ['d1', '① ∂Loss/∂Yhat', r => r.d1.toFixed(5)],
+        ['d2', '② ∂Yhat/∂Z2', r => r.d2.toFixed(5)],
+        ['d3', '③ ∂Z2/∂W2[0,0]', r => r.d3.toFixed(5)],
+        ['g', '① × ② × ③', r => r.g.toFixed(6)],
+      ];
+
+      const sumRow = (label, value, live, color, span) => h('tfoot', null, h('tr', null,
+        h('td', { colSpan: span, style: { fontFamily: KR, fontSize: '23px', fontWeight: 700,
+            textAlign: 'right', padding: '12px 16px 4px',
+            color: live ? color : '#BFBECC' } }, label),
+        h('td', { style: { fontFamily: EN, fontSize: '27px', fontWeight: 700,
+            textAlign: 'center', padding: '12px 4px 4px',
+            color: live ? color : '#D6D5E0' } }, live ? value : '·')));
+
+      const btn = (label, onClick, primary, dis) => h('button',
+        { key: label, onClick: onClick, disabled: !!dis,
+          style: { fontFamily: 'var(--kr)', fontSize: '23px', fontWeight: 700,
+                   padding: '12px 24px', borderRadius: '10px', whiteSpace: 'nowrap',
+                   cursor: dis ? 'default' : 'pointer', opacity: dis ? 0.4 : 1,
+                   border: '2px solid var(--acc)',
+                   background: primary ? 'var(--acc)' : '#fff',
+                   color: primary ? '#fff' : 'var(--acc)' } }, label);
+
+      return h('div', { style: { display: 'flex', flexDirection: 'column',
+          gap: '18px', width: '100%' } },
+
+        // ── 순전파 표: MSE 는 error² 열이 채워질 때 함께 뜬다.
+        table(A_COLS, BP.R, sumRow('Loss = MSE = 평균(error²)', BP.mse.toFixed(6),
+              i >= 6, 'var(--amber)', A_COLS.length - 1)),
+
+        // ── 현재 단계의 식
+        h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '18px',
+            background: st.p === 'bwd' ? '#FDF3F3' : (st.p === 'upd' ? '#EDF9F4' : '#F4F5F9'),
+            borderLeft: '6px solid ' + C, borderRadius: '10px', padding: '16px 22px' } },
+          h('span', { style: { fontFamily: 'var(--en)', fontSize: '24px',
+            fontWeight: 700, color: C, whiteSpace: 'nowrap' } }, (i + 1) + ' / ' + S.length),
+          h('span', { style: { fontSize: '26px', fontWeight: 700, color: 'var(--ink)',
+            whiteSpace: 'nowrap' } }, st.t),
+          h('span', { style: { fontFamily: 'var(--en)', fontSize: '25px',
+            color: 'var(--mut)' } }, st.f)),
+
+        // ── 역전파 표 + 이번 단계 설명
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1.45fr 1fr',
+            gap: '32px', alignItems: 'start' } },
+          h('div', { style: { opacity: i >= 7 ? 1 : 0.35, transition: 'opacity .2s' } },
+            table(B_COLS, BP.R, sumRow('평균 = ∂Loss/∂W2[0,0]', BP.grad.toFixed(6),
+                  i >= 11, 'var(--no)', B_COLS.length - 1))),
+          h('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } },
+            h('div', { style: { fontSize: '24px', lineHeight: 1.45, color: 'var(--mut)',
+              background: '#F7F7FA', borderRadius: '10px', padding: '18px 22px' } }, st.n),
+            i >= 12 ? h('div', { style: { background: '#0C0B17', borderRadius: '10px',
+                padding: '18px 22px', display: 'flex', flexDirection: 'column',
+                gap: '6px' } },
+              h('div', { style: { fontFamily: 'var(--en)', fontSize: '23px',
+                color: '#9E9AB8' } }, 'η = ' + BP.LR),
+              h('div', { style: { fontFamily: 'var(--en)', fontSize: '30px',
+                fontWeight: 700, color: '#fff' } },
+                'W2[0,0] : ' + BP.W200.toFixed(4) + ' → ' + BP.newW.toFixed(4))) : null,
+            h('div', { style: { display: 'flex', gap: '10px', flexWrap: 'wrap' } },
+              btn('◀ 이전', () => this.setState(s => ({ bp: Math.max(0, s.bp - 1) })),
+                  false, i === 0),
+              btn('다음 ▶', () => this.setState(s => ({ bp: Math.min(S.length - 1, s.bp + 1) })),
+                  true, i === S.length - 1),
+              btn('처음부터', () => this.setState({ bp: 0 }))))));
+    })();
+
+    // ── 하나의 방법이 다섯 분야로. 칩 위치는 연도가 정한다 — 순서가 곧 논점이다.
+    const nnFanout = (() => {
+      const W = 1600, H = 640, Y0 = 2012, Y1 = 2024;
+      const LX = 430, X0 = 620, X1 = 1500;
+      const px = y => X0 + (y - Y0) / (Y1 - Y0) * (X1 - X0);
+      const LANES = [
+        { f: '이미지', en: 'Vision', c: '#00E49B', y: 88, m: [
+          [2012, 'AlexNet'], [2015, 'ResNet'], [2020, 'ViT'], [2022, 'Diffusion'] ] },
+        { f: '음성', en: 'Speech', c: '#F59E0B', y: 192, m: [
+          [2016, 'WaveNet'], [2022, 'Whisper'] ] },
+        { f: '언어', en: 'Language', c: '#9E5DF9', y: 296, m: [
+          [2017, 'Transformer'], [2020, 'GPT-3'], [2022, 'ChatGPT'] ] },
+        { f: '과학', en: 'Science', c: '#4FC3F7', y: 400, m: [
+          [2021, 'AlphaFold 2'], [2023, 'GraphCast'] ] },
+        { f: '유전자', en: 'Genomics', c: '#FF7AA2', y: 504, m: [
+          [2018, 'DeepVariant'], [2023, 'AlphaMissense'] ] },
+      ];
+      const RY = 296;
+      // 연도를 붙이지 않는다 — 한 분야를 대표할 논문 하나를 고르는 순간
+      // 방어할 수 없는 주장을 슬라이드에 올리게 된다.
+      const MORE_FIELDS = ['의료 영상', '신약 개발', '로보틱스', '재료과학',
+                           '기후 · 기상', '금융', '농업', '교육', '법률', '도시계획'];
+      const MY = 596;
+      const CW = m => Math.max(122, m[1].length * 15 + 34);
+      LANES.forEach(l => {
+        let prev = -1e9;
+        l.pos = l.m.map(m => {
+          const w = CW(m);
+          const x = Math.max(px(m[0]), prev + w / 2 + 14);
+          prev = x + w / 2;
+          return x;
+        });
+      });
+      const chip = (lane, m, k, x) => {
+        const w = CW(m);
+        return h('g', { key: k },
+          h('rect', { x: x - w / 2, y: lane.y - 25, width: w, height: 50, rx: 25,
+            fill: lane.c, opacity: 0.16, stroke: lane.c, strokeWidth: 1.6 }),
+          h('text', { x: x, y: lane.y + 1, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 25, fontWeight: 700, fill: lane.c }, m[1]),
+          h('text', { x: x, y: lane.y + 46, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 21, fill: '#7C7797' }, m[0]));
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+          preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: 'auto', display: 'block' } },
+        // 연도 눈금 — 다섯 레인이 같은 시간축을 공유한다는 게 이 그림의 핵심.
+        [2012, 2016, 2020, 2024].map(y => h('g', { key: 't' + y },
+          h('line', { x1: px(y), y1: 44, x2: px(y), y2: H - 8,
+            stroke: '#2C2748', strokeWidth: 1 }),
+          h('text', { x: px(y), y: 26, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 23, fill: '#6E6890' }, y))),
+        h('g', null,
+          h('line', { x1: 1508, y1: 26, x2: 1580, y2: 26, stroke: '#3CEEB5',
+            strokeWidth: 2.5, markerEnd: 'url(#fan-now)' }),
+          h('defs', null, h('marker', { id: 'fan-now', viewBox: '0 0 10 10',
+            refX: 8, refY: 5, markerWidth: 6, markerHeight: 6,
+            orient: 'auto-start-reverse' },
+            h('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#3CEEB5' })))),
+        // 뿌리에서 각 레인으로 뻗는 가지
+        // 이름 붙인 다섯 갈래 아래로, 세지 않은 갈래들
+        h('path', { d: 'M 250 ' + RY + ' C 340 ' + RY + ', 330 ' + MY + ', 430 ' + MY,
+          fill: 'none', stroke: '#6E6890', strokeWidth: 2.5, opacity: 0.4,
+          strokeDasharray: '2 9', strokeLinecap: 'round' }),
+        h('text', { x: 412, y: MY - 4, textAnchor: 'end', fontFamily: KR,
+          fontSize: 27, fontWeight: 700, fill: '#8F8AA6' }, '그 외'),
+        h('text', { x: 412, y: MY + 22, textAnchor: 'end', fontFamily: KR,
+          fontSize: 20, fill: '#5C5778' }, '수백 개 분야'),
+        MORE_FIELDS.map((f, k) => {
+          const x = 470 + (k % 5) * 208, y = MY - 14 + Math.floor(k / 5) * 34;
+          return h('text', { key: 'm' + k, x: x, y: y, fontFamily: KR,
+            fontSize: 23, fill: '#6E6890' }, f);
+        }),
+        h('text', { x: 1512, y: MY + 6, fontFamily: KR, fontSize: 26,
+          fontWeight: 700, fill: '#8F8AA6' }, '⋯'),
+        LANES.map(l => h('path', { key: 'b' + l.f,
+          d: 'M 250 ' + RY + ' C 340 ' + RY + ', 330 ' + l.y + ', ' + LX + ' ' + l.y,
+          fill: 'none', stroke: l.c, strokeWidth: 3, opacity: 0.55 })),
+        LANES.map(l => h('line', { key: 'r' + l.f, x1: LX, y1: l.y,
+          x2: l.pos[l.pos.length - 1], y2: l.y,
+          stroke: l.c, strokeWidth: 1.5, opacity: 0.3 })),
+        // 뿌리
+        h('g', null,
+          h('rect', { x: 40, y: RY - 62, width: 212, height: 124, rx: 22,
+            fill: '#0C0B17', stroke: '#4434E2', strokeWidth: 3 }),
+          h('text', { x: 146, y: RY - 12, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 34, fontWeight: 800, fill: '#fff' }, '인공신경망'),
+          h('text', { x: 146, y: RY + 22, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 22, fill: '#9E9AB8' }, 'Neural Network'),
+          h('text', { x: 146, y: RY + 50, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 20, fill: '#6E6890' }, '역전파 + GPU')),
+        // 분야 이름
+        LANES.map(l => h('g', { key: 'l' + l.f },
+          h('text', { x: LX - 18, y: l.y - 4, textAnchor: 'end', fontFamily: KR,
+            fontSize: 30, fontWeight: 700, fill: l.c }, l.f),
+          h('text', { x: LX - 18, y: l.y + 24, textAnchor: 'end', fontFamily: EN,
+            fontSize: 20, fill: '#6E6890' }, l.en))),
+        LANES.map(l => l.m.map((m, k) => chip(l, m, l.f + k, l.pos[k]))));
+    })();
+
+    // ── 4주차 신규 차트. 중앙대 덱의 renderVals() 안에 끼워 넣으므로 그 스코프의
+    //    h / EN / KR 을 그대로 쓴다.
+    const W4 = (() => {
+      const KR2 = 'var(--kr)', EN2 = 'var(--en)';
+      const rnd = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296;
+        return s / 4294967296; };
+      const gau = (r) => { const u = Math.max(r(), 1e-9), v = r();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+      return { KR2, KR2, EN2, rnd, gau };
+    })();
+    const _KR = 'var(--kr)', _EN = 'var(--en)';
+    const _MUT = 'var(--mut)', _INK = 'var(--ink)', _ACC = 'var(--acc)';
+    const _AX = '#C9C7D6';
+    const _rnd = W4.rnd, _gau = W4.gau;
+    const _scale = (W, H, pad, rx, ry) => ({
+      x: v => pad + (v - rx[0]) / (rx[1] - rx[0]) * (W - pad * 2),
+      y: v => H - pad - (v - ry[0]) / (ry[1] - ry[0]) * (H - pad * 2) });
+
+    // 노드 하나 = 회귀 + 활성화
+    const nodeSketch = (() => {
+      const W = 1600, H = 420;
+      const inp = (y, t) => h('g', { key: t },
+        h('circle', { cx: 150, cy: y, r: 40, fill: '#fff', stroke: _ACC, strokeWidth: 3 }),
+        h('text', { x: 150, y: y + 11, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 30, fontWeight: 700, fill: _INK }, t));
+      const edge = (y, w) => h('g', { key: w },
+        h('line', { x1: 190, y1: y, x2: 610, y2: 210, stroke: '#C9C7D6', strokeWidth: 2.5 }),
+        h('text', { x: 380, y: (y + 210) / 2 - 12, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 26, fontWeight: 600, fill: _ACC }, w));
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        inp(90, 'x₁'), inp(210, 'x₂'), inp(330, 'x₃'),
+        edge(90, 'w₁'), edge(210, 'w₂'), edge(330, 'w₃'),
+        h('circle', { key: 'b', cx: 650, cy: 70, r: 30, fill: '#F4F5F9',
+          stroke: '#C9C7D6', strokeWidth: 2.5 }),
+        h('text', { key: 'bt', x: 650, y: 80, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 27, fill: _MUT }, 'b'),
+        h('line', { key: 'bl', x1: 650, y1: 100, x2: 650, y2: 172, stroke: '#C9C7D6',
+          strokeWidth: 2.5 }),
+        h('circle', { key: 'n', cx: 650, cy: 210, r: 58, fill: 'var(--primary-pale,#ECEBFC)',
+          stroke: _ACC, strokeWidth: 4 }),
+        h('text', { key: 'ns', x: 650, y: 222, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 40, fontWeight: 700, fill: _ACC }, 'Σ'),
+        h('line', { key: 'e1', x1: 708, y1: 210, x2: 860, y2: 210, stroke: '#C9C7D6',
+          strokeWidth: 2.5 }),
+        h('rect', { key: 'a', x: 860, y: 158, width: 210, height: 104, rx: 16,
+          fill: '#EDF9F4', stroke: 'var(--ok)', strokeWidth: 3 }),
+        h('text', { key: 'at', x: 965, y: 200, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 27, fontWeight: 700, fill: 'var(--ok)' }, '활성화 함수'),
+        h('text', { key: 'at2', x: 965, y: 236, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 25, fill: _MUT }, 'σ'),
+        h('line', { key: 'e2', x1: 1070, y1: 210, x2: 1220, y2: 210, stroke: '#C9C7D6',
+          strokeWidth: 2.5 }),
+        h('circle', { key: 'o', cx: 1270, cy: 210, r: 46, fill: '#fff',
+          stroke: 'var(--ok)', strokeWidth: 3.5 }),
+        h('text', { key: 'ot', x: 1270, y: 222, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 32, fontWeight: 700, fill: _INK }, 'y'),
+        h('text', { key: 'f', x: 1360, y: 218, fontFamily: _EN, fontSize: 27,
+          fill: _MUT }, 'y = σ( Σwᵢxᵢ + b )'),
+        h('text', { key: 'c1', x: 400, y: 392, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 25, fill: _MUT }, '여기까지 회귀와 같다'),
+        h('text', { key: 'c2', x: 1000, y: 392, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 25, fontWeight: 700, fill: 'var(--ok)' }, '다른 건 이것 하나'));
+    })();
+
+    // 논리연산 진리표
+    const logicTable = (() => {
+      const ROWS = [[0, 0], [0, 1], [1, 0], [1, 1]];
+      const OPS = [['AND', (a, b) => a & b], ['OR', (a, b) => a | b],
+                   ['NAND', (a, b) => 1 - (a & b)], ['XOR', (a, b) => a ^ b]];
+      const cell = (t, head, col) => h('td', { key: Math.random(), style: {
+        fontFamily: _EN, fontSize: head ? '25px' : '30px', fontWeight: head ? 700 : 400,
+        textAlign: 'center', padding: '16px 10px', color: col || (head ? _MUT : _INK),
+        borderBottom: head ? '2px solid ' + _INK : '1px solid var(--line)' } }, t);
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '20px',
+          width: '100%' } },
+        h('table', { style: { width: '100%', borderCollapse: 'collapse' } },
+          h('thead', null, h('tr', null, cell('x₁', true), cell('x₂', true),
+            OPS.map(([n]) => cell(n, true, n === 'XOR' ? 'var(--no)' : _ACC)))),
+          h('tbody', null, ROWS.map((r, i) => h('tr', { key: i },
+            cell(r[0]), cell(r[1]),
+            OPS.map(([n, f]) => cell(f(r[0], r[1]), false,
+              n === 'XOR' ? 'var(--no)' : _INK)))))),
+        h('div', { style: { fontFamily: _KR, fontSize: '24px', color: _MUT } },
+          'XOR 은 오늘 뒤에서 다시 만난다'));
+    })();
+
+    // 가중치 3 → 9
+    const weightGrowth = (() => {
+      const W = 1600, H = 430;
+      const net = (x0, ins, hid, outs, title, n, col) => {
+        const g = [], xi = x0 + 70, xh = x0 + 250, xo = x0 + 430;
+        const ys = (k, tot) => 210 + (k - (tot - 1) / 2) * 96;
+        for (let i = 0; i < ins; i++)
+          for (let j = 0; j < (hid || outs); j++)
+            g.push(h('line', { key: 'a' + i + j, x1: xi, y1: ys(i, ins),
+              x2: hid ? xh : xo, y2: ys(j, hid || outs), stroke: col,
+              strokeWidth: 2, opacity: 0.45 }));
+        if (hid)
+          for (let j = 0; j < hid; j++)
+            for (let k = 0; k < outs; k++)
+              g.push(h('line', { key: 'b' + j + k, x1: xh, y1: ys(j, hid),
+                x2: xo, y2: ys(k, outs), stroke: col, strokeWidth: 2, opacity: 0.45 }));
+        const dot = (x, y, k) => h('circle', { key: k, cx: x, cy: y, r: 22, fill: '#fff',
+          stroke: col, strokeWidth: 3 });
+        for (let i = 0; i < ins; i++) g.push(dot(xi, ys(i, ins), 'i' + i));
+        if (hid) for (let j = 0; j < hid; j++) g.push(dot(xh, ys(j, hid), 'h' + j));
+        for (let k = 0; k < outs; k++) g.push(dot(xo, ys(k, outs), 'o' + k));
+        return h('g', { key: title },
+          g,
+          h('text', { x: x0 + 250, y: 60, textAnchor: 'middle', fontFamily: _KR,
+            fontSize: 28, fontWeight: 700, fill: _INK }, title),
+          h('text', { x: x0 + 250, y: 386, textAnchor: 'middle', fontFamily: _EN,
+            fontSize: 44, fontWeight: 800, fill: col }, n));
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        net(60, 2, 0, 1, '단층 — 가중치 + 편향', '3', _MUT),
+        h('text', { key: 'ar', x: 800, y: 222, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 46, fontWeight: 700, fill: 'var(--line)' }, '→'),
+        net(920, 2, 2, 1, '은닉층 하나 추가', '9', _ACC));
+    })();
+
+    // 손실함수 세 가지
+    const lossKinds = (() => {
+      const rows = [
+        ['MAE', '평균 절대 오차', 'Σ|y − ŷ| / n',
+         '+와 −가 상계되지 않게 절댓값을 씌운다', _MUT],
+        ['MSE', '평균 제곱 오차', 'Σ(y − ŷ)² / n',
+         '제곱하니 큰 오차가 폭발한다 — 큰 것부터 맞추려 든다', _ACC],
+        ['RMSE', '제곱근 평균 제곱 오차', '√( Σ(y − ŷ)² / n )',
+         'MSE 에 루트를 씌워 원래 단위로 되돌린다', _MUT]];
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '20px',
+          width: '100%' } },
+        rows.map(([n, k, f, d, col]) => h('div', { key: n, style: { display: 'grid',
+            gridTemplateColumns: '150px 300px 1fr', alignItems: 'center', gap: '28px',
+            background: col === _ACC ? '#F0EEFD' : '#F7F7FA', borderRadius: '14px',
+            padding: '26px 32px', border: col === _ACC ? '2px solid ' + _ACC : 'none' } },
+          h('div', { style: { fontFamily: _EN, fontSize: '34px', fontWeight: 800,
+            color: col } }, n),
+          h('div', { style: { fontFamily: _EN, fontSize: '27px', color: _INK } }, f),
+          h('div', { style: { fontFamily: _KR, fontSize: '25px', color: _MUT,
+            lineHeight: 1.4 } }, d))));
+    })();
+
+    // 손실 곡면 (9차원을 2차원으로 눌러 그린 것)
+    const lossSurface = (() => {
+      const W = 760, H = 520;
+      const f = (x, y) => Math.sin(x * 1.5) * Math.cos(y * 1.2) * 0.9
+        + (x * x + y * y) * 0.16;
+      const lines = [];
+      for (let j = 0; j <= 14; j++) {
+        const pts = [];
+        for (let i = 0; i <= 30; i++) {
+          const x = -2.4 + i * 0.16, y = -2.4 + j * 0.343;
+          const z = f(x, y);
+          pts.push([W / 2 + x * 118 + y * 42, 330 + y * 46 - z * 62]);
+        }
+        lines.push(h('path', { key: j,
+          d: pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '),
+          fill: 'none', stroke: j % 3 === 0 ? '#8D8DFB' : '#D6D5E6',
+          strokeWidth: j % 3 === 0 ? 2.4 : 1.5 }));
+      }
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        lines,
+        h('circle', { key: 'p', cx: W / 2 - 128, cy: 232, r: 11, fill: '#0C0B17' }),
+        h('text', { key: 't', x: W / 2 - 128, y: 206, textAnchor: 'middle',
+          fontFamily: _KR, fontSize: 24, fontWeight: 700, fill: '#0C0B17' }, '지금 여기'),
+        h('text', { key: 'z', x: 30, y: 40, fontFamily: _KR, fontSize: 24,
+          fill: _MUT }, '높이 = 손실'),
+        h('text', { key: 'b', x: W - 30, y: H - 18, textAnchor: 'end', fontFamily: _KR,
+          fontSize: 24, fill: _MUT }, '밑면 = 가중치 공간 (실제 9차원)'));
+    })();
+
+    // 편미분의 독립성 → 병렬
+    const parallelGrad = (() => {
+      const W = 1600, H = 380;
+      const card = (x, t, sub, col) => h('g', { key: t },
+        h('rect', { x: x, y: 96, width: 250, height: 150, rx: 16, fill: '#fff',
+          stroke: col, strokeWidth: 3 }),
+        h('text', { x: x + 125, y: 158, textAnchor: 'middle', fontFamily: _EN,
+          fontSize: 30, fontWeight: 700, fill: col }, t),
+        h('text', { x: x + 125, y: 200, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 23, fill: _MUT }, sub),
+        h('circle', { cx: x + 125, cy: 300, r: 15, fill: 'var(--ok)' }));
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('text', { key: 'h', x: 30, y: 52, fontFamily: _KR, fontSize: 26, fill: _MUT },
+          '순전파가 끝난 뒤 — 각 가중치의 편미분'),
+        card(60, '∂L/∂W₁', '나머지는 상수', _ACC),
+        card(370, '∂L/∂W₂', '나머지는 상수', _ACC),
+        card(680, '∂L/∂B₁', '나머지는 상수', _ACC),
+        card(990, '∂L/∂W₃', '나머지는 상수', _ACC),
+        card(1300, '⋯', '수십만 개까지', _MUT),
+        h('line', { key: 'br', x1: 185, y1: 300, x2: 1425, y2: 300,
+          stroke: 'var(--ok)', strokeWidth: 2.5, opacity: 0.45 }),
+        h('text', { key: 'bt', x: 800, y: 352, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 26, fontWeight: 700, fill: 'var(--ok)' },
+          '전부 동시에 — 서로를 기다리지 않는다'));
+    })();
+
+    // 학습 곡선의 계단
+    const lossCurve = (() => {
+      const W = 1600, H = 430, pad = 70;
+      const s = _scale(W, H, pad, [0, 100], [0, 0.30]);
+      const r = _rnd(4242), pts = [];
+      for (let i = 0; i <= 100; i++) {
+        let v = 0.251;
+        if (i > 62) v = 0.251 * Math.exp(-(i - 62) / 6.5) + 0.004;
+        pts.push([i, Math.max(0.002, v + (r() - 0.5) * 0.004)]);
+      }
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('line', { key: 'xa', x1: pad, y1: H - pad, x2: W - pad, y2: H - pad,
+          stroke: _AX, strokeWidth: 2 }),
+        h('line', { key: 'ya', x1: pad, y1: pad, x2: pad, y2: H - pad,
+          stroke: _AX, strokeWidth: 2 }),
+        h('path', { key: 'c',
+          d: pts.map((p, i) => (i ? 'L' : 'M') + s.x(p[0]) + ' ' + s.y(p[1])).join(' '),
+          fill: 'none', stroke: _ACC, strokeWidth: 4.5 }),
+        h('line', { key: 'm', x1: s.x(62), y1: pad, x2: s.x(62), y2: H - pad,
+          stroke: 'var(--ok)', strokeWidth: 2.5, strokeDasharray: '10 8' }),
+        h('text', { key: 'mt', x: s.x(62) + 18, y: pad + 34, fontFamily: _KR,
+          fontSize: 26, fontWeight: 700, fill: 'var(--ok)' }, '길을 찾은 순간'),
+        h('text', { key: 'l', x: s.x(28), y: s.y(0.251) - 22, textAnchor: 'middle',
+          fontFamily: _KR, fontSize: 25, fill: _MUT }, '한참을 헤맨다'),
+        h('text', { key: 'yl', x: pad - 14, y: pad - 20, textAnchor: 'end',
+          fontFamily: _KR, fontSize: 24, fill: _MUT }, '손실'),
+        h('text', { key: 'xl', x: W - pad, y: H - 24, textAnchor: 'end', fontFamily: _KR,
+          fontSize: 24, fill: _MUT }, '학습 횟수'));
+    })();
+
+    // 110 → 220 → 440 → … → 1
+    const denseStack = (() => {
+      const L = [['입력', 110, _MUT], ['Dense', 220, _ACC], ['BatchNorm', 220, 'var(--ok)'],
+                 ['Dense', 440, _ACC], ['Dense', 220, _ACC], ['Dense', 110, _ACC],
+                 ['Dense', 20, _ACC], ['출력', 1, 'var(--amber)']];
+      const mx = 440;
+      return h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: '14px',
+          width: '100%', height: '100%' } },
+        L.map(([n, w, col], i) => h('div', { key: i, style: { flex: 1,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' } },
+          h('div', { style: { fontFamily: _EN, fontSize: '26px', fontWeight: 700,
+            color: col } }, w),
+          h('div', { style: { width: '100%', height: (30 + w / mx * 260) + 'px',
+            background: col, opacity: 0.22, border: '2px solid ' + col,
+            borderRadius: '10px' } }),
+          h('div', { style: { fontFamily: _KR, fontSize: '21px', color: _MUT,
+            textAlign: 'center' } }, n))));
+    })();
+
+    // 풀었다가 조인다
+    const funnel = (() => {
+      const W = 1600, H = 330;
+      const L = [110, 220, 440, 220, 110, 20, 1], mx = 440;
+      const pts = L.map((v, i) => [80 + i * ((W - 160) / (L.length - 1)),
+                                   H / 2 - v / mx * 118, H / 2 + v / mx * 118]);
+      const top = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
+      const bot = pts.slice().reverse().map(p => 'L' + p[0] + ' ' + p[2]).join(' ');
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('path', { key: 'f', d: top + ' ' + bot + ' Z', fill: _ACC, opacity: 0.16,
+          stroke: _ACC, strokeWidth: 3 }),
+        pts.map((p, i) => h('text', { key: i, x: p[0], y: p[2] + 40, textAnchor: 'middle',
+          fontFamily: _EN, fontSize: 25, fontWeight: 700, fill: _ACC }, L[i])),
+        h('text', { key: 'a', x: 420, y: 46, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 27, fontWeight: 700, fill: _INK }, '풀어 헤친다'),
+        h('text', { key: 'b', x: 1180, y: 46, textAnchor: 'middle', fontFamily: _KR,
+          fontSize: 27, fontWeight: 700, fill: _INK }, '조여서 정리한다'));
+    })();
+
+    // 단위가 다른 변수
+    const scaleProblem = (() => {
+      const W = 760, H = 520;
+      const bar = (y, w, t, col) => h('g', { key: t },
+        h('text', { x: 190, y: y + 26, textAnchor: 'end', fontFamily: _KR,
+          fontSize: 24, fill: _INK }, t),
+        h('rect', { x: 210, y: y, width: w, height: 36, rx: 7, fill: col, opacity: 0.8 }));
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('text', { key: 'h', x: 30, y: 44, fontFamily: _KR, fontSize: 25, fill: _MUT },
+          '같은 층에 들어가는 값들'),
+        bar(90, 500, '대지면적 (㎡)', 'var(--no)'),
+        bar(160, 320, '도로면적 (㎡)', 'var(--no)'),
+        bar(230, 12, '지하층 유무 (0/1)', _ACC),
+        bar(300, 14, '슬레이트 (0/1)', _ACC),
+        h('text', { key: 'n', x: 30, y: 420, fontFamily: _KR, fontSize: 26,
+          fontWeight: 700, fill: 'var(--no)' }, '큰 쪽이 Affine 값을 혼자 끌고 다닌다'),
+        h('text', { key: 'n2', x: 30, y: 466, fontFamily: _KR, fontSize: 24,
+          fill: _MUT }, '→ 시그모이드의 기울기 없는 구간으로 밀려난다'));
+    })();
+
+    // 이어서 학습
+    const resumeTrain = (() => {
+      const W = 1600, H = 340, pad = 66;
+      const s = _scale(W, H, pad, [0, 400], [0.25, 0.95]);
+      const seg = (a, b, col, k) => {
+        const p = [];
+        for (let i = a; i <= b; i++)
+          p.push([i, 0.30 + 0.62 * (1 - Math.exp(-i / 120))]);
+        return h('path', { key: k,
+          d: p.map((q, i) => (i ? 'L' : 'M') + s.x(q[0]) + ' ' + s.y(q[1])).join(' '),
+          fill: 'none', stroke: col, strokeWidth: 5 });
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('line', { key: 'xa', x1: pad, y1: H - pad, x2: W - pad, y2: H - pad,
+          stroke: _AX, strokeWidth: 2 }),
+        seg(0, 100, _ACC, 'a'), seg(100, 200, '#9E5DF9', 'b'),
+        seg(200, 300, 'var(--ok)', 'c'), seg(300, 400, 'var(--amber)', 'd'),
+        [100, 200, 300].map(x => h('line', { key: x, x1: s.x(x), y1: pad, x2: s.x(x),
+          y2: H - pad, stroke: 'var(--line)', strokeWidth: 2, strokeDasharray: '7 7' })),
+        [[50, '1회'], [150, '2회'], [250, '3회'], [350, '4회']].map(([x, t]) =>
+          h('text', { key: t, x: s.x(x), y: H - 24, textAnchor: 'middle', fontFamily: _KR,
+            fontSize: 23, fill: _MUT }, t + ' 실행')),
+        h('text', { key: 'yl', x: pad - 14, y: pad - 18, textAnchor: 'end',
+          fontFamily: _KR, fontSize: 24, fill: _MUT }, '정확도'));
+    })();
+
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      showCitations: this.props.showCitations ?? true,
+      reluChart, dropoutNets, sigmoidCurve, blindDescent, nnGrowth, paramExplosion, scaleToday,
+      cpuGpuCores, ensembleFlow, imagenetChart, svmMargin, mycinRule, deepNetSignal,
+      slpDemo, bpDemo, nnFanout,
+      nodeSketch, logicTable, weightGrowth, lossKinds, lossSurface,
+      parallelGrad, lossCurve, denseStack, funnel, scaleProblem, resumeTrain,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {"showFooter": true, "showCitations": true}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

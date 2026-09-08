@@ -10,6 +10,10 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W04_인공신경망/slides/W04_심층신경망.html`
+- `W04_인공신경망/slides/W04_인공신경망.html`
+
 노트북
 - `W04_인공신경망/notebooks/07 SLP.ipynb`
 - `W04_인공신경망/notebooks/08 MLP.ipynb`
