@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W10_LLM의_구조</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 10주차 강의영상 ② 02:00–03:30 · 29 LLM.ipynb — 오늘부터 언어 모델이다. 거의 모든 모델이 트랜스포머로 바뀌고 있으니 여기 맞춰 계속 공부하면 좋다. 도시공학은 법률·계획과 뗄 수 없고 텍스트 분석도 이미지 분석도 결국 의미를 뽑아내야 한다. 다른 분야보다 훨씬 적극적으로 써야 할 것이다. 다만 지금까지 배운 뉴럴넷의 맥락을 그대로 유지하면서 볼 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(158,93,249,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">10주차 · 1교시</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">LLM 의 구조</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">무엇이 이 모델의 크기를 정하는가</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">한양대학교 도시공학과 · 28 GPT.ipynb · 29 LLM.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="02" data-speaker-notes="오늘의 질문. 챗GPT는 대화를 하는 것처럼 보이지만 실제로 학습된 목표는 딱 하나다. 다음 토큰. 이 사실 하나를 붙들고 있으면 오늘 나오는 모든 것이 그 위에 얹히는 장치로 보인다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 질문</div>
+  <h2 style="margin:0;font-size:72px;font-weight:800;line-height:1.2;letter-spacing:-0.025em;max-width:1680px">언어 모델은<br>무엇을 맞히도록 학습되었는가?</h2>
+  <div style="height:250px"><span data-dc-slot="nextToken"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">답은 하나다 — <b style="color:var(--fg-1)">다음 토큰</b>. 오늘 나오는 모든 장치는 이 위에 얹힌 것이다.</p>
+</section>
+
+<section data-deck="0" data-label="언어도 시계열이다" data-screen-label="03" data-speaker-notes="출처: 강의영상 ② 03:40–04:20 — 지난 시간과 이어 붙인다. 시계열 예측을 할 수 있으면 언어를 예측할 수 있겠다는 데서 출발했다. 그럼 언어에서 시계열의 한 칸은 무엇인가? 그게 토큰이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">지난 시간에서 이어서</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">언어도 시계열이다</h2>
+  <div style="height:280px"><span data-dc-slot="langAsSeries"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">시계열 예측을 할 수 있으면 언어를 예측할 수 있겠다 — 그럼 언어에서 <b style="color:var(--fg-1)">한 칸</b>은 무엇인가?</p>
+</section>
+
+<section data-deck="0" data-label="토크나이저" data-screen-label="04" data-speaker-notes="출처: 강의영상 ② 04:20–05:20 — 토크나이저는 문장을 어떻게 잘라서 번호를 붙일 것인가를 정하는 것이다. 여기가 중요한 이유는 토크나이저가 바뀌면 모델이 통째로 바뀌기 때문이다. 그래서 모델마다 쓰는 토크나이저가 다르다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">문장을 어떻게 자를 것인가</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Tokenizer</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="tokenize"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">토크나이저가 바뀌면 <b style="color:#D93636">모델이 통째로 바뀐다.</b> 번호가 전부 달라지기 때문이다.</p>
+</section>
+
+<section data-deck="0" data-label="한글은 잘게 쪼개진다" data-screen-label="05" data-speaker-notes="출처: 강의영상 ② 05:20–08:00 — 실제로 넣어 보면 영어는 단어 단위로 잘리는데 한글은 글자 하나씩 잘린다. 초기 토크나이저는 특히 심했다. 이게 왜 문제냐면 같은 내용을 담는 데 토큰이 훨씬 많이 들고, 그만큼 컨텍스트를 잡아먹고 비용도 더 든다. 버전이 올라가면서 단어를 묶어 주는 애들이 생기긴 했다. 학생들에게 직접 사이트에서 넣어 보게 할 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한글은 잘게 쪼개진다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">직접 넣어 볼 것 — tiktokenizer 류의 사이트</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="krTokens"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">같은 내용에 토큰이 더 든다 → <b style="color:var(--fg-1)">컨텍스트를 더 먹고 비용도 더 든다.</b> 도시 문서가 한글이라는 점이 그대로 비용이 된다.</p>
+</section>
+
+<section data-deck="0" data-label="Vocab 크기" data-screen-label="06" data-speaker-notes="출처: LLM.pptx p.12 · 강의영상 ② 08:00–09:00 — 토크나이저의 역량은 번호가 몇 번까지 붙어 있느냐, 즉 vocab 크기다. 실제 값을 보면 라마 2가 32,000, 라마 3이 128,256이다. GPT-2/3은 5만 개 정도. 그런데 GPT-3.5부터는 정확한 수가 비공개다. 여기서 학생들이 봐야 할 건 두 가지 — 다국어를 담으려면 커질 수밖에 없다는 것, 그리고 어느 시점부터 회사들이 숫자를 안 밝힌다는 것. 직접 tiktokenizer.vercel.app 에서 넣어 보게 할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">번호가 몇 번까지 있나</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Vocab Size · tiktokenizer.vercel.app 에서 직접 확인할 것</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="tokenizerTable"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">다국어를 담으려면 <b style="color:var(--fg-1)">커질 수밖에</b> 없다. 그런데 크게 하면 모델도 커진다 — 그래서 목적에 따라 골라 쓴다.</p>
+</section>
+
+<section data-deck="0" data-label="임베딩으로 압축" data-screen-label="07" data-speaker-notes="출처: 강의영상 ② 09:00–10:20 — 토크나이저는 원핫이다. vocab이 15만이면 15만 자리 중 하나만 1인 벡터. 이걸 시계열로 매 칸 넣을 수는 없다. 그래서 줄인다. 줄이는 데 가장 좋은 게 뭐였나 — 2주차 PCA, 오토인코더에서 본 차원 축소다. 임베딩이 바로 그것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">15만 자리를 몇백 자리로</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Embedding — 이미 배운 차원 축소</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="embedding"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">2주차 <b style="color:var(--fg-1)">PCA</b>, 이미지의 <b style="color:var(--fg-1)">오토인코더</b> 와 같은 동작이다 — 차원을 줄여 의미만 남긴다.</p>
+</section>
+
+<section data-deck="0" data-label="포지셔널 인코딩" data-screen-label="08" data-speaker-notes="출처: 강의영상 ② 10:20–10:50 — 여기서 RNN과 결정적으로 갈린다. RNN은 한 칸씩 순서대로 지나가니 순서가 저절로 들어갔다. 트랜스포머는 전부 한꺼번에 넣는다. 그러면 순서 정보가 사라진다. 그래서 위치 정보를 따로 더해 준다. 이게 포지셔널 인코딩이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">순서는 따로 넣어 준다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Positional Encoding</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="positional"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">RNN 은 한 칸씩 지나가니 순서가 <b style="color:var(--fg-1)">저절로</b> 들어갔다. 한꺼번에 넣는 순간 <b style="color:#D93636">순서가 사라진다.</b></p>
+</section>
+
+<section data-deck="0" data-label="컨텍스트 길이" data-screen-label="09" data-speaker-notes="출처: 강의영상 ② 10:50–12:20 — 컨텍스트 토큰 사이즈는 이 시계열을 얼마까지 받아 줄 것이냐다. 앞에 책 한 권을 넣을 수도 있고, 채팅 두세 번밖에 못 넣을 수도 있다. 이게 답변 길이까지 결정한다. 늘리면 좋은데, 늘리면 가중치 개수가 엄청나게 늘고 추론할 때 전력이 그만큼 든다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.2fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">CONTEXT LENGTH</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">시계열을<br>얼마까지 받나</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">앞에 <b style="color:var(--fg-1)">책 한 권</b>을 넣을 수도, <b style="color:var(--fg-1)">대화 두세 번</b>밖에 못 넣을 수도 있다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">입력 길이가 <b style="color:var(--fg-1)">출력 길이까지</b> 결정한다.<br><br>늘리면 좋지만 — 가중치 개수와 <b style="color:#D93636">추론 전력</b>이 함께 늘어난다.</div>
+  </div>
+  <div style="height:760px"><span data-dc-slot="ctxGrowth"></span></div>
+</section>
+
+<section data-deck="0" data-label="깊이와 관점" data-screen-label="10" data-speaker-notes="출처: 강의영상 ② 12:20–13:40 — 나머지 둘. 트랜스포머 레이어를 많이 쌓을수록 언어의 확률 분포를 복잡하게 이해할 수 있다. 덴스 층을 많이 쌓으면 비선형 관계를 잘 잡던 것과 같다. 그리고 멀티헤드. 헤드가 늘어난다는 건 문장을 바라보는 관점이 늘어난다는 뜻이다. 주어 중심으로 보는 애, 목적어 중심으로 보는 애, 법률적으로 보는 애." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">나머지 두 축</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">깊이와 관점</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 38px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--primary-main)">Layers</div>
+      <div style="font-size:var(--type-body);font-weight:700">몇 층으로 쌓나</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">덴스 층을 많이 쌓을수록 <b style="color:var(--fg-1)">비선형 관계</b>를 잘 잡던 것과 같다.</p>
+      <div style="flex:1;min-height:0"><span data-dc-slot="layersFig"></span></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 38px;display:flex;flex-direction:column;gap:18px">
+      <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:#9E5DF9">Attention Heads</div>
+      <div style="font-size:var(--type-body);font-weight:700">몇 개의 관점으로 보나</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">주어 중심으로 보는 애, 목적어 중심으로 보는 애, <b style="color:var(--fg-1)">법률적으로</b> 보는 애.</p>
+      <div style="flex:1;min-height:0"><span data-dc-slot="headsFig"></span></div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="블록 하나의 속" data-screen-label="11" data-speaker-notes="출처: LLM.pptx p.31 · 강의영상 ② 13:00–13:40 — 그럼 그 한 층 안에서 무슨 일이 벌어지나. 아래에서 토큰이 임베딩 행렬을 통과하고, 거기에 위치 정보를 더한다. 그 다음 점선 상자가 층 하나다 — 마스크드 셀프어텐션으로 앞쪽 단어만 보고, 더하고 정규화하고, 포인트와이즈 피드포워드를 통과하고, 또 더하고 정규화한다. 오른쪽으로 도는 화살표가 스킵 커넥션이다. 이 점선 상자를 12층, 48층, 96층 쌓는 것이다. 맨 위에서 임베딩 행렬을 전치해서 다시 곱하면 vocab 크기의 벡터가 되고, 소프트맥스가 그걸 확률로 만든다. 마스크드가 GPT를 GPT답게 만드는 부분이다 — 뒤를 못 본다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">Decoder block</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그 한 층 안에서<br>벌어지는 일</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--surface-app);border-radius:12px;padding:16px 22px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">Masked</b> self-attention — 앞쪽 단어만 본다. 뒤를 못 보는 것이 GPT를 GPT답게 만든다.</div>
+      <div style="background:var(--surface-app);border-radius:12px;padding:16px 22px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">Add &amp; Layer norm</b> — 오른쪽으로 도는 화살표가 스킵 커넥션이다. ResNet 에서 본 그것.</div>
+      <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:12px;padding:16px 22px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">점선 상자 <b style="color:var(--primary-dark)">하나가 한 층</b> — 이걸 12층·48층·96층 쌓는다.</div>
+    </div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">맨 위에서 임베딩 행렬을 <b style="color:var(--fg-3)">전치해</b> 다시 곱하면 vocab 크기의 벡터가 되고, 소프트맥스가 그걸 확률로 만든다.</p>
+  </div>
+  <div style="height:800px;background:#fff;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s31_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GPT 디코더 블록 — 임베딩 → 마스크드 어텐션 → FFN → 소프트맥스</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="넷이 크기를 정한다" data-screen-label="12" data-speaker-notes="출처: 강의영상 ② 13:40–14:20 — 정리하면 네 가지가 전체 가중치 크기를 정한다. vocab, 컨텍스트 길이, 레이어 수, 헤드 수. 그리고 마지막에 다시 vocab 크기만큼의 확률 분포를 소프트맥스로 뱉는다. 이 넷을 키우는 게 지금 빅테크의 무한 경쟁이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">모델 크기를 정하는 네 가지</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">토큰이 들어가서 확률표가 나온다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="archStack"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">마지막은 결국 <b style="color:#fff">vocab 크기만큼의 확률표</b> — 소프트맥스로 다음 토큰 하나를 고른다.</p>
+</section>
+
+<section data-deck="0" data-label="Scaling Law" data-screen-label="13" data-speaker-notes="출처: LLM.pptx p.34 · Kaplan et al. (OpenAI, 2020) · 강의영상 ② 14:20–15:40 — 이 표 한 장이 오늘의 결론이다. GPT-1은 입력 512, 헤드 12, 히든 768, 레이어 12, 파라미터 1억1700만이었다. GPT-3 다빈치가 2048 / 96 / 12288 / 96 / 1750억. 여기까지는 다 공개돼 있다. 그런데 GPT-3.5부터 헤드 수도 히든 크기도 레이어 수도 비공개로 바뀐다. GPT-4는 파라미터 수마저 비공개다. 표의 오른쪽 아래가 통째로 비어 가는 걸 학생들에게 직접 보여줄 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">키우면 좋아진다 — <span style="color:var(--accent-green)">Scaling Law</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Kaplan et al. (OpenAI, 2020)</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="scalingTable"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">표의 <b style="color:#FF7AA2">오른쪽 아래가 통째로 비어 간다</b> — 어느 시점부터 회사들이 구조를 밝히지 않는다.</p>
+</section>
+
+<section data-deck="0" data-label="여기서부터 비공개" data-screen-label="14" data-speaker-notes="출처: 강의영상 ② 15:00–15:40 — 중요한 대목이다. 어텐션 헤드 수도, 히든 크기도, 레이어 수도 어느 시점부터 비공개가 됐다. 발표하는 건 오른쪽 하나 — 가중치 개수뿐이고 그마저도 안 밝히는 곳이 많다. 그래서 이 강의에서는 비공개 구간을 비워 둔다. 추정치로 채워 넣으면 없는 사실을 강의에서 말하게 된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">중요</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">어느 시점부터 <span style="color:#D93636">비공개</span>다</h2>
+  <div style="height:330px"><span data-dc-slot="disclosure"></span></div>
+  <div style="padding:28px 34px;background:#FDF0F0;border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1700px">그래서 이 강의에서는 <b style="color:#D93636">비공개 구간을 비워 둔다.</b> 추정치로 채우면 없는 사실을 강의에서 말하게 된다.</div>
+</section>
+
+<section data-deck="0" data-label="얼마나 커졌나" data-screen-label="15" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.52 (Momentum Works) · 강의영상 ② 15:00–15:40 — 원 크기가 파라미터 수다. 위가 1,000억 개 미만, 아래가 그 이상. 위 줄을 보면 ELMo 9,400만에서 시작해 GPT-1 이 1억 1,700만, BERT 3억 4,000만, GPT-2 가 15억. 여기까지가 우리가 노트북에서 돌려 본 크기다. 아래 줄로 내려오면 자릿수가 바뀐다. GPT-3 가 1,750억, Gopher 2,800억, MT-NLG 5,300억, PaLM 5,400억. 그리고 맨 오른쪽 GPT-4 는 물음표다 — 파라미터 수를 공개하지 않았다. 이 그림에서 가장 중요한 게 저 물음표다. 추정치는 인터넷에 돌아다니지만 발표된 값이 아니다. 발표되지 않은 숫자를 강의에서 사실처럼 말하지 않는다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">원 하나가 <span style="color:var(--primary-main)">파라미터 수</span>다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Momentum Works, “LLMs are becoming very large indeed”</span>
+  </div>
+  <div style="height:620px;background:var(--surface-app);border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/tl_s52_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>파라미터 규모 비교 — 1,000억 미만과 그 이상</span></div></div>
+  </div>
+  <div style="height:170px;display:grid;grid-template-columns:1fr 1fr 1.05fr;gap:28px">
+    <div style="background:var(--surface-app);border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:6px;justify-content:center"><div style="font-family:var(--font-display);font-size:25px;font-weight:800;color:var(--fg-3)">위 줄 — 1,000 억 미만</div><p style="margin:0;font-size:23px;color:var(--fg-3);line-height:1.4">ELMo 9,400 만 → GPT-2 15 억. <b style="color:var(--fg-1)">노트북에서 돌려 본 크기</b>다.</p></div>
+    <div style="background:var(--surface-app);border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:6px;justify-content:center"><div style="font-family:var(--font-display);font-size:25px;font-weight:800;color:var(--fg-3)">아래 줄 — 자릿수가 바뀐다</div><p style="margin:0;font-size:23px;color:var(--fg-3);line-height:1.4">GPT-3 1,750 억 · Gopher 2,800 억 · PaLM 5,400 억.</p></div>
+    <div style="background:var(--neutral-black);color:#fff;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:6px;justify-content:center"><div style="font-family:var(--font-display);font-size:25px;font-weight:800;color:#00E49B">맨 오른쪽은 물음표다</div><p style="margin:0;font-size:23px;line-height:1.4;opacity:.92">GPT-4 는 <b>공개하지 않았다.</b> 추정치는 돌아다니지만 발표된 값이 아니다.</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="파라미터 경쟁" data-screen-label="16" data-speaker-notes="출처: 강의영상 ② 15:40–16:10 — 그래서 남은 경쟁이 가중치 개수다. 지금 전체 추세는 크면 클수록 무조건 성능이 뛰어나다로 가고 있다. 멈출 수가 없는 상태다. 다만 MoE 이후로는 총 파라미터와 실제로 쓰이는 활성 파라미터가 다르다는 점을 반드시 짚을 것 — 2교시에서 다룬다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 28%,rgba(68,52,226,.34),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">남은 경쟁</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">“크면 클수록 좋다” 로<br>가고 있다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#fff">멈출 수가 없다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">한 번 학습에 수개월, 인프라 포함 조 단위. 그런데도 계속 커진다.</p>
+    </div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#00E49B">단, 숫자를 볼 때 주의</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">MoE 이후 <b style="color:#fff">총 파라미터</b>와 토큰 하나가 실제로 쓰는 <b style="color:#fff">활성 파라미터</b>는 다르다 — 2교시.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">어느 쪽인지 밝히지 않은 수치는 <b style="color:#fff">쓰지 않는다.</b></p>
+</section>
+
+<section data-deck="0" data-label="비용은 전부 하드웨어다" data-screen-label="17" data-speaker-notes="출처: 강의영상 ② 16:10–17:40 — 돈이 많이 드는 가장 큰 이유가 전부 하드웨어다. GPU 한 장을 PC에 여덟 개까지 꽂는데 그냥 꽂으면 동시에 안 돌아간다. 메모리를 공유하는 링크를 붙여야 한다. 그렇게 한 팟을 만들고, 팟을 여덟 대 묶어 슈퍼팟을 만든다. 국내에 슈퍼팟은 몇 군데 안 들어갔다고 한다. 숫자는 개략치라고 반드시 밝힐 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">비용은 거의 전부 하드웨어다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:#D93636;font-weight:700">강의에서 든 개략치 — 정확한 시세 아님</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="hwStack"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">그냥 꽂으면 동시에 안 돌아간다 — <b style="color:var(--fg-1)">메모리를 공유하는 링크</b>가 따로 필요하다. 그 비용이 대부분이다.</p>
+</section>
+
+<section data-deck="0" data-label="전력이 병목이다" data-screen-label="18" data-speaker-notes="출처: 강의영상 ② 15:40–16:10 — 최근에 이런 이야기가 나온다. 한 개 주의 데이터센터에서 몇 달간 학습하던 수준을 넘어서서 두 개 데이터센터를 써야 하는데, 한 주에서 두 개를 동시에 가동할 전력이 없다. 그래서 두 개 주에 나눠서 연결해 쓴다. 계산의 병목이 반도체가 아니라 전기가 된 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 22% 76%,rgba(245,158,11,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#F59E0B;font-weight:700">병목이 옮겨 갔다</div>
+  <h2 style="margin:0;font-size:64px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">반도체가 아니라<br><span style="color:#F59E0B">전기</span>가 부족하다</h2>
+  <div style="height:250px"><span data-dc-slot="powerFig"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1700px">한 주에서 데이터센터 두 개를 <b style="color:#fff">동시에 가동할 전력이 없어</b> 두 개 주에 나눠 연결해 쓴다는 이야기가 나온다.<br><span style="color:var(--neutral-medium);font-size:var(--type-small)">강의에서 소개한 업계 정황 — 특정 기업의 확정 사실로 옮기지 말 것.</span></p>
+</section>
+
+<section data-deck="0" data-label="도시계획의 질문" data-screen-label="19" data-speaker-notes="출처: 강의영상 ② 18:00–19:40 — 여기가 이 수업이 도시공학과 수업인 이유다. 미국에서 업무시설 건축 허가가 줄고 데이터센터 인허가가 가장 많이 늘고 있다는 이야기가 나온다. 그럼 질문이 생긴다. 인력을 회사가 더 필요로 하지 않게 되면 기존 도시계획의 생각이 여전히 의미가 있나. 20년 단위로 계획을 세우고 5년마다 재정비하는데, 5년 후에도 직주 접근성이나 업무의 정의가 같을까." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">이 수업이 도시공학과 수업인 이유</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em;max-width:1700px">5년 후에도 <span style="color:var(--primary-main)">직주 접근성</span>의 정의가 같을까?</h2>
+  <div style="height:250px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/s100_city.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>같은 도시 블록이 시간이 지나며 사무실에서 주거와 녹지로 바뀌는 그림</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:30px;font-weight:800;color:#D93636">업무시설 인허가 ↓</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">사무실을 덜 짓는다는 신호가 나온다.</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:30px;font-weight:800;color:#00B37A">데이터센터 인허가 ↑</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">사람 대신 전력과 냉각을 담는 건물이 늘어난다.</p>
+    </div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">우리는 <b style="color:#00E49B">20년 단위</b>로 계획을 세우고 <b style="color:#00E49B">5년마다</b> 재정비한다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">전력 인프라부터 용도지역까지 — 무엇을 다시 물어야 하는가.</span></div>
+</section>
+
+<section data-deck="0" data-label="반대 방향 — 경량화" data-screen-label="20" data-speaker-notes="출처: 강의영상 ② 19:40–21:20 — 반대 흐름도 있다. NPU 회사들이 뜨고 있는데, 학습에는 아직 못 쓰고 추론에는 쓴다. 전력을 훨씬 적게 먹고 속도도 빠르다. 국내에서 노리는 건 이거다. 초거대 모델 경쟁은 미국과 중국에 이미 밀렸다고 보고, 대신 경량화해서 아주 작은 공간에서도 추론이 잘 되게 만들어 제조업이나 농촌 같은 피지컬 AI로 승부를 보자는 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">반대 방향 — 작게, 그리고 몸으로</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">NPU · 경량화 · Physical AI</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="npuFig"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">학습에는 아직 못 쓰고 <b style="color:var(--fg-1)">추론(inference)</b> 에 쓴다 — 전력이 적게 들고 빠르다.</p>
+</section>
+
+<section data-deck="0" data-label="추론이라는 말" data-screen-label="21" data-speaker-notes="출처: 강의영상 ② 39:00–40:40 — 용어를 하나 정리하고 넘어간다. 인퍼런스는 학습이 끝난 모델에 입력을 넣어 출력을 뽑는 그 전 과정이다. 이것도 한국말로는 추론이다. 그런데 리즈닝도 추론이다. 둘은 완전히 다른 말이다. 이미 인퍼런스라는 말을 뉴럴넷에서 써 버렸기 때문에, 길게 생각해서 답을 만드는 과정은 리즈닝이라고 따로 부른다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">용어 정리</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">둘 다 “추론” 이지만 다르다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-top:8px solid var(--primary-main)">
+      <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--primary-main)">Inference</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">학습이 끝난 모델에 입력을 넣어 <b style="color:var(--fg-1)">토큰 하나</b>를 뽑는 그 계산 전 과정.</p>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">뉴럴넷 전반에서 오래 써 온 말이다.</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-top:8px solid #9E5DF9">
+      <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:#9E5DF9">Reasoning</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">답을 내기 전에 <b style="color:var(--fg-1)">길게 생각하는 과정</b>을 정답지로 삼아 학습시킨 것.</p>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">2교시 SFT 에서 자세히 — 같은 프리트레이닝 모델에서 갈라진다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="22" data-speaker-notes="정리. 언어 모델은 다음 토큰 하나를 맞히도록 학습된 모델이다. 토크나이저가 한 칸을 정하고, 임베딩이 압축하고, 포지셔널 인코딩이 순서를 넣고, 컨텍스트 길이·레이어·헤드가 크기를 정한다. 그리고 여기서부터는 공개되지 않는다. 2교시는 이 덩어리를 어떻게 사람이 쓸 수 있는 물건으로 만드는지를 본다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 22% 80%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">1교시 정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:20px;font-size:34px;line-height:1.4;max-width:1700px">
+    <li>언어 모델이 학습한 목표는 <b style="color:var(--accent-green)">다음 토큰 하나</b>다.</li>
+    <li><b style="color:var(--accent-green)">토크나이저</b>가 한 칸을 정하고, <b style="color:var(--accent-green)">임베딩</b>이 압축하고, <b style="color:var(--accent-green)">포지셔널 인코딩</b>이 순서를 넣는다.</li>
+    <li><b style="color:var(--accent-green)">컨텍스트 · 레이어 · 헤드</b>가 크기를 정하고, 그 크기가 곧 전력과 돈이다.</li>
+    <li>그리고 어느 시점부터 <b style="color:var(--accent-green)">공개되지 않는다.</b></li>
+  </ol>
+  <div style="padding:28px 34px;background:rgba(68,52,226,.24);border:2px solid rgba(158,93,249,.5);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1700px">2교시 — 이 <b style="color:#fff">덩어리</b>를 어떻게 사람이 쓸 수 있는 물건으로 만드나.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">Pre-training → SFT → RLHF · 실습: 28 GPT.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W10_LLM의_구조</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">22</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">언어도 시계열이다</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">토크나이저</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">한글은 잘게 쪼개진다</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">Vocab 크기</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">임베딩으로 압축</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">포지셔널 인코딩</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">컨텍스트 길이</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">깊이와 관점</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">블록 하나의 속</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">넷이 크기를 정한다</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">Scaling Law</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">여기서부터 비공개</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">얼마나 커졌나</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">파라미터 경쟁</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">비용은 전부 하드웨어다</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">전력이 병목이다</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">도시계획의 질문</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">반대 방향 — 경량화</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">추론이라는 말</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const AMB = '#F59E0B';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const chip = (x, y, w, hh, t, col, bg, fs) => h('g', { key: t + x + y },
+      h('rect', { x: x, y: y, width: w, height: hh, rx: 11, fill: bg, stroke: col,
+        strokeWidth: 2 }),
+      h('text', { x: x + w / 2, y: y + hh / 2 + 9, textAnchor: 'middle', fontFamily: KR,
+        fontSize: fs || 25, fontWeight: 700, fill: col }, t));
+
+    // ── 다음 토큰 확률표 ────────────────────────────────────────
+    const nextToken = (() => {
+      const W = 1720, H = 250;
+      const CAND = [['지역', 0.31], ['계획', 0.22], ['인구', 0.17], ['면적', 0.09],
+                    ['정책', 0.06], ['…', 0.15]];
+      const g = [], IN = ['도시', '기본', '계획', '의', '계획'];
+      IN.forEach((t, i) => g.push(chip(40 + i * 132, 92, 118, 66, t, MUT,
+        'var(--surface-app)')));
+      g.push(h('text', { key: 'ar', x: 730, y: 134, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 40, fill: MUT }, '→'));
+      CAND.forEach((c, i) => {
+        const x = 800 + i * 152;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 176 - c[1] * 190, width: 128,
+          height: c[1] * 190, rx: 8, fill: i === 0 ? ACC : '#C9C7D6' }));
+        g.push(h('text', { key: 't' + i, x: x + 64, y: 204, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 24, fontWeight: 700,
+          fill: i === 0 ? ACC : MUT }, c[0]));
+        g.push(h('text', { key: 'p' + i, x: x + 64, y: 168 - c[1] * 190,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 21, fontWeight: 700,
+          fill: i === 0 ? ACC : MUT }, (c[1] * 100).toFixed(0) + '%'));
+      });
+      return svg(W, H, [g,
+        h('text', { key: 'l1', x: 40, y: 62, fontFamily: KR, fontSize: 23, fill: MUT },
+          '지금까지의 토큰'),
+        h('text', { key: 'l2', x: 800, y: 62, fontFamily: KR, fontSize: 23, fill: MUT },
+          '다음 토큰의 확률표'),
+        h('text', { key: 'l3', x: W - 40, y: 242, textAnchor: 'end', fontFamily: KR,
+          fontSize: 21, fill: MUT }, '개념 예시 — 실제 확률은 모델이 정한다')]);
+    })();
+
+    // ── 언어도 시계열 ───────────────────────────────────────────
+    const langAsSeries = (() => {
+      const W = 1720, H = 280;
+      const g = [];
+      const num = [4103, 4088, 4121, 4155, 4140];
+      num.forEach((n, i) => g.push(chip(60 + i * 150, 40, 132, 70, String(n), MUT,
+        '#fff')));
+      g.push(h('text', { key: 'a1', x: 830, y: 84, fontFamily: KR, fontSize: 24,
+        fill: MUT }, '다음 값은?'));
+      const tok = ['도시', '기본', '계획', '의', '수립'];
+      tok.forEach((t, i) => g.push(chip(60 + i * 150, 168, 132, 70, t, ACC, '#EEF0FE')));
+      g.push(h('text', { key: 'a2', x: 830, y: 212, fontFamily: KR, fontSize: 24,
+        fill: ACC, fontWeight: 700 }, '다음 토큰은?'));
+      return svg(W, H, [g,
+        h('text', { key: 'l1', x: 1180, y: 84, fontFamily: KR, fontSize: 27,
+          fill: MUT }, '주가 — 숫자의 시계열'),
+        h('text', { key: 'l2', x: 1180, y: 212, fontFamily: KR, fontSize: 27,
+          fontWeight: 700, fill: INK }, '문장 — 토큰의 시계열'),
+        h('line', { key: 'sep', x: 0, x1: 40, y1: 140, x2: W - 40, y2: 140,
+          stroke: '#EEEDF3', strokeWidth: 2 })]);
+    })();
+
+    // ── 토크나이징 ──────────────────────────────────────────────
+    const tokenize = (() => {
+      const W = 1720, H = 470;
+      const EN_T = [['Urban', 12403], [' plan', 3197], ['ning', 1229], [' is', 374]];
+      const KR_T = [['도', 84291], ['시', 42137], ['계', 60118], ['획', 55302],
+                    ['은', 34120]];
+      const rowOf = (arr, y, col, bg, lab) => {
+        const g = [h('text', { key: 'l' + y, x: 60, y: y - 22, fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: col }, lab)];
+        let x = 60;
+        arr.forEach((t, i) => {
+          const w = Math.max(150, t[0].length * 26 + 70);
+          g.push(h('rect', { key: 'r' + y + i, x: x, y: y, width: w, height: 86, rx: 12,
+            fill: bg, stroke: col, strokeWidth: 2 }));
+          g.push(h('text', { key: 't' + y + i, x: x + w / 2, y: y + 40,
+            textAnchor: 'middle', fontFamily: KR, fontSize: 28, fontWeight: 700,
+            fill: INK }, t[0].trim() === '' ? '␣' : t[0]));
+          g.push(h('text', { key: 'n' + y + i, x: x + w / 2, y: y + 72,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 21, fill: col }, t[1]));
+          x += w + 12;
+        });
+        g.push(h('text', { key: 'c' + y, x: x + 24, y: y + 52, fontFamily: KR,
+          fontSize: 26, fontWeight: 800, fill: col }, arr.length + ' 토큰'));
+        return h('g', { key: lab }, g);
+      };
+      return svg(W, H, [
+        rowOf(EN_T, 80, ACC, '#EEF0FE', '영어 — 단어 조각 단위로 묶인다'),
+        rowOf(KR_T, 300, RED, '#FDF0F0', '한글 — 글자 하나가 토큰이 되기 쉽다'),
+        h('text', { key: 'n', x: 60, y: 448, fontFamily: KR, fontSize: 22, fill: MUT },
+          '번호는 예시 — 토크나이저 버전마다 자르는 방식도 번호도 전부 다르다'),
+      ]);
+    })();
+
+    // ── 한글 토큰 비용 ──────────────────────────────────────────
+    const krTokens = (() => {
+      const W = 1720, H = 470;
+      const bar = (y, lab, n, col, sub) => h('g', { key: lab },
+        h('text', { x: 40, y: y + 44, fontFamily: KR, fontSize: 28, fontWeight: 700,
+          fill: col }, lab),
+        h('rect', { x: 400, y: y, width: n / 42 * 980, height: 66, rx: 12, fill: col,
+          opacity: 0.85 }),
+        h('text', { x: 400 + n / 42 * 980 + 22, y: y + 46, fontFamily: EN,
+          fontSize: 32, fontWeight: 800, fill: col }, n + ' 토큰'),
+        h('text', { x: 400, y: y + 100, fontFamily: KR, fontSize: 21, fill: MUT }, sub));
+      return svg(W, H, [
+        h('text', { key: 'q', x: 40, y: 46, fontFamily: KR, fontSize: 26, fill: MUT },
+          '같은 뜻의 문장을 넣어 보면'),
+        bar(78, '영어', 11, ACC, '“Urban planning is the design of cities.”'),
+        bar(258, '한글', 29, RED, '“도시계획은 도시를 설계하는 일이다.”'),
+        h('text', { key: 'n', x: 40, y: 442, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' },
+          '개념 예시 — 토크나이저마다 다르다. 반드시 직접 넣어 보고 확인할 것.'),
+      ]);
+    })();
+
+    // ── vocab 크기 ──────────────────────────────────────────────
+    // ── 토크나이저 표 (LLM.pptx p.12) ───────────────────────────
+    const tokenizerTable = (() => {
+      const ROW = [
+        ['GPT-2 / GPT-3', 'BPE', '약 50,257', '공개'],
+        ['GPT-3.5 / GPT-4', 'Tiktoken (BPE)', '약 100,000+', '정확한 수 비공개'],
+        ['GPT-4o', 'Tiktoken (멀티모달)', '약 150,000+ 추정', '미공개'],
+        ['Claude 1~3', 'SentencePiece', '약 100,000+', '정확한 vocab 비공개'],
+        ['LLaMA 2 (Meta)', 'SentencePiece (BPE)', '32,000', '공개'],
+        ['LLaMA 3 (Meta)', 'SentencePiece (BPE)', '128,256', '공개'],
+        ['Mistral 7B / Mixtral', 'BPE', '32,000', '공개'],
+        ['Gemini 1.5 Pro', '내부 커스텀', '비공개 (수십만 추정)', '미공개'],
+        ['Command R+ (Cohere)', 'SentencePiece', '약 50,000~100,000', '정확한 수치 비공개'],
+        ['BERT', 'WordPiece', '약 30,000', '공개'],
+      ];
+      const cell = (t, k, st) => h('div', { key: k, style: Object.assign({
+        padding: '15px 20px', fontFamily: KR, fontSize: '23px',
+        color: 'var(--fg-2)' }, st) }, t);
+      const kids = [];
+      ['모델', '토크나이저 유형', 'Vocab Size', '공개 여부'].forEach((t, i) =>
+        kids.push(cell(t, 'h' + i, { fontSize: '21px', fontWeight: 700,
+          color: MUT })));
+      ROW.forEach((r, i) => {
+        const open = r[3] === '공개';
+        r.forEach((t, j) => kids.push(cell(t, i + '_' + j, {
+          borderTop: '1px solid var(--border-1)',
+          fontFamily: j === 2 ? EN : KR,
+          fontWeight: j === 0 ? 700 : (j === 2 ? 800 : 400),
+          fontSize: j === 2 ? '26px' : '23px',
+          color: j === 3 ? (open ? GRN : RED)
+                         : (j === 2 && !open ? MUT : 'var(--fg-2)'),
+        })));
+      });
+      return h('div', { style: { display: 'grid',
+        gridTemplateColumns: '1.15fr 1.15fr 1fr 1fr', width: '100%',
+        background: '#fff', border: '2px solid var(--border-1)',
+        borderRadius: '16px', overflow: 'hidden', alignSelf: 'center' } }, kids);
+    })();
+
+    const embedding = (() => {
+      const W = 1720, H = 470;
+      const g = [];
+      for (let i = 0; i < 16; i++) {
+        const on = i === 6;
+        g.push(h('rect', { key: 'o' + i, x: 120, y: 62 + i * 21, width: 150, height: 16,
+          rx: 4, fill: on ? ACC : '#EDECF2' }));
+      }
+      g.push(h('text', { key: 'od', x: 195, y: 424, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 24, fill: MUT }, '⋮'));
+      const vals = [0.31, -0.72, 0.08, 0.55, -0.19, 0.87, -0.44, 0.26];
+      vals.forEach((v, i) => {
+        g.push(h('rect', { key: 'e' + i, x: 1010, y: 96 + i * 44, width: 260, height: 34,
+          rx: 7, fill: '#EEF0FE', stroke: ACC, strokeWidth: 1.6 }));
+        g.push(h('text', { key: 'et' + i, x: 1140, y: 121 + i * 44, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fontWeight: 700, fill: ACC }, v.toFixed(2)));
+      });
+      return svg(W, H, [
+        g,
+        h('text', { key: 'l1', x: 195, y: 44, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: INK }, '원-핫'),
+        h('text', { key: 'l1b', x: 195, y: 456, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: RED }, 'vocab 크기 = 15만 자리'),
+        h('rect', { key: 'w', x: 420, y: 140, width: 400, height: 190, rx: 16,
+          fill: 'var(--surface-app)', stroke: VIO, strokeWidth: 3 }),
+        h('text', { key: 'wt', x: 620, y: 224, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: VIO }, 'Embedding'),
+        h('text', { key: 'wt2', x: 620, y: 264, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '학습되는 행렬'),
+        h('text', { key: 'a1', x: 350, y: 244, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 36, fill: AX }, '→'),
+        h('text', { key: 'a2', x: 910, y: 244, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 36, fill: AX }, '→'),
+        h('text', { key: 'l2', x: 1140, y: 62, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: ACC }, '임베딩 벡터'),
+        h('text', { key: 'l2b', x: 1140, y: 456, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: ACC }, '몇백 ~ 몇천 자리'),
+        h('text', { key: 'n', x: 1420, y: 244, fontFamily: KR, fontSize: 23, fill: MUT },
+          '자리는 줄고'),
+        h('text', { key: 'n2', x: 1420, y: 284, fontFamily: KR, fontSize: 23,
+          fontWeight: 700, fill: INK }, '의미는 남는다'),
+      ]);
+    })();
+
+    // ── 포지셔널 인코딩 ─────────────────────────────────────────
+    const positional = (() => {
+      const W = 1720, H = 470;
+      const TOK = ['도시', '가', '사람', '을', '바꾼다'];
+      const g = [];
+      TOK.forEach((t, i) => {
+        const x = 130 + i * 210;
+        g.push(chip(x, 90, 170, 76, t, ACC, '#EEF0FE'));
+        g.push(h('text', { key: 'p' + i, x: x + 85, y: 210, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 30, fontWeight: 800, fill: MUT }, '+'));
+        g.push(chip(x, 236, 170, 76, 'pos ' + i, VIO, '#F6F1FF'));
+        g.push(h('text', { key: 'e' + i, x: x + 85, y: 356, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 30, fontWeight: 800, fill: MUT }, '↓'));
+        g.push(chip(x, 380, 170, 66, '입력', GRN, '#EDF9F4', 22));
+      });
+      return svg(W, H, [
+        g,
+        h('text', { key: 'l1', x: 100, y: 138, textAnchor: 'end', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: ACC }, '토큰 임베딩'),
+        h('text', { key: 'l2', x: 100, y: 284, textAnchor: 'end', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: VIO }, '위치 인코딩'),
+        h('text', { key: 'n', x: 1240, y: 200, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-3)' }, '“몇 번째 칸이었는지”를'),
+        h('text', { key: 'n2', x: 1240, y: 244, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: INK }, '값으로 더해서 알려 준다'),
+        h('text', { key: 'n3', x: 1240, y: 306, fontFamily: KR, fontSize: 22,
+          fill: MUT }, '이 장치가 없으면 어순이 사라진다'),
+      ]);
+    })();
+
+    // ── 컨텍스트 성장 ───────────────────────────────────────────
+    const ctxGrowth = (() => {
+      const W = 1080, H = 760;
+      const ITEM = [['GPT-1', 512], ['GPT-2', 1024], ['GPT-3', 2048],
+                    ['GPT-4 급', 128000]];
+      const g = [];
+      ITEM.forEach((it, i) => {
+        const y = 110 + i * 155;
+        const w = Math.log10(it[1]) / Math.log10(128000) * 640;
+        g.push(h('text', { key: 'l' + i, x: 40, y: y + 44, fontFamily: EN, fontSize: 26,
+          fontWeight: 700, fill: i === 3 ? ACC : MUT }, it[0]));
+        g.push(h('rect', { key: 'b' + i, x: 260, y: y, width: w, height: 64, rx: 12,
+          fill: i === 3 ? ACC : '#C9C7D6' }));
+        g.push(h('text', { key: 'v' + i, x: 260 + w + 20, y: y + 46, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: i === 3 ? ACC : MUT },
+          it[1].toLocaleString()));
+      });
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('text', { key: 'h', x: 40, y: 58, fontFamily: KR, fontSize: 24, fill: MUT },
+          '입력 토큰 최대 길이 (로그 눈금)'),
+        g,
+        h('text', { key: 'n', x: 40, y: 716, fontFamily: KR, fontSize: 22,
+          fill: 'var(--fg-3)' }, '12만 8천이면 웬만한 문서는 통째로 들어간다'),
+      ]);
+    })();
+
+    // ── 레이어 도해 ─────────────────────────────────────────────
+    const layersFig = (() => {
+      const W = 600, H = 300, g = [];
+      for (let i = 0; i < 7; i++)
+        g.push(h('rect', { key: i, x: 60, y: 22 + i * 38, width: 480, height: 28, rx: 7,
+          fill: ACC, opacity: 0.22 + i * 0.10 }));
+      return svg(W, H, [g,
+        h('text', { key: 't', x: 300, y: 296, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, '층이 깊을수록 복잡한 관계를 잡는다')]);
+    })();
+
+    // ── 헤드 도해 ───────────────────────────────────────────────
+    const headsFig = (() => {
+      const W = 600, H = 300;
+      const LAB = ['주어', '목적어', '시제', '법률'];
+      const g = [];
+      LAB.forEach((t, i) => {
+        const x = 40 + i * 138;
+        g.push(h('rect', { key: 'r' + i, x: x, y: 60, width: 118, height: 118, rx: 14,
+          fill: '#F6F1FF', stroke: VIO, strokeWidth: 2 }));
+        g.push(h('text', { key: 't' + i, x: x + 59, y: 128, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 24, fontWeight: 700, fill: VIO }, t));
+        g.push(h('line', { key: 'l' + i, x1: x + 59, y1: 56, x2: 300, y2: 24,
+          stroke: VIO, strokeWidth: 2, opacity: 0.4 }));
+      });
+      return svg(W, H, [g,
+        h('text', { key: 'c', x: 300, y: 18, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fontWeight: 700, fill: INK }, '같은 문장'),
+        h('text', { key: 't', x: 300, y: 232, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, '헤드마다 다른 곳을 본다'),
+        h('text', { key: 't2', x: 300, y: 268, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, '(관점의 개수)')]);
+    })();
+
+    // ── 구조 스택 ───────────────────────────────────────────────
+    const archStack = (() => {
+      const W = 1720, H = 480;
+      const band = (y, hh, lab, sub, col, tag) => h('g', { key: lab },
+        h('rect', { x: 240, y: y, width: 1000, height: hh, rx: 14,
+          fill: 'rgba(255,255,255,.07)', stroke: col, strokeWidth: 2.5 }),
+        h('text', { x: 280, y: y + hh / 2 + 9, fontFamily: EN, fontSize: 27,
+          fontWeight: 700, fill: col }, lab),
+        h('text', { x: 1200, y: y + hh / 2 + 8, textAnchor: 'end', fontFamily: KR,
+          fontSize: 22, fill: 'var(--neutral-lighter)' }, sub),
+        tag ? h('text', { x: 1290, y: y + hh / 2 + 9, fontFamily: KR, fontSize: 24,
+          fontWeight: 800, fill: '#00E49B' }, tag) : null);
+      return svg(W, H, [
+        band(20, 66, 'Token Embedding', 'vocab × 임베딩 차원', ACC, '① vocab'),
+        band(96, 66, '+ Positional Encoding', '컨텍스트 길이만큼', VIO, '② 길이'),
+        band(172, 150, 'Transformer Layer × N', '층마다 Multi-Head Attention', '#8ED6FF',
+          '③ 층수 · ④ 헤드'),
+        band(334, 66, 'Softmax', 'vocab 크기의 확률표', '#00E49B', ''),
+        h('rect', { key: 'in', x: 240, y: 414, width: 1000, height: 54, rx: 12,
+          fill: 'rgba(255,255,255,.12)' }),
+        h('text', { key: 'int', x: 740, y: 450, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: '#fff' }, '입력 토큰'),
+        h('text', { key: 'out', x: 740, y: 12, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: 'var(--neutral-medium)' }, '↑ 다음 토큰'),
+      ]);
+    })();
+
+    // ── 컨텍스트 표 ─────────────────────────────────────────────
+    // ── Scaling Law 표 (LLM.pptx p.34) ─────────────────────────
+    const scalingTable = (() => {
+      const ROW = [
+        ['GPT-1', '512', '12', '768', '12', '117M'],
+        ['GPT-2 Small', '1,024', '12', '768', '12', '124M'],
+        ['GPT-2 Medium', '1,024', '16', '1,024', '24', '345M'],
+        ['GPT-2 Large', '1,024', '20', '1,280', '36', '762M'],
+        ['GPT-2 XL', '1,024', '25', '1,600', '48', '1.5B'],
+        ['GPT-3 Ada', '2,048', '~16', '~1,024', '~24', '350M'],
+        ['GPT-3 Babbage', '2,048', '~16', '~2,048', '~24', '1.3B'],
+        ['GPT-3 Curie', '2,048', '~32', '~4,096', '~32', '6.7B'],
+        ['GPT-3 Davinci', '2,048', '96', '12,288', '96', '175B'],
+        ['GPT-3.5', '4,096', '비공개', '비공개', '비공개', '약 175B'],
+        ['GPT-4', '8K / 32K', '비공개', '비공개', '비공개', '비공개 (추정)'],
+        ['GPT-4o', '128K', '비공개', '비공개', '비공개', '비공개'],
+      ];
+      const hide = (t) => t.indexOf('비공개') >= 0;
+      const cell = (t, k, st) => h('div', { key: k, style: Object.assign({
+        padding: '11px 16px', fontFamily: EN, fontSize: '22px',
+        color: 'var(--neutral-lighter)' }, st) }, t);
+      const kids = [];
+      ['모델', 'Input Token', '헤드 수', '히든 크기', '레이어 수', '파라미터']
+        .forEach((t, i) => kids.push(cell(t, 'h' + i, { fontFamily: KR,
+          fontSize: '20px', fontWeight: 700, color: MUT })));
+      ROW.forEach((r, i) => r.forEach((t, j) => kids.push(cell(t, i + '_' + j, {
+        borderTop: '1px solid rgba(255,255,255,.14)',
+        fontFamily: j === 0 ? KR : EN,
+        fontWeight: j === 0 || j === 5 ? 800 : 400,
+        color: hide(t) ? '#FF7AA2' : (j === 0 ? '#8ED6FF' : 'var(--neutral-lighter)'),
+        opacity: hide(t) ? 0.9 : 1,
+      }))));
+      return h('div', { style: { display: 'grid',
+        gridTemplateColumns: '1.2fr 1fr 0.85fr 0.95fr 0.9fr 1.1fr', width: '100%',
+        background: 'rgba(255,255,255,.05)', borderRadius: '16px',
+        overflow: 'hidden', alignSelf: 'center' } }, kids);
+    })();
+
+    const disclosure = (() => {
+      const W = 1720, H = 330;
+      const box = (x, w, lab, open) => h('g', { key: lab },
+        h('rect', { x: x, y: 70, width: w, height: 140, rx: 16,
+          fill: open ? '#EDF9F4' : '#FDF0F0',
+          stroke: open ? GRN : RED, strokeWidth: 3,
+          strokeDasharray: open ? 'none' : '10 8' }),
+        h('text', { x: x + w / 2, y: 132, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 27, fontWeight: 700, fill: open ? GRN : RED }, lab),
+        h('text', { x: x + w / 2, y: 172, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, open ? '공개' : '비공개'));
+      return svg(W, H, [
+        box(40, 300, '토크나이저 · vocab', true),
+        box(364, 300, '컨텍스트 길이', true),
+        box(688, 300, '어텐션 헤드 수', false),
+        box(1012, 300, '히든 크기', false),
+        box(1336, 344, '레이어 수', false),
+        h('text', { key: 'n', x: 40, y: 268, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-3)' },
+          '발표되는 건 사실상 하나 — 가중치 개수. 그마저 안 밝히는 곳이 많다.'),
+        h('text', { key: 'n2', x: 40, y: 44, fontFamily: KR, fontSize: 23, fill: MUT },
+          '초기 모델은 논문에 전부 적혀 있었다'),
+      ]);
+    })();
+
+    // ── 하드웨어 스택 ───────────────────────────────────────────
+    const hwStack = (() => {
+      const W = 1720, H = 460;
+      const step = (x, w, big, lab, sub, col) => h('g', { key: lab },
+        h('rect', { x: x, y: 90, width: w, height: 200, rx: 18, fill: '#fff',
+          stroke: col, strokeWidth: 3 }),
+        h('text', { x: x + w / 2, y: 168, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 44, fontWeight: 800, fill: col }, big),
+        h('text', { x: x + w / 2, y: 218, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: INK }, lab),
+        h('text', { x: x + w / 2, y: 256, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, sub));
+      const arw = (x) => h('text', { key: 'a' + x, x: x, y: 200, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 36, fill: AX }, '→');
+      return svg(W, H, [
+        step(20, 330, '약 5천만', 'GPU 1장', '학습·추론의 단위', MUT),
+        arw(370),
+        step(390, 330, '약 2억', '서버 1대', 'GPU 8장 + 메모리 링크', ACC),
+        arw(740),
+        step(760, 330, '약 200억', '1 팟', '대기업 추론용 단위', VIO),
+        arw(1110),
+        step(1130, 330, '약 2,000억', '슈퍼팟', '팟 8대 + 공유 장비', RED),
+        h('text', { key: 'n', x: 20, y: 400, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' },
+          '강의에서 규모 감각을 위해 든 개략치다 — 시점·구성·환율에 따라 크게 달라진다.'),
+        h('text', { key: 'n2', x: 20, y: 442, fontFamily: KR, fontSize: 22, fill: MUT },
+          '해외 대형 데이터센터는 이 슈퍼팟을 다시 여러 개 묶은 규모다.'),
+      ]);
+    })();
+
+    // ── 전력 ────────────────────────────────────────────────────
+    const powerFig = (() => {
+      const W = 1720, H = 250;
+      const dc = (x, lab, col) => h('g', { key: lab },
+        h('rect', { x: x, y: 60, width: 300, height: 130, rx: 16,
+          fill: 'rgba(255,255,255,.08)', stroke: col, strokeWidth: 3 }),
+        h('text', { x: x + 150, y: 116, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 27, fontWeight: 700, fill: col }, '데이터센터'),
+        h('text', { x: x + 150, y: 156, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: 'var(--neutral-lighter)' }, lab));
+      return svg(W, H, [
+        dc(180, 'A 주', AMB),
+        dc(700, 'B 주', AMB),
+        h('line', { key: 'link', x1: 484, y1: 124, x2: 696, y2: 124, stroke: AMB,
+          strokeWidth: 5, strokeDasharray: '14 10' }),
+        h('text', { key: 'lt', x: 590, y: 96, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: AMB }, '연결해서 한 모델을 학습'),
+        h('text', { key: 'n', x: 1080, y: 106, fontFamily: KR, fontSize: 27,
+          fontWeight: 700, fill: '#fff' }, '한 주 안에서는'),
+        h('text', { key: 'n2', x: 1080, y: 152, fontFamily: KR, fontSize: 27,
+          fontWeight: 700, fill: AMB }, '전력이 부족하다'),
+      ]);
+    })();
+
+    // ── NPU / 경량화 ────────────────────────────────────────────
+    const npuFig = (() => {
+      const W = 1720, H = 440;
+      const col = (x, w, lab, sub, c, bg, items) => h('g', { key: lab },
+        h('rect', { x: x, y: 40, width: w, height: 330, rx: 18, fill: bg,
+          stroke: c, strokeWidth: 3 }),
+        h('text', { x: x + 34, y: 100, fontFamily: KR, fontSize: 32, fontWeight: 800,
+          fill: c }, lab),
+        h('text', { x: x + 34, y: 142, fontFamily: KR, fontSize: 22, fill: MUT }, sub),
+        items.map((t, i) => h('text', { key: i, x: x + 34, y: 202 + i * 48,
+          fontFamily: KR, fontSize: 25, fill: 'var(--fg-2)' }, '· ' + t)));
+      return svg(W, H, [
+        col(20, 820, '학습 (Training)', 'GPU 가 필요하다', RED, '#FDF0F0',
+          ['수개월 · 수천 장 규모', '전력 소모가 크다', '사실상 빅테크만 가능']),
+        col(880, 820, '추론 (Inference)', 'NPU 로 갈 수 있다', GRN, '#EDF9F4',
+          ['전력을 훨씬 적게 먹는다', '속도가 빠르다', '작은 기기 안에 넣을 수 있다']),
+        h('text', { key: 'n', x: 880, y: 418, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' },
+          '초거대 경쟁 대신 경량화 → 제조·농업 등 “몸을 가진 AI” 로 가자는 전략'),
+      ]);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      nextToken, langAsSeries, tokenize, krTokens, tokenizerTable, embedding, positional,
+      ctxGrowth, layersFig, headsFig, archStack, scalingTable, disclosure, hwStack,
+      powerFig, npuFig,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

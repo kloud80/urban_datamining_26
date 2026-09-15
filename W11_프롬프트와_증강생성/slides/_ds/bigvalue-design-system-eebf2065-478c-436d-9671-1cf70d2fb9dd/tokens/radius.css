@@ -1,0 +1,13 @@
+/* ============================================================
+   BigValue — Radius tokens
+   Generous, soft corners. Cards 12-16, buttons 8, chips pill, modals 24.
+   ============================================================ */
+:root {
+  --radius-xs:   0.2rem;   /*  2px */
+  --radius-sm:   0.4rem;   /*  4px */
+  --radius-md:   0.8rem;   /*  8px — inputs, buttons */
+  --radius-lg:   1.2rem;   /* 12px — cards, panels */
+  --radius-xl:   1.6rem;   /* 16px — hero cards */
+  --radius-2xl:  2.4rem;   /* 24px — modals */
+  --radius-pill: 9999px;   /* tags, avatars */
+}

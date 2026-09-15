@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W07_VLM과_멀티모달</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 강의영상 VLM 29:00 · 32 VLM.ipynb — 7주차 보충 자료다. 여기까지 우리는 이미지를 읽었고(5·6주차) 이미지를 만들었다(7주차). 그런데 정작 큰 질문 하나가 남아 있다. 이미지와 글자를 한자리에서 다루려면 무엇이 필요한가. 이 자료는 그 한 질문을 따라간다. CLIP 에서 시작해서 ViT, MAE 를 거쳐 지금 우리가 쓰는 멀티모달 모델까지 5년치 흐름이다. 미리 말해 둘 것 — 이 내용은 12주차 멀티모달에서 본격적으로 다시 다룬다. 오늘은 7주차에서 배운 확산 모델이 어디로 이어지는지까지만 보고 간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(158,93,249,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">7주차 보충 · 이미지 분석 2</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.12;letter-spacing:-0.03em">VLM 과 멀티모달</h1>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">이미지와 글자를 한자리에서 다루려면 무엇이 필요한가</p>
+  <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">한양대학교 도시공학과 · CLIP → ViT → MAE → 멀티모달 LLM → DiT</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 흐름" data-screen-label="02" data-speaker-notes="출처: 신규 — 네 걸음이다. 1부는 왜 이게 필요했는지. 옛날에는 OCR 이라는 별도 기술을 썼다. 2부가 CLIP, 이미지와 글자가 만나는 공간을 처음 만든 모델이다. 3부가 ViT 와 MAE, CNN 을 버리고 트랜스포머로 갈아탄 대목이다. 4부가 지금, 하나의 모델 안에 이미지 토큰과 텍스트 토큰을 같이 넣는 시대다. 마지막에 확산 모델이 어떻게 바뀌었는지까지 본다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 흐름</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">네 걸음</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="weekMap"></span></div>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="03" data-speaker-notes="출처: 신규 — 오늘의 질문이다. 이미지와 글자를 한자리에서 다루려면 무엇이 필요한가. 학생들에게 먼저 생각하게 할 것. 5주차에 이미지를 숫자로 바꿨고, 9주차에 문장을 숫자로 바꿨다. 둘 다 벡터가 됐다. 그런데 그 두 벡터는 서로 다른 공간에 있다. 강아지 사진의 벡터와 강아지라는 단어의 벡터가 아무 관계가 없다. 이 둘을 같은 공간으로 데려오는 것이 오늘의 전부다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 질문</div>
+  <h2 style="margin:0;font-size:72px;font-weight:800;line-height:1.2;letter-spacing:-0.025em;max-width:1620px">이미지와 글자를 <span style="color:var(--primary-main)">한자리</span>에서<br>다루려면 무엇이 필요한가?</h2>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1620px">둘 다 벡터로 바꿨다. 그런데 그 두 벡터는 <b style="color:var(--fg-1)">서로 다른 공간</b>에 있다.</p>
+</section>
+
+<section data-deck="0" data-label="예전에는 OCR 이었다" data-screen-label="04" data-speaker-notes="출처: 강의영상 VLM 32:00–34:00 — 1부다. 예전에 이미지 속 글자를 읽으려면 OCR 이라는 별도 기술을 썼다. 절차를 짚어 줄 것. 먼저 글자처럼 생긴 자리를 찾는다. 탐지다. 6주차에 배운 그것이다. 그다음 그 조각이 어느 언어의 어느 폰트인지 후보를 세운다. 그리고 확률표를 만들어 가장 그럴듯한 글자를 고른다. MNIST 를 한 칸 한 칸 맞히는 것과 같다. 이걸 글자 수만큼 반복한다. 문제는 이 파이프라인이 길고, 중간에 한 번 틀리면 뒤가 전부 틀린다는 것이다. 그리고 결정적으로 — 이 방식은 글자를 읽을 뿐, 그 글자가 그림의 어디에 붙어 있었는지는 모른다. 표 안의 숫자인지 캡션인지 구분하지 못한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">1부 · 왜 필요했나</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">예전에는 OCR 이었다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="ocrPipe"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">글자를 <b style="color:#FF7AA2">읽기만</b> 한다 — 그 글자가 그림의 <b style="color:#00E49B">어디에 붙어 있었는지</b>는 모른다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">표 안의 숫자인지 캡션인지 구분하지 못한다. 파이프라인이 길어 중간에 한 번 틀리면 뒤가 전부 틀린다.</span></div>
+</section>
+
+<section data-deck="0" data-label="두 벡터가 따로 논다" data-screen-label="05" data-speaker-notes="출처: 강의영상 VLM 45:00 — 문제를 정확히 세운다. 우리는 이미 둘 다 벡터로 바꿀 줄 안다. 5주차에 CNN 으로 사진 한 장을 피처 벡터 25개로 요약했다. 9주차에 문장을 컨텍스트 벡터로 바꿨다. 그런데 그 두 벡터는 서로 다른 공간에 있다. 강아지 사진의 벡터가 [0.2, 0.8, ...] 이고 강아지라는 단어의 벡터가 [0.5, 0.1, ...] 인데, 이 둘이 가깝다는 보장이 전혀 없다. 각자 다른 목적으로 학습됐기 때문이다. 그러니 필요한 것은 하나다 — 둘이 만날 수 있는 공간. 여기서 강의에서 나온 말을 그대로 전해 줄 것. 인공지능이 세상을 지배하는 시점에는 모든 언어가 사라지고 벡터만 남을 것이라는 말이 있다. 그만큼 벡터 공간에 익숙해지라는 뜻이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">둘 다 벡터인데 <span style="color:#D93636">따로 논다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">5주차 피처 벡터 · 9주차 컨텍스트 벡터</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="twoSpaces"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">각자 <b style="color:var(--fg-1)">다른 목적</b>으로 학습됐으니 가깝다는 보장이 없다. 필요한 건 <b style="color:var(--fg-1)">둘이 만나는 공간</b>이다.</p>
+</section>
+
+<section data-deck="0" data-label="CLIP — 인터넷에서 짝을 긁어 온다" data-screen-label="06" data-speaker-notes="출처: 강의영상 VLM 36:00–38:00 · Learning Transferable Visual Models From Natural Language Supervision (OpenAI, 2021) — 2부다. 오픈AI 의 CLIP 프로젝트다. 데이터를 어디서 구했는지가 절반이다. 인터넷의 이미지에는 캡션이 붙어 있다. 뉴스 사진 밑의 설명, 블로그 사진의 alt 텍스트 같은 것이다. 그걸 통째로 긁었다. 4억 쌍이다. 여기서 짚을 것 — 이미지 파일을 받은 게 아니라 이미지 URL 과 그에 붙은 캡션을 쌍으로 모았다. 그래서 데이터셋이 가볍다. 그리고 결정적인 점 — 사람이 라벨을 단 게 아니다. 이미 세상에 있던 짝을 주워 온 것이다. 라벨링 노가다가 없다. 5주차에 외벽 138장을 손으로 라벨링한 것을 떠올리게 하고 비교해 줄 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2부 · CLIP · 2021</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이미 있던 짝을 <span style="color:var(--primary-main)">주워 왔다</span></h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="clipData"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">사람이 라벨을 단 게 아니다 — <b style="color:#00E49B">세상에 이미 있던 짝</b>을 4억 개 긁었다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">5주차에 외벽 138장을 손으로 라벨링하던 것과 비교해 볼 것.</span></div>
+</section>
+
+<section data-deck="0" data-label="짝이 맞게 당긴다" data-screen-label="07" data-speaker-notes="출처: 강의영상 VLM 43:00–44:00 · CLIP 논문 Figure 1 — CLIP 이 무엇을 학습하는지. 인코더가 둘이다. 이미지 인코더와 텍스트 인코더. 처음에는 이미지 인코더로 ResNet 을 썼다. 5주차 SOTA 에서 본 그 ResNet 이다. 나중에 ViT 로 바뀐다. 학습 목표가 아주 단순하다. 같은 쌍에서 나온 이미지 벡터와 텍스트 벡터는 가깝게, 다른 쌍끼리는 멀게. 그림의 대각선이 정답 쌍이다. 대각선만 밝게 만들면 된다. 이걸 대조 학습이라고 부른다. 여기서 중요한 감각 하나 — 이미지를 텍스트로 번역하는 게 아니다. 둘을 같은 자로 잴 수 있게 만드는 것뿐이다. 그래서 반대 방향, 즉 이미지에서 문장을 지어내는 일은 CLIP 이 못 한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">대각선만 <span style="color:var(--primary-main)">밝게</span> 만든다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Contrastive Learning · 인코더 둘</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="clipTrain"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">번역하는 게 아니다 — 둘을 <b style="color:var(--fg-1)">같은 자로 잴 수 있게</b> 만드는 것뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="강아지 사진을 넣어 보면" data-screen-label="08" data-speaker-notes="출처: 강의영상 VLM 43:00–45:00 · 32 VLM.ipynb — 실제로 돌려 본다. 강아지 사진 한 장을 이미지 인코더에 넣어 벡터를 얻는다. 그리고 후보 문장을 여러 개 만들어 텍스트 인코더에 넣는다. 강아지 사진이다, 고양이 사진이다, 자동차 사진이다 같은 것들이다. 그다음 유사도를 재면 강아지 문장이 88 퍼센트로 가장 높게 나온다. 여기서 실습 감각을 두 가지 줄 것. 첫째, 한국어는 정확도가 뚜렷하게 떨어진다. 학습 데이터가 영어 캡션 위주였기 때문이다. 둘째, 문장이 길고 세밀해질수록 성능이 떨어진다. 짧은 명사구에는 강하고 긴 설명에는 약하다. 그래도 이게 대단한 이유는 — 이 모델은 강아지를 분류하도록 학습된 적이 없다는 것이다. 후보 문장만 바꾸면 어떤 분류 문제로도 쓸 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">후보 문장만 바꾸면 <span style="color:var(--primary-main)">분류기가 된다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">32 VLM.ipynb</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="clipUse"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px">
+    <div style="padding:22px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">이 모델은 <b style="color:var(--fg-1)">강아지를 분류하도록 배운 적이 없다.</b> 그런데 맞힌다.</div>
+    <div style="padding:22px 28px;background:#FDF0F0;border:2px solid #D93636;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">한국어는 <b style="color:#D93636">눈에 띄게 약하다.</b> 긴 설명문도 약하다 — 영어 캡션 위주로 배웠다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Stable Diffusion 의 그 자리" data-screen-label="09" data-speaker-notes="출처: 강의영상 VLM 45:00–46:00 — 앞 자료와 이어 붙이는 장이다. 7주차 본 자료에서 Stable Diffusion 구조를 봤다. 거기 아래쪽에 CLIP 텍스트 인코더라고 적힌 상자가 하나 있었다. 그게 바로 이것이다. 사용자가 쓴 문장이 CLIP 을 지나 벡터가 되고, 그 벡터가 U-Net 안으로 크로스 어텐션으로 들어간다. 여기서 왜 이게 가능한지를 한 번 더 짚어 줄 것 — CLIP 이 이미지와 텍스트를 같은 공간으로 데려왔기 때문이다. 학습할 때는 이미지 임베딩을 조건으로 넣어도 되고, 생성할 때 텍스트를 넣어도 같은 자리로 떨어진다. 그래서 그림 생성기에 문장으로 말을 걸 수 있게 된 것이다. CLIP 이 없었으면 텍스트로 그림을 부리는 일 자체가 안 됐다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 80% 28%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">앞 자료와 이어 붙인다</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">그림 생성기에 <span style="color:var(--accent-green)">문장으로 말을 걸 수 있게 된 것</span>이<br>바로 이것 때문이다</h2>
+  <div style="flex:1;min-height:0;max-height:300px"><span data-dc-slot="sdHook"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">Stable Diffusion 구조도 아래쪽의 <b style="color:#fff">CLIP 텍스트 인코더</b> 상자가 이 이야기였다.</p>
+</section>
+
+<section data-deck="0" data-label="CLIP 의 한계" data-screen-label="10" data-speaker-notes="출처: 강의영상 VLM 46:00–47:00 — 그런데 우리가 원하던 건 이게 아니었다. 우리가 원한 건 이미지를 언어모델에 그냥 넣어 주는 것이었다. CLIP 으로 그걸 하려면 어떻게 되나. 먼저 이미지를 임베딩한다. 그다음 후보 문장을 잔뜩 만들어 각각 임베딩한다. 유사도를 재서 제일 비슷한 문장을 고른다. 그 문장을 언어모델에 넣는다. 한 번 건너가야 한다. 그리고 더 나쁜 문제가 있다 — CLIP 의 텍스트 인코더가 만드는 임베딩과 언어모델이 쓰는 임베딩은 서로 다른 물건이다. 같은 공간이 아니다. 그래서 둘을 이어 붙이기가 아주 어려웠다. 결론은 이것이다. CLIP 은 이미지와 글자를 같은 자로 재게 해 줬지만, 언어모델 안으로 이미지를 들여보내 주지는 못했다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 번 <span style="color:#D93636">건너가야</span> 한다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="clipGap"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">같은 자로 <b style="color:#00E49B">재게</b> 해 줬지만, 언어모델 <b style="color:#FF7AA2">안으로 들여보내</b> 주지는 못했다.</div>
+</section>
+
+<section data-deck="0" data-label="ViT — CNN 을 버린다" data-screen-label="11" data-speaker-notes="출처: 강의영상 VLM 47:00–50:00 · An Image is Worth 16x16 Words (ICLR 2021) — 3부다. 2020년에 비전 트랜스포머가 나온다. 발상이 완전히 다르다. 9주차에 문장을 어떻게 다뤘는지 떠올리게 할 것. 문장을 토큰으로 자르고, 순서 정보를 포지션 임베딩으로 따로 붙여 주고, 어텐션으로 서로 손을 들게 했다. ViT 는 이미지에 똑같이 한다. 이미지를 16 곱하기 16 픽셀 조각으로 전부 자른다. 그 조각 하나를 토큰 하나로 본다. 여기서 학생들이 갸웃할 것이다 — 16 곱하기 16 에 RGB 면 값이 768개다. 그 덩어리를 토큰 하나로 보자는 것이다. 말이 안 되는 것 같지만 된다. 그리고 조각마다 자기 위치를 포지션 임베딩으로 달아 준다. 그렇게 만든 토큰 줄을 트랜스포머 인코더에 그냥 넣는다. 이 순간 CNN 이 통째로 사라진다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3부 · ViT · 2020</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이미지를 <span style="color:var(--primary-main)">단어처럼</span> 자른다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="vitPatch"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">16 × 16 × 3 = <b style="color:#00E49B">값 768개</b> 짜리 덩어리 하나를 토큰 하나로 본다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">말이 안 되는 것 같지만 된다. 이 순간 CNN 이 통째로 사라진다.</span></div>
+</section>
+
+<section data-deck="0" data-label="구석과 구석이 바로 만난다" data-screen-label="12" data-speaker-notes="출처: 강의영상 VLM 51:00–52:00 — ViT 가 CNN 보다 나은 점을 딱 하나로 짚는다. 5주차를 떠올리게 할 것. 합성곱은 커널이 옆으로 밀려 가면서 가까운 것끼리만 이었다. 그래서 왼쪽 위 구석의 점과 오른쪽 아래 구석의 점이 만나려면, 층을 계속 쌓아 마지막 층까지 올라와야 했다. 어떤 필터엔가 묻어서 같이 올라와야만 비로소 같이 해석됐다. 게다가 패딩을 안 주면 가장자리 픽셀은 학습에 한 번밖에 참여하지 못했다. 자기 정보를 거의 못 줬다. ViT 는 그렇지 않다. 모든 패치가 어텐션으로 이어져 있으니 첫 층부터 구석과 구석이 직접 손을 잡는다. 그래서 이미지 전체의 맥락을 건너뛰어 읽는다. 여기서 한마디 — 그럼 CNN 은 왜 그렇게 했나. 이미지에는 버려도 되는 게 워낙 많았기 때문이다. 그 가정이 깨진 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">구석과 구석이 <span style="color:var(--primary-main)">바로</span> 만난다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">5주차 합성곱과 비교</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="cnnVsVit"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">CNN 이 그렇게 한 이유는 <b style="color:var(--fg-1)">이미지에 버려도 되는 게 많았기 때문</b>이다. 그 가정이 깨졌다.</p>
+</section>
+
+<section data-deck="0" data-label="그런데 데이터가 모자란다" data-screen-label="13" data-speaker-notes="출처: 강의영상 VLM 52:00–53:00 — ViT 가 나왔는데 바로 이기지 못했다. 이유가 데이터다. 언어모델이 그렇게 커질 수 있었던 이유를 떠올리게 할 것. 인터넷의 글은 무제한이다. 그리고 마스킹으로 정답을 무한히 만들 수 있었다. 중간을 가리고 맞혀 봐, 뒤를 가리고 맞혀 봐. 사람이 정답을 달아 줄 필요가 없다. 그래서 학습 데이터가 사실상 무한했다. 이미지는 어떤가. CLIP 이 모은 이미지-캡션 쌍이 4억 개다. 많아 보이지만 언어에 비하면 아주 적다. 그리고 더 큰 문제 — 이미지를 넣었을 때 뒤에 나와야 할 정답이 무엇인지가 애매하다. 캡션밖에 없다. 캡션을 맞히는 학습으로는 원하는 수준까지 못 간다. 그래서 한동안 결론이 이랬다. 그놈이 그놈이다, 차라리 CNN 이 가볍고 사전학습된 것도 많으니 낫다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">막힌 곳</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정답을 <span style="color:#D93636">무한히 만들 수가 없다</span></h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="dataGap"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">한동안 결론이 이랬다 — <b style="color:#FF7AA2">그놈이 그놈이다.</b> 차라리 CNN 이 가볍고 사전학습된 것도 많다.</div>
+</section>
+
+<section data-deck="0" data-label="MAE — 이미지에 마스킹을 건다" data-screen-label="14" data-speaker-notes="출처: 강의영상 VLM 54:00–56:00 · Masked Autoencoders Are Scalable Vision Learners (2021) — 2021년에 마스크드 오토인코더가 나온다. 아이디어 하나를 던진 것인데 결과가 터졌다. 발상은 이것이다. 언어에서 단어를 가리고 맞히게 했듯이, 이미지에서 패치를 가리고 맞히게 하자. 논문은 75 퍼센트를 가린다. 네 조각 중 셋을 지우는 것이다. 그리고 남은 25 퍼센트만 보고 나머지를 그려 내게 한다. 여기서 어텐션이 하는 일을 말로 풀어 줄 것 — 왼쪽 위에 남은 조각이 이렇게 묻는다. 나는 지금 이 자리를 채워야 하는데, 누가 나한테 정보를 줄 수 있지? 그러면 멀리 있는 조각들이 손을 든다. 그 정보를 받아 자기 자리를 그린다. 결정적인 것은 이 학습에 사람 손이 하나도 안 든다는 것이다. 사진만 있으면 정답이 저절로 생긴다. 드디어 이미지에서도 데이터가 무한해졌다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">MAE · 2021</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">넷 중 셋을 <span style="color:#00B37A">가리고</span> 그리게 한다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="maeMask"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">사람 손이 <b style="color:#00E49B">하나도 안 든다.</b> 사진만 있으면 정답이 저절로 생긴다 — 드디어 이미지도 무한해졌다.</div>
+</section>
+
+<section data-deck="0" data-label="OCR 이 사라졌다" data-screen-label="15" data-speaker-notes="출처: 강의영상 VLM 56:00–57:00 — 그 결과가 무엇이었는지. 여기가 이 자료에서 제일 놀라운 대목이다. 마스크 학습을 시켰더니 멀티헤드 어텐션의 헤드들이 각자 다른 것을 보기 시작했다. 어떤 헤드는 색을, 어떤 헤드는 경계를, 어떤 헤드는 선을 본다. 그런데 그 와중에 글자까지 인식하기 시작했다. 가려진 자리에 이 획이 있어야 글자가 완성될 것 같다는 식으로 복원하다 보니, 글자를 읽는 능력이 부산물로 따라온 것이다. 그래서 무슨 일이 벌어졌나. OCR 이라는 기술 분야가 통째로 사라졌다. 앞에서 본 그 긴 파이프라인 — 탐지하고, 폰트 맞추고, 확률표 만들고 — 이 전부 필요 없어졌다. 지금 여러분이 PDF 를 그냥 던져 넣으면 읽히는 이유가 이것이다. 오랜 기간 표의 위치를 찾고 이미지를 잘라 내던 기술들이 한 번에 날아갔다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">글자 읽기가 <span style="color:var(--primary-main)">부산물로</span> 따라왔다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">멀티헤드가 각자 다른 것을 본다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="headsSee"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">OCR 이라는 기술 분야가 <b style="color:#FF7AA2">통째로 사라졌다.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">지금 PDF 를 그냥 던져 넣으면 읽히는 이유가 이것이다.</span></div>
+</section>
+
+<section data-deck="0" data-label="하나의 모델에 같이 넣는다" data-screen-label="16" data-speaker-notes="출처: 강의영상 VLM 63:00–65:00 — 4부다. 여기까지는 이미지 쪽과 텍스트 쪽이 따로 학습되고 나중에 이어 붙는 구조였다. ViT 를 MAE 로 먼저 학습시키고, 그걸 CLIP 으로 텍스트와 연결하고, 그다음에 언어모델에 갖다 쓰는 식이다. 지금은 다르다. 언어모델 자체가 워낙 크니까, 아예 그 안에 이미지 토큰과 텍스트 토큰을 같이 넣고 한 번에 학습시킨다. 그러면 어떤 일이 생기나. 이미지 패치와 텍스트 토큰이 같은 시퀀스에 놓이니까 서로 셀프 어텐션이 된다. 그림의 어느 조각이 문장의 어느 단어와 직접 손을 잡는다. 건너갈 필요가 없어졌다. 앞 장에서 말한 CLIP 의 한계가 여기서 풀린다. 한 가지 짚어 줄 것 — 이미지 패치 토큰과 텍스트 토큰은 같은 물건이 아니다. 포지션을 매기는 방식조차 다르다. 그래도 같은 어텐션 안에서 만나게 해 놓은 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">4부 · 지금</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">한 줄에 <span style="color:var(--accent-green)">같이 세운다</span></h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="oneModel"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">그림 조각과 문장 단어가 <b style="color:#fff">직접 손을 잡는다.</b> 건너갈 필요가 없어졌다.</p>
+</section>
+
+<section data-deck="0" data-label="표가 풀렸다" data-screen-label="17" data-speaker-notes="출처: 강의영상 VLM 65:00–67:00 — 이게 실무에서 무엇을 바꿨는지 아주 구체적인 예로 간다. 도시 분야 학생들이 바로 알아들을 이야기다. 공공 문서의 표를 떠올리게 할 것. 도시기본계획이나 관리계획 보고서를 열어 보면 한글로 만든 표가 있다. 그런데 그 표가 엑셀처럼 반듯하지 않다. 중간에 칸을 쪼갰다가, 어디는 합쳤다가, 어디는 아예 선을 지웠다가 한다. 사람 눈에는 읽히는데 기계에는 지옥이다. PDF 로 구워 놓으면 더 어렵다. 그래서 OCR 을 잘한다는 회사들이 이걸 붙들고 오래 씨름했다. 지금은 어떻게 되나. 이미지 토큰과 텍스트 토큰이 서로 어텐션을 하니까, 표 안의 숫자가 어느 행 어느 열에 속하는지를 맥락으로 이해한다. 그림 안의 글자, 캡션, 본문 문장이 서로 어떻게 연결되는지까지 설명해 낸다. 마지막으로 학생들에게 던질 것 — 그럼 여러분이 다루는 도시계획 문서들을 이제 어떻게 다룰 수 있겠는가." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">공공 문서의 <span style="color:var(--primary-main)">그 표</span>가 풀렸다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">도시기본계획 · 관리계획 보고서</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="tableCase"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">표 안의 숫자가 <b style="color:#00E49B">어느 행 어느 열에 속하는지</b>를 맥락으로 이해한다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">그럼 여러분이 다루는 도시계획 문서들을 이제 어떻게 다룰 수 있겠는가.</span></div>
+</section>
+
+<section data-deck="0" data-label="DiT — U-Net 을 갈아 끼운다" data-screen-label="18" data-speaker-notes="출처: 강의영상 VLM 74:00–77:00 · Scalable Diffusion Models with Transformers (2022) — 확산 모델로 돌아온다. 7주차 본 자료에서 잡음을 한 칸 걷어 내는 일을 U-Net 이 맡았다. 그런데 U-Net 은 합성곱이다. 합성곱의 성질을 그대로 물려받았다. 눌러 담는 과정에서 부분을 놓친다. 그래서 나온 것이 DiT 다. 그 자리에 트랜스포머를 넣었다. 결과가 뭐였나. 옛날 Stable Diffusion 으로 그려 본 사람들은 알 것이다. 가운데 주제는 잘 그리는데 손가락 같은 디테일이 망가졌다. 왜 그런가. 왼손을 그리는 자리와 오른손을 그리는 자리가 서로 정보를 못 주고받았기 때문이다. DiT 는 어텐션이니 다르다. 왼손이 여기 있다는 정보를 오른손 자리가 직접 받아서 그린다. 그래서 디테일이 좋아졌다. 지금 나노바나나 같은 최신 생성 모델이 DiT 계열일 것으로 널리 추정된다고 말해 줄 것 — 공개된 사실은 아니므로 추정이라고 분명히 할 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#E8873A;font-weight:700">DiT · 2022</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">U-Net 자리에 <span style="color:#E8873A">트랜스포머</span>를 넣는다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="ditSwap"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">왼손이 여기 있다는 정보를 <b style="color:#FFB86B">오른손 자리가 직접 받아서</b> 그린다 — 그래서 디테일이 좋아졌다.</div>
+</section>
+
+<section data-deck="0" data-label="영상은 어떻게 만드나" data-screen-label="19" data-speaker-notes="출처: 강의영상 VLM 77:00–79:00 — 마지막 한 걸음이다. 요즘 몇 초짜리 영상을 쉽게 만들어 주는 도구들이 있다. 어떻게 하는 것 같으냐고 먼저 물어볼 것. 답은 생각보다 단순하다. 5초짜리에 초당 20프레임이면 100장이다. 그 100장을 한 판의 큰 이미지로 그냥 이어 붙인다. 그리고 통째로 패치로 잘라 DiT 에 넣는다. 그러면 어떤 일이 생기나. 첫 장면의 패치와 마지막 장면의 패치가 같은 어텐션 안에 있다. 그래서 시작할 때 손에 돌을 들고 있었으면, 마지막에 그 돌을 던지든 들고 있든 해야 한다는 것을 모델이 스스로 맞춘다. 앞뒤가 이어지는 이유가 이것이다. 대신 계산량이 어마어마하다. 그래서 아직 한 편의 영화는 못 만든다. 마지막으로 속도 이야기를 해 줄 것 — 이게 1, 2년 사이에 일어난 일이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(232,135,58,.26),transparent 62%)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">100장을 <span style="color:#FFB86B">한 판으로</span> 붙인다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">5초 × 초당 20프레임</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="videoPatch"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">시작 장면의 조각과 끝 장면의 조각이 <b style="color:#fff">같은 어텐션 안에</b> 있다. 그래서 앞뒤가 이어진다.</p>
+</section>
+
+<section data-deck="0" data-label="두 흐름이 판을 바꿨다" data-screen-label="20" data-speaker-notes="출처: 강의영상 VLM 47:00 · 73:00 — 전체를 두 단어로 묶는다. 이 5년을 읽고 나면 판을 바꾼 것이 두 가지였다는 게 보인다. 하나는 트랜스포머, 즉 어텐션이다. 멀리 있는 것끼리 직접 손을 잡게 했다. 다른 하나는 마스크드 러닝이다. 가리고 맞히게 해서 정답을 무한히 만들어 냈다. 이 둘이 텍스트에서 먼저 일어났고, 그다음 이미지로 건너왔고, 지금은 확산 모델과 영상까지 갔다. 여기서 도시 분야 사례를 하나 붙여 줄 것. 마스크드 러닝은 이미지에만 쓰는 게 아니다. 미국 부동산 회사 질로의 시세 알고리즘이 좋은 예다. 전국 주택 리스팅 데이터에 구멍이 많다. 어떤 집은 방 개수가, 어떤 집은 욕실 개수가 비어 있다. 그걸 마스크 학습으로 채웠다. 이런 맥락에서는 욕실이 몇 개일 것이다를 어텐션으로 배우게 한 것이다. 우리 분야의 결측 데이터도 같은 방법으로 다룰 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">판을 바꾼 건 <span style="color:var(--primary-main)">두 가지</span>였다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="twoWaves"></span></div>
+  <div style="padding:26px 34px;background:var(--surface-app);border-radius:16px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">우리 분야의 결측 데이터도 같다.</b> 미국 부동산 시세 알고리즘은 리스팅에 빠진 방·욕실 개수를 마스크 학습으로 채운다 — 이런 맥락이면 욕실이 몇 개일 것이다를 어텐션으로 배우게 한 것이다.</div>
+</section>
+
+<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="21" data-speaker-notes="출처: 신규 — 3분 토론. Q1 은 오늘 1부와 이어진다. Q2 는 도시 분야로 바로 끌어오는 질문이다. Q3 는 속도 이야기다. 강의에서 나온 경고를 그대로 전할 것 — 석박사 과정을 마칠 때쯤이면 시장이 완전히 바뀌어 있을 수 있다. 지금 배우는 것이 중요하지만, 그 위에서 새로 나온 것을 얼마나 빨리 얹을 수 있느냐가 더 중요하다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3분 · 옆 사람과</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">하나만 골라 이야기해 보자</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q1</b> &nbsp; CLIP 은 한국어가 약하다. 우리 자료로 쓰려면 <b style="color:var(--fg-1)">무엇을 먼저</b> 해야 하는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q2</b> &nbsp; 도시계획 보고서를 통째로 넣을 수 있게 됐다면, <b style="color:var(--fg-1)">어떤 연구</b>가 새로 가능해지는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q3</b> &nbsp; 마스크드 러닝으로 채울 만한 <b style="color:var(--fg-1)">우리 분야의 구멍 난 데이터</b>는 무엇인가?</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="22" data-speaker-notes="출처: 신규 — 오늘의 질문에 답한다. 이미지와 글자를 한자리에서 다루려면 무엇이 필요한가. 세 번에 걸쳐 답이 바뀌었다. 처음에는 같은 자로 재게 했다. CLIP 이다. 그다음에는 이미지를 글자처럼 다뤘다. ViT 와 MAE 다. 지금은 아예 한 줄에 같이 세운다. 멀티모달 LLM 이다. 그리고 마지막 한마디 — 이 셋을 관통하는 것은 결국 벡터다. 무엇이든 벡터로 바꿔 놓으면 같은 공간에서 다룰 수 있다는 것, 그게 이 수업 전체를 관통한 이야기였다. 12주차 멀티모달에서 여기서부터 다시 시작한다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 24% 78%,rgba(158,93,249,.26),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">오늘의 질문에 답한다</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">무엇이든 <span style="color:var(--accent-green)">벡터로 바꿔 놓으면</span><br>같은 공간에서 다룰 수 있다</h2>
+  <div style="flex:1;min-height:0;max-height:300px"><span data-dc-slot="wrapUp"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">이 수업 전체를 관통한 이야기였다. <b style="color:#fff">12주차 멀티모달</b>에서 여기서부터 다시 시작한다.</p>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W07_VLM과_멀티모달</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">22</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">오늘의 흐름</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">예전에는 OCR 이었다</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">두 벡터가 따로 논다</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">CLIP — 인터넷에서 짝을 긁어 온다</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">짝이 맞게 당긴다</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">강아지 사진을 넣어 보면</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">Stable Diffusion 의 그 자리</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">CLIP 의 한계</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">ViT — CNN 을 버린다</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">구석과 구석이 바로 만난다</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">그런데 데이터가 모자란다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">MAE — 이미지에 마스킹을 건다</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">OCR 이 사라졌다</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">하나의 모델에 같이 넣는다</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">표가 풀렸다</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">DiT — U-Net 을 갈아 끼운다</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">영상은 어떻게 만드나</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">두 흐름이 판을 바꿨다</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const rnd = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+
+    // ── 오늘의 흐름 ─────────────────────────────────────────────
+    const weekMap = (() => {
+      const W = 1720, H = 400;
+      const C = [
+        ['1', '왜 필요했나', ['이미지 속 글자를 읽으려면', 'OCR 이라는 별도 기술'], MUT],
+        ['2', 'CLIP', ['이미지와 글자가', '만나는 공간을 만든다'], ACC],
+        ['3', 'ViT · MAE', ['CNN 을 버리고', '가리고 맞히게 한다'], GRN],
+        ['4', '하나의 모델로', ['한 줄에 같이 세운다', '그리고 DiT 로'], VIO],
+      ];
+      const g = [];
+      const CW = 390, GAP = 30, X0 = 40;
+      C.forEach((c, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 40, width: CW, height: 280, rx: 20,
+          fill: '#fff', stroke: c[3], strokeWidth: i === 0 ? 2.5 : 3 }));
+        g.push(h('circle', { key: 'c' + i, cx: x + 50, cy: 104, r: 28, fill: c[3] }));
+        g.push(h('text', { key: 'n' + i, x: x + 50, y: 114, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 26, fontWeight: 800, fill: '#fff' }, c[0]));
+        g.push(h('text', { key: 't' + i, x: x + 94, y: 114, fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: c[3] }, c[1]));
+        c[2].forEach((s, j) => g.push(h('text', { key: 's' + i + j, x: x + 32,
+          y: 188 + j * 44, fontFamily: KR, fontSize: 22, fill: 'var(--fg-3)' }, s)));
+        if (i < 3) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 190,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 32, fill: AX }, '→'));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 376, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '실습 — 32 VLM.ipynb · 본격적인 내용은 12주차 멀티모달에서'));
+      return svg(W, H, g);
+    })();
+
+    // ── 옛 OCR 파이프라인 ──────────────────────────────────────
+    const ocrPipe = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const S = [['①', '글자 같은 자리를 찾는다', '6주차 탐지'],
+                 ['②', '어느 언어 어느 폰트인가', '후보를 세운다'],
+                 ['③', '확률표에서 고른다', 'MNIST 와 같은 일'],
+                 ['④', '글자 수만큼 반복', '한 칸 한 칸']];
+      const CW = 390, GAP = 30, X0 = 40;
+      S.forEach((s, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 40, width: CW, height: 200, rx: 20,
+          fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'n' + i, x: x + 30, y: 98, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: MUT }, s[0]));
+        g.push(h('text', { key: 't' + i, x: x + 76, y: 98, fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: INK }, s[1]));
+        g.push(h('text', { key: 's' + i, x: x + 30, y: 168, fontFamily: KR,
+          fontSize: 21, fill: MUT }, s[2]));
+        if (i < 3) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 148,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: AX }, '→'));
+      });
+      // 끊기는 지점
+      g.push(h('path', { key: 'cut', d: 'M880 268 L900 300 M900 268 L880 300',
+        stroke: RED, strokeWidth: 5 }));
+      g.push(h('text', { key: 'ct', x: 930, y: 296, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: RED },
+        '중간에 한 번 틀리면 뒤가 전부 틀린다'));
+      g.push(h('rect', { key: 'ob', x: 40, y: 320, width: 820, height: 76, rx: 16,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'ot', x: 72, y: 368, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: RED },
+        '읽어 낸 글자에 “어디에 있었나” 가 없다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 두 벡터 공간 ───────────────────────────────────────────
+    const twoSpaces = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const r = rnd(13);
+      const cloud = (key, cx, cy, col, n) => {
+        for (let i = 0; i < n; i++) {
+          const a = r() * Math.PI * 2, d = r() * 96;
+          g.push(h('circle', { key: key + i, cx: cx + Math.cos(a) * d,
+            cy: cy + Math.sin(a) * d * 0.78, r: 7, fill: col, opacity: 0.5 }));
+        }
+      };
+      g.push(h('rect', { key: 'lb', x: 40, y: 44, width: 740, height: 300, rx: 20,
+        fill: '#fff', stroke: '#E4E2EE', strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'lt', x: 72, y: 30, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: ACC }, '이미지 벡터 공간 — 5주차 피처 벡터'));
+      cloud('a', 410, 194, ACC, 70);
+      g.push(h('rect', { key: 'rb', x: 940, y: 44, width: 740, height: 300, rx: 20,
+        fill: '#fff', stroke: '#E4E2EE', strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'rt', x: 972, y: 30, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: GRN }, '텍스트 벡터 공간 — 9주차 컨텍스트 벡터'));
+      cloud('b', 1310, 194, GRN, 70);
+      // 서로 못 잇는다
+      g.push(h('line', { key: 'x1', x1: 810, y1: 150, x2: 910, y2: 240,
+        stroke: RED, strokeWidth: 4 }));
+      g.push(h('line', { key: 'x2', x1: 910, y1: 150, x2: 810, y2: 240,
+        stroke: RED, strokeWidth: 4 }));
+      g.push(h('text', { key: 'xt', x: 860, y: 296, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 22, fontWeight: 800, fill: RED }, '연결 없음'));
+      g.push(h('text', { key: 'c1', x: 410, y: 384, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fill: MUT }, '강아지 사진 = [0.2, 0.8, …]'));
+      g.push(h('text', { key: 'c2', x: 1310, y: 384, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fill: MUT }, '“강아지” = [0.5, 0.1, …]'));
+      return svg(W, H, g);
+    })();
+
+    // ── CLIP 데이터 ────────────────────────────────────────────
+    const clipData = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const PAIR = [['강아지 사진', 'a photo of a golden retriever'],
+                    ['거리 사진', 'a busy street in downtown Seoul'],
+                    ['그래프 이미지', 'bar chart of monthly sales']];
+      g.push(h('text', { key: 'ht', x: 40, y: 36, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: MUT }, '인터넷에 이미 이렇게 붙어 있다'));
+      PAIR.forEach((p, i) => {
+        const y = 58 + i * 96;
+        g.push(h('rect', { key: 'i' + i, x: 40, y: y, width: 300, height: 76, rx: 14,
+          fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'it' + i, x: 190, y: y + 48, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 700, fill: ACC }, p[0]));
+        g.push(h('text', { key: 'l' + i, x: 362, y: y + 48, fontFamily: EN,
+          fontSize: 26, fill: AX }, '↔'));
+        g.push(h('rect', { key: 't' + i, x: 410, y: y, width: 640, height: 76, rx: 14,
+          fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'tt' + i, x: 440, y: y + 48, fontFamily: EN,
+          fontSize: 22, fill: '#00805A' }, p[1]));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 386, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '이미지 파일이 아니라 URL 과 캡션을 쌍으로 모았다 — 그래서 데이터셋이 가볍다'));
+      // 4억
+      g.push(h('rect', { key: 'nb', x: 1110, y: 76, width: 570, height: 250, rx: 20,
+        fill: 'var(--neutral-black)' }));
+      g.push(h('text', { key: 'nt', x: 1150, y: 138, fontFamily: KR, fontSize: 24,
+        fill: '#8D89A6' }, '긁어 모은 이미지 – 캡션 쌍'));
+      g.push(h('text', { key: 'nv', x: 1150, y: 226, fontFamily: EN, fontSize: 74,
+        fontWeight: 800, fill: '#00E49B' }, '4 억'));
+      g.push(h('text', { key: 'nn', x: 1150, y: 282, fontFamily: KR, fontSize: 21,
+        fill: '#8D89A6' }, '사람이 라벨을 단 것이 하나도 없다'));
+      return svg(W, H, g);
+    })();
+
+    // ── CLIP 대조 학습 ─────────────────────────────────────────
+    const clipTrain = (() => {
+      const W = 1720, H = 430;
+      const g = [];
+      const N = 5, CELL = 62, GX = 640, GY = 84;
+      g.push(h('text', { key: 'h1', x: 40, y: 40, fontFamily: KR, fontSize: 23,
+        fontWeight: 800, fill: ACC }, '이미지 인코더'));
+      g.push(h('text', { key: 'h1n', x: 40, y: 74, fontFamily: KR, fontSize: 20,
+        fill: MUT }, 'ResNet → 나중에 ViT'));
+      g.push(h('text', { key: 'h2', x: 40, y: 146, fontFamily: KR, fontSize: 23,
+        fontWeight: 800, fill: GRN }, '텍스트 인코더'));
+      g.push(h('text', { key: 'h2n', x: 40, y: 180, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '캡션 문장을 벡터로'));
+      g.push(h('rect', { key: 'gb', x: 40, y: 220, width: 520, height: 140, rx: 16,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'gt', x: 70, y: 264, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: INK }, '학습 목표는 하나'));
+      g.push(h('text', { key: 'gn', x: 70, y: 304, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' }, '짝인 것은 가깝게'));
+      g.push(h('text', { key: 'gn2', x: 70, y: 338, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' }, '짝이 아닌 것은 멀게'));
+      for (let i = 0; i < N; i++) {
+        g.push(h('text', { key: 'cl' + i, x: GX - 16, y: GY + i * CELL + 40,
+          textAnchor: 'end', fontFamily: EN, fontSize: 20, fill: ACC },
+          'I' + (i + 1)));
+        g.push(h('text', { key: 'ct' + i, x: GX + i * CELL + CELL / 2, y: GY - 14,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 20, fill: GRN },
+          'T' + (i + 1)));
+        for (let j = 0; j < N; j++) {
+          const on = i === j;
+          g.push(h('rect', { key: 'c' + i + j, x: GX + j * CELL, y: GY + i * CELL,
+            width: CELL - 4, height: CELL - 4, rx: 7,
+            fill: on ? GRN : '#EFEEF5', opacity: on ? 1 : 1 }));
+        }
+      }
+      g.push(h('text', { key: 'dl', x: GX + N * CELL + 28, y: GY + 40,
+        fontFamily: KR, fontSize: 22, fontWeight: 800, fill: GRN },
+        '대각선 = 진짜 짝'));
+      g.push(h('text', { key: 'dl2', x: GX + N * CELL + 28, y: GY + 78,
+        fontFamily: KR, fontSize: 21, fill: MUT }, '여기만 밝게 만든다'));
+      g.push(h('text', { key: 'dl3', x: GX + N * CELL + 28, y: GY + 140,
+        fontFamily: KR, fontSize: 21, fill: MUT }, '나머지는 어둡게'));
+      g.push(h('text', { key: 'cap', x: 40, y: 410, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '이미지를 글로 번역하는 것이 아니다 — 반대 방향, 사진에서 문장을 지어내는 일은 못 한다'));
+      return svg(W, H, g);
+    })();
+
+    // ── CLIP 사용 ──────────────────────────────────────────────
+    const clipUse = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      g.push(h('rect', { key: 'ib', x: 40, y: 90, width: 240, height: 200, rx: 18,
+        fill: '#EEF0FE', stroke: ACC, strokeWidth: 3 }));
+      g.push(h('text', { key: 'it', x: 160, y: 200, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 800, fill: ACC }, '강아지 사진'));
+      g.push(h('text', { key: 'ar', x: 320, y: 200, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 32, fill: AX }, '→'));
+      const CAND = [['a photo of a dog', 88.25, GRN],
+                    ['a photo of a cat', 6.10, MUT],
+                    ['a photo of a car', 3.25, MUT],
+                    ['개 사진입니다', 2.40, RED]];
+      CAND.forEach((c, i) => {
+        const y = 50 + i * 82;
+        g.push(h('rect', { key: 'cb' + i, x: 380, y: y, width: 620, height: 62,
+          rx: 12, fill: '#fff', stroke: i === 0 ? GRN : '#E4E2EE',
+          strokeWidth: i === 0 ? 3 : 2 }));
+        g.push(h('text', { key: 'ct' + i, x: 410, y: y + 40, fontFamily: EN,
+          fontSize: 22, fill: i === 3 ? RED : INK }, c[0]));
+        const bw = 560 * (c[1] / 100);
+        g.push(h('rect', { key: 'bb' + i, x: 1030, y: y + 14, width: Math.max(6, bw),
+          height: 34, rx: 8, fill: c[2], opacity: i === 0 ? 1 : 0.45 }));
+        g.push(h('text', { key: 'bv' + i, x: 1030 + Math.max(6, bw) + 16, y: y + 41,
+          fontFamily: EN, fontSize: 23, fontWeight: 800, fill: c[2] },
+          c[1].toFixed(2) + '%'));
+      });
+      g.push(h('text', { key: 'cap', x: 380, y: 390, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '이미지 벡터와 각 문장 벡터의 유사도'));
+      return svg(W, H, g);
+    })();
+
+    // ── Stable Diffusion 연결 ──────────────────────────────────
+    const sdHook = (() => {
+      const W = 1720, H = 260;
+      const g = [];
+      const box = (key, x, w, t1, t2, col, fill) => {
+        g.push(h('rect', { key: key, x: x, y: 60, width: w, height: 120, rx: 18,
+          fill: fill, stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: x + w / 2, y: 118, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 25, fontWeight: 800, fill: col }, t1));
+        g.push(h('text', { key: key + 's', x: x + w / 2, y: 154, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 20, fill: '#8D89A6' }, t2));
+      };
+      const arr = (key, x1, x2, col) => {
+        g.push(h('line', { key: key, x1: x1, y1: 120, x2: x2 - 12, y2: 120,
+          stroke: col, strokeWidth: 3.5 }));
+        g.push(h('path', { key: key + 'h', d: 'M' + (x2 - 14) + ' 112 L' + x2
+          + ' 120 L' + (x2 - 14) + ' 128 Z', fill: col }));
+      };
+      box('a', 40, 400, '“우주복 입은 말”', '사용자가 쓴 문장', '#D9C6FF',
+        'rgba(158,93,249,.14)');
+      arr('r1', 440, 500, '#9E5DF9');
+      box('b', 500, 400, 'CLIP 텍스트 인코더', '오늘 배운 그것', '#00E49B',
+        'rgba(0,228,155,.14)');
+      arr('r2', 900, 960, '#00E49B');
+      box('c', 960, 340, '조건 벡터', 'cross-attention', '#7B8CFF',
+        'rgba(123,140,255,.14)');
+      arr('r3', 1300, 1360, '#7B8CFF');
+      box('d', 1360, 320, 'U-Net', '7주차 확산 모델', '#FFB86B',
+        'rgba(255,184,107,.14)');
+      g.push(h('text', { key: 'cap', x: 40, y: 228, fontFamily: KR, fontSize: 22,
+        fill: 'var(--neutral-lighter)' },
+        'CLIP 이 이미지와 텍스트를 같은 공간으로 데려왔기 때문에 이 연결이 성립한다'));
+      return svg(W, H, g);
+    })();
+
+    // ── CLIP 의 한계 ───────────────────────────────────────────
+    const clipGap = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const S = [['이미지를 임베딩한다', ACC], ['후보 문장을 잔뜩 만든다', MUT],
+                 ['가장 비슷한 문장을 고른다', MUT], ['그 문장을 LLM 에 넣는다', VIO]];
+      S.forEach((s, i) => {
+        const x = 40 + i * 412;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 60, width: 372, height: 120,
+          rx: 18, fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 't' + i, x: x + 186, y: 132, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 700, fill: s[1] }, s[0]));
+        if (i < 3) g.push(h('text', { key: 'a' + i, x: x + 392, y: 132,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: AX }, '→'));
+      });
+      g.push(h('text', { key: 'bt', x: 860, y: 226, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 800, fill: RED },
+        '한 번 건너가야 한다'));
+      // 임베딩이 서로 다르다
+      g.push(h('rect', { key: 'nb', x: 40, y: 266, width: 1640, height: 100, rx: 18,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'nt', x: 76, y: 310, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: RED }, '그리고 더 나쁜 문제'));
+      g.push(h('text', { key: 'nn', x: 76, y: 348, fontFamily: KR, fontSize: 22,
+        fill: 'var(--fg-3)' },
+        'CLIP 텍스트 인코더가 만드는 임베딩과 언어모델이 쓰는 임베딩은 서로 다른 물건이다 — 같은 공간이 아니다'));
+      return svg(W, H, g);
+    })();
+
+    // ── ViT 패치 ───────────────────────────────────────────────
+    const vitPatch = (() => {
+      const W = 1720, H = 430;
+      const g = [];
+      const r = rnd(23);
+      const N = 6, CELL = 44, GX = 40, GY = 70;
+      for (let a = 0; a < N; a++)
+        for (let b = 0; b < N; b++)
+          g.push(h('rect', { key: 'p' + a + b, x: GX + b * CELL, y: GY + a * CELL,
+            width: CELL - 4, height: CELL - 4, rx: 4, fill: ACC,
+            opacity: 0.14 + r() * 0.62 }));
+      g.push(h('text', { key: 'gt', x: GX, y: 46, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: MUT }, '이미지를 16 × 16 조각으로 전부 자른다'));
+      g.push(h('text', { key: 'gn', x: GX, y: GY + N * CELL + 34, fontFamily: KR,
+        fontSize: 21, fill: MUT }, '조각 하나 = 토큰 하나'));
+      g.push(h('text', { key: 'ar', x: 350, y: 200, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: AX }, '→'));
+      // 토큰 줄
+      const TX = 420, TW = 116;
+      for (let i = 0; i < 6; i++) {
+        g.push(h('rect', { key: 't' + i, x: TX + i * (TW + 12), y: 116, width: TW,
+          height: 72, rx: 12, fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'tt' + i, x: TX + i * (TW + 12) + TW / 2, y: 160,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 21, fontWeight: 700,
+          fill: ACC }, '패치 ' + (i + 1)));
+        g.push(h('rect', { key: 'p2' + i, x: TX + i * (TW + 12), y: 200, width: TW,
+          height: 52, rx: 12, fill: '#F3EDFF', stroke: VIO, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'pt' + i, x: TX + i * (TW + 12) + TW / 2, y: 234,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 19, fill: VIO },
+          '위치 ' + (i + 1)));
+      }
+      g.push(h('text', { key: 'tl', x: TX, y: 100, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: ACC }, '패치 임베딩'));
+      g.push(h('text', { key: 'pl', x: TX + 6 * (TW + 12) + 16, y: 234,
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: VIO },
+        '포지션 임베딩'));
+      g.push(h('rect', { key: 'eb', x: TX, y: 286, width: 6 * (TW + 12) - 12,
+        height: 76, rx: 16, fill: '#EDF9F4', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'et', x: TX + (6 * (TW + 12) - 12) / 2, y: 334,
+        textAnchor: 'middle', fontFamily: KR, fontSize: 26, fontWeight: 800,
+        fill: '#00805A' }, '트랜스포머 인코더 — 9주차 그 구조 그대로'));
+      g.push(h('text', { key: 'cap', x: GX, y: 408, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '문장을 토큰으로 자르고 위치를 붙여 어텐션에 넣던 것과 똑같이 한다'));
+      return svg(W, H, g);
+    })();
+
+    // ── CNN vs ViT ─────────────────────────────────────────────
+    const cnnVsVit = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const panel = (key, x0, title, col, fill) => {
+        g.push(h('rect', { key: key + 'b', x: x0, y: 50, width: 780, height: 300,
+          rx: 20, fill: fill, stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: x0, y: 34, fontFamily: KR,
+          fontSize: 25, fontWeight: 800, fill: col }, title));
+      };
+      panel('a', 40, '합성곱 — 층을 쌓아야 겨우 만난다', RED, '#FDF0F0');
+      // 층층이 올라가야 만남
+      for (let L = 0; L < 4; L++) {
+        const y = 300 - L * 66;
+        const n = 8 - L * 2;
+        for (let i = 0; i < n; i++)
+          g.push(h('rect', { key: 'c' + L + i, x: 130 + i * 62 + L * 31, y: y,
+            width: 52, height: 40, rx: 6, fill: RED, opacity: 0.18 + L * 0.16 }));
+      }
+      g.push(h('circle', { key: 'p1', cx: 156, cy: 320, r: 12, fill: RED }));
+      g.push(h('circle', { key: 'p2', cx: 590, cy: 320, r: 12, fill: '#7B8CFF' }));
+      g.push(h('text', { key: 'cn', x: 70, y: 384, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' },
+        '구석의 두 점이 만나려면 마지막 층까지 올라와야 한다'));
+      panel('b', 900, '어텐션 — 첫 층부터 바로 잡는다', GRN, '#EAF7F1');
+      const PX = 980, PY = 110, PC = 82;
+      const pts = [];
+      for (let a = 0; a < 3; a++)
+        for (let b = 0; b < 7; b++) {
+          const x = PX + b * PC, y = PY + a * PC;
+          pts.push([x, y]);
+          g.push(h('rect', { key: 'v' + a + b, x: x, y: y, width: 68, height: 68,
+            rx: 8, fill: GRN, opacity: 0.14 }));
+        }
+      g.push(h('path', { key: 'lnk', d: 'M1014 144 Q 1300 40 1520 296', fill: 'none',
+        stroke: GRN, strokeWidth: 5 }));
+      g.push(h('circle', { key: 'q1', cx: 1014, cy: 144, r: 13, fill: GRN }));
+      g.push(h('circle', { key: 'q2', cx: 1520, cy: 296, r: 13, fill: '#7B8CFF' }));
+      g.push(h('text', { key: 'bn', x: 930, y: 384, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' },
+        '모든 패치가 이어져 있으니 구석과 구석이 직접 손을 잡는다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 데이터 격차 ────────────────────────────────────────────
+    const dataGap = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      g.push(h('rect', { key: 'lb', x: 40, y: 50, width: 790, height: 280, rx: 20,
+        fill: '#EAF7F1', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'lt', x: 40, y: 34, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: GRN }, '언어 — 정답을 무한히 만든다'));
+      ['인터넷의 글은 무제한', '중간을 가리고 맞혀 봐',
+       '뒤를 가리고 맞혀 봐', '사람이 정답을 달 필요가 없다'].forEach((t, i) => {
+        g.push(h('text', { key: 'l' + i, x: 78, y: 110 + i * 54, fontFamily: KR,
+          fontSize: 23, fill: 'var(--fg-3)' }, '· ' + t));
+      });
+      g.push(h('rect', { key: 'rb', x: 890, y: 50, width: 790, height: 280, rx: 20,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }));
+      g.push(h('text', { key: 'rt', x: 890, y: 34, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: RED }, '이미지 — 정답이 애매하다'));
+      ['이미지 – 캡션 쌍 4억 개가 전부', '언어에 비하면 아주 적다',
+       '이미지를 넣으면 정답이 무엇인가', '캡션밖에 없다'].forEach((t, i) => {
+        g.push(h('text', { key: 'r' + i, x: 928, y: 110 + i * 54, fontFamily: KR,
+          fontSize: 23, fill: 'var(--fg-3)' }, '· ' + t));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 380, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: INK },
+        '학습 데이터를 스스로 만들어 낼 수 있느냐 — 이것이 두 분야를 갈랐다'));
+      return svg(W, H, g);
+    })();
+
+    // ── MAE ────────────────────────────────────────────────────
+    const maeMask = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const r = rnd(97);
+      const N = 8, CELL = 34;
+      const keep = [];
+      for (let i = 0; i < N * N; i++) keep.push(r() > 0.75);
+      const grid = (key, x0, mode) => {
+        for (let i = 0; i < N * N; i++) {
+          const a = Math.floor(i / N), b = i % N;
+          const on = mode === 'full' || keep[i];
+          g.push(h('rect', { key: key + i, x: x0 + b * CELL, y: 90 + a * CELL,
+            width: CELL - 3, height: CELL - 3, rx: 4,
+            fill: on ? GRN : '#E4E2EE',
+            opacity: on ? (mode === 'pred' && !keep[i] ? 0.45 : 0.3 + r() * 0.5) : 1 }));
+        }
+      };
+      const predGrid = (key, x0) => {
+        for (let i = 0; i < N * N; i++) {
+          const a = Math.floor(i / N), b = i % N;
+          g.push(h('rect', { key: key + i, x: x0 + b * CELL, y: 90 + a * CELL,
+            width: CELL - 3, height: CELL - 3, rx: 4, fill: GRN,
+            opacity: keep[i] ? 0.72 : 0.34,
+            stroke: keep[i] ? 'none' : GRN,
+            strokeWidth: keep[i] ? 0 : 1.5, strokeDasharray: '3 2' }));
+        }
+      };
+      g.push(h('text', { key: 'h1', x: 40, y: 62, fontFamily: KR, fontSize: 23,
+        fontWeight: 800, fill: MUT }, '① 원본을 패치로 자른다'));
+      grid('a', 40, 'full');
+      g.push(h('text', { key: 'ar1', x: 400, y: 250, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 32, fill: AX }, '→'));
+      g.push(h('text', { key: 'h2', x: 460, y: 62, fontFamily: KR, fontSize: 23,
+        fontWeight: 800, fill: RED }, '② 75% 를 가린다'));
+      grid('b', 460, 'mask');
+      g.push(h('text', { key: 'ar2', x: 820, y: 250, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 32, fill: AX }, '→'));
+      g.push(h('text', { key: 'h3', x: 880, y: 62, fontFamily: KR, fontSize: 23,
+        fontWeight: 800, fill: GRN }, '③ 나머지를 그려 낸다'));
+      predGrid('c', 880);
+      g.push(h('rect', { key: 'nb', x: 1300, y: 90, width: 380, height: 240, rx: 20,
+        fill: '#fff', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'nt', x: 1332, y: 142, fontFamily: KR, fontSize: 23,
+        fontWeight: 800, fill: GRN }, '남은 조각이 묻는다'));
+      g.push(h('text', { key: 'n1', x: 1332, y: 194, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' }, '“이 자리를 채워야 하는데'));
+      g.push(h('text', { key: 'n2', x: 1332, y: 230, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' }, '누가 나한테 정보를 주지?”'));
+      g.push(h('text', { key: 'n3', x: 1332, y: 292, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: GRN }, '멀리 있는 조각들이 손을 든다'));
+      g.push(h('text', { key: 'cap', x: 40, y: 400, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '언어에서 단어를 가리고 맞히게 한 것과 똑같다 — 그걸 이미지로 옮겼을 뿐이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 헤드마다 다른 것을 본다 ────────────────────────────────
+    const headsSee = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const HD = [['색', '어떤 헤드는 색을 본다', ACC],
+                  ['경계', '어떤 헤드는 경계를 본다', GRN],
+                  ['선', '어떤 헤드는 선을 본다', VIO],
+                  ['글자', '그 와중에 글자까지', RED]];
+      HD.forEach((d, i) => {
+        const x = 40 + i * 412;
+        const hot = i === 3;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 50, width: 372, height: 220,
+          rx: 20, fill: hot ? '#FDF0F0' : 'var(--surface-app)',
+          stroke: hot ? RED : 'none', strokeWidth: hot ? 3 : 0 }));
+        g.push(h('text', { key: 'h' + i, x: x + 186, y: 134, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 40, fontWeight: 800, fill: d[2] }, d[0]));
+        g.push(h('text', { key: 't' + i, x: x + 186, y: 200, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fill: 'var(--fg-3)' }, d[1]));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 322, fontFamily: KR, fontSize: 23,
+        fill: 'var(--fg-3)' },
+        '멀티헤드 어텐션은 같은 데이터를 여러 관점에서 동시에 본다 — 9주차에 배운 그 구조다'));
+      g.push(h('text', { key: 'cap2', x: 40, y: 366, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: RED },
+        '가려진 자리를 채우려다 보니 “이 획이 있어야 글자가 완성된다” 까지 배웠다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 하나의 모델 ────────────────────────────────────────────
+    const oneModel = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const r = rnd(59);
+      const TOK = [['패치', ACC], ['패치', ACC], ['패치', ACC], ['패치', ACC],
+                   ['이', GRN], ['사진', GRN], ['에서', GRN], ['무엇이', GRN],
+                   ['보이나', GRN]];
+      const TW = 168, GX = 40, TY = 190;
+      TOK.forEach((t, i) => {
+        const x = GX + i * (TW + 14);
+        g.push(h('rect', { key: 'b' + i, x: x, y: TY, width: TW, height: 82, rx: 14,
+          fill: t[1] === ACC ? 'rgba(68,52,226,.20)' : 'rgba(0,228,155,.16)',
+          stroke: t[1] === ACC ? '#7B8CFF' : '#00E49B', strokeWidth: 2.5 }));
+        g.push(h('text', { key: 't' + i, x: x + TW / 2, y: TY + 50,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 24, fontWeight: 700,
+          fill: t[1] === ACC ? '#9FA8FF' : '#00E49B' }, t[0]));
+      });
+      g.push(h('text', { key: 'l1', x: GX, y: TY - 24, fontFamily: KR, fontSize: 22,
+        fontWeight: 800, fill: '#9FA8FF' }, '이미지 토큰'));
+      g.push(h('text', { key: 'l2', x: GX + 4 * (TW + 14), y: TY - 24,
+        fontFamily: KR, fontSize: 22, fontWeight: 800, fill: '#00E49B' },
+        '텍스트 토큰'));
+      // 서로 잇는 어텐션 선
+      for (let k = 0; k < 9; k++) {
+        const a = Math.floor(r() * 4), b = 4 + Math.floor(r() * 5);
+        g.push(h('path', { key: 'e' + k,
+          d: 'M' + (GX + a * (TW + 14) + TW / 2) + ' ' + TY
+            + ' Q ' + (GX + (a + b) / 2 * (TW + 14) + TW / 2) + ' ' + (TY - 110)
+            + ' ' + (GX + b * (TW + 14) + TW / 2) + ' ' + TY,
+          fill: 'none', stroke: '#9E5DF9', strokeWidth: 2.5, opacity: 0.55 }));
+      }
+      g.push(h('rect', { key: 'mb', x: GX, y: 312, width: 9 * (TW + 14) - 14,
+        height: 76, rx: 16, fill: 'rgba(255,255,255,.07)',
+        stroke: 'rgba(255,255,255,.22)', strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'mt', x: GX + (9 * (TW + 14) - 14) / 2, y: 360,
+        textAnchor: 'middle', fontFamily: KR, fontSize: 26, fontWeight: 800,
+        fill: '#fff' }, '하나의 거대 언어 모델 — 같은 셀프 어텐션 안에서 만난다'));
+      g.push(h('text', { key: 'cap', x: GX, y: 46, fontFamily: KR, fontSize: 22,
+        fill: '#8D89A6' },
+        '패치 토큰과 텍스트 토큰은 같은 물건이 아니다 — 포지션 매기는 방식조차 다르다. 그래도 한 줄에 세운다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 표 사례 ────────────────────────────────────────────────
+    const tableCase = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      // 왼쪽 — 못 읽던 표
+      g.push(h('rect', { key: 'lb', x: 40, y: 56, width: 790, height: 280, rx: 20,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }));
+      g.push(h('text', { key: 'lt', x: 40, y: 38, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: RED }, '✗  OCR 이 못 풀던 것'));
+      const CELLS = [[0, 0, 2, 1], [2, 0, 1, 2], [3, 0, 2, 1],
+                     [0, 1, 1, 1], [1, 1, 1, 2], [3, 1, 1, 1], [4, 1, 1, 2],
+                     [0, 2, 1, 1], [2, 2, 1, 1], [3, 2, 1, 1]];
+      CELLS.forEach((c, i) => {
+        g.push(h('rect', { key: 'c' + i, x: 96 + c[0] * 132, y: 104 + c[1] * 66,
+          width: c[2] * 132 - 8, height: c[3] * 66 - 8, rx: 5, fill: '#fff',
+          stroke: '#D9D7E6', strokeWidth: 2 }));
+      });
+      g.push(h('text', { key: 'ln', x: 76, y: 316, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' },
+        '쪼갰다 합쳤다 선을 지웠다 — 사람 눈에는 읽히는데 기계에는 지옥'));
+      // 오른쪽 — 지금
+      g.push(h('rect', { key: 'rb', x: 890, y: 56, width: 790, height: 280, rx: 20,
+        fill: '#EAF7F1', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'rt', x: 890, y: 38, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: GRN }, '○  지금 되는 것'));
+      ['이 숫자는 3행 2열의 값이다', '이 글자는 그림 안의 범례다',
+       '이 캡션은 아래 표를 가리킨다'].forEach((t, i) => {
+        g.push(h('rect', { key: 'q' + i, x: 928, y: 100 + i * 76, width: 714,
+          height: 60, rx: 12, fill: '#fff' }));
+        g.push(h('text', { key: 'qt' + i, x: 958, y: 140 + i * 76, fontFamily: KR,
+          fontSize: 22, fill: 'var(--fg-3)' }, '“' + t + '”'));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 382, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '이미지 토큰과 텍스트 토큰이 서로 어텐션을 하니 위치까지 맥락으로 잡힌다'));
+      return svg(W, H, g);
+    })();
+
+    // ── DiT ────────────────────────────────────────────────────
+    const ditSwap = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const chain = (key, y, mid, midCol, note, noteCol) => {
+        const box = (k, x, w, t, col, fill) => {
+          g.push(h('rect', { key: k, x: x, y: y, width: w, height: 96, rx: 16,
+            fill: fill, stroke: col, strokeWidth: 3 }));
+          g.push(h('text', { key: k + 't', x: x + w / 2, y: y + 58,
+            textAnchor: 'middle', fontFamily: KR, fontSize: 24, fontWeight: 800,
+            fill: col }, t));
+        };
+        const arr = (k, x1, x2) => {
+          g.push(h('line', { key: k, x1: x1, y1: y + 48, x2: x2 - 11, y2: y + 48,
+            stroke: AX, strokeWidth: 3 }));
+          g.push(h('path', { key: k + 'h', d: 'M' + (x2 - 13) + ' ' + (y + 40)
+            + ' L' + x2 + ' ' + (y + 48) + ' L' + (x2 - 13) + ' ' + (y + 56) + ' Z',
+            fill: AX }));
+        };
+        box(key + 'a', 40, 300, '잡음 낀 잠재', '#7B8CFF', '#fff');
+        arr(key + 'r1', 340, 400);
+        box(key + 'b', 400, 420, mid, midCol, midCol === GRN ? '#EDF9F4' : '#FFF4E8');
+        arr(key + 'r2', 820, 880);
+        box(key + 'c', 880, 300, '한 칸 덜 잡음', '#7B8CFF', '#fff');
+        g.push(h('text', { key: key + 'n', x: 1220, y: y + 42, fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: noteCol }, note[0]));
+        g.push(h('text', { key: key + 'n2', x: 1220, y: y + 78, fontFamily: KR,
+          fontSize: 21, fill: MUT }, note[1]));
+      };
+      chain('a', 60, 'U-Net (합성곱)', GRN,
+        ['가운데 주제는 잘 그린다', '손가락 같은 디테일이 망가진다'], RED);
+      chain('b', 232, 'Transformer (DiT)', '#E8873A',
+        ['왼손과 오른손이 서로 안다', '디테일이 살아난다'], '#E8873A');
+      g.push(h('text', { key: 'cap', x: 40, y: 386, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '최근 생성 모델들이 DiT 계열일 것으로 널리 추정된다 — 공개된 사실은 아니므로 추정이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 영상 ───────────────────────────────────────────────────
+    const videoPatch = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const r = rnd(71);
+      // 프레임 100장
+      g.push(h('text', { key: 'h1', x: 40, y: 44, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: '#8D89A6' }, '5초 × 초당 20프레임 = 100장'));
+      for (let i = 0; i < 5; i++)
+        g.push(h('rect', { key: 'f' + i, x: 40 + i * 30, y: 70 + i * 12, width: 200,
+          height: 130, rx: 10, fill: 'rgba(255,255,255,.10)',
+          stroke: 'rgba(255,255,255,.28)', strokeWidth: 2 }));
+      g.push(h('text', { key: 'ar', x: 350, y: 160, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: '#6E6890' }, '→'));
+      // 한 판으로 붙여 패치화
+      const GX = 430, CELL = 34, NX = 20, NY = 5;
+      for (let a = 0; a < NY; a++)
+        for (let b = 0; b < NX; b++)
+          g.push(h('rect', { key: 'p' + a + b, x: GX + b * CELL, y: 70 + a * CELL,
+            width: CELL - 3, height: CELL - 3, rx: 3, fill: '#FFB86B',
+            opacity: 0.16 + r() * 0.5 }));
+      g.push(h('text', { key: 'h2', x: GX, y: 44, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: '#FFB86B' },
+        '한 판으로 이어 붙이고 통째로 패치화한다'));
+      // 첫 장면과 끝 장면이 손을 잡는다
+      g.push(h('path', { key: 'lnk', d: 'M' + (GX + 16) + ' 86 Q '
+        + (GX + NX * CELL / 2) + ' -30 ' + (GX + (NX - 1) * CELL + 16) + ' 86',
+        fill: 'none', stroke: '#FFB86B', strokeWidth: 4, opacity: 0 }));
+      g.push(h('path', { key: 'lnk2', d: 'M' + (GX + 16) + ' 244 Q '
+        + (GX + NX * CELL / 2) + ' 340 ' + (GX + (NX - 1) * CELL + 16) + ' 244',
+        fill: 'none', stroke: '#FFB86B', strokeWidth: 4, strokeDasharray: '10 7' }));
+      g.push(h('text', { key: 'lt', x: GX + NX * CELL / 2, y: 336,
+        textAnchor: 'middle', fontFamily: KR, fontSize: 22, fontWeight: 700,
+        fill: '#FFB86B' }, '첫 장면의 조각과 끝 장면의 조각이 같은 어텐션 안에'));
+      g.push(h('rect', { key: 'nb', x: 1200, y: 92, width: 480, height: 160, rx: 20,
+        fill: 'rgba(255,255,255,.07)' }));
+      g.push(h('text', { key: 'nt', x: 1232, y: 144, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#fff' }, '“시작할 때 돌을 들고 있었으니'));
+      g.push(h('text', { key: 'nt2', x: 1232, y: 186, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#fff' }, '마지막에 던지든 들고 있든'));
+      g.push(h('text', { key: 'nt3', x: 1232, y: 228, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#fff' }, '해야 하는 것 아닌가”'));
+      g.push(h('text', { key: 'cap', x: 40, y: 384, fontFamily: KR, fontSize: 22,
+        fill: '#8D89A6' },
+        '대신 계산량이 어마어마하다 — 그래서 아직 한 편의 영화는 못 만든다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 두 흐름 ────────────────────────────────────────────────
+    const twoWaves = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const wave = (key, x0, title, sub, col, fill, items) => {
+        g.push(h('rect', { key: key + 'b', x: x0, y: 40, width: 790, height: 300,
+          rx: 20, fill: fill, stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: x0 + 36, y: 108, fontFamily: KR,
+          fontSize: 36, fontWeight: 800, fill: col }, title));
+        g.push(h('text', { key: key + 's', x: x0 + 36, y: 152, fontFamily: KR,
+          fontSize: 22, fill: MUT }, sub));
+        items.forEach((t, i) => g.push(h('text', { key: key + 'i' + i,
+          x: x0 + 36, y: 212 + i * 46, fontFamily: KR, fontSize: 22,
+          fill: 'var(--fg-3)' }, '· ' + t)));
+      };
+      wave('a', 40, '트랜스포머', '멀리 있는 것끼리 직접 손을 잡게 했다', ACC,
+        '#EEF0FE', ['문장 → 이미지 → 확산 → 영상', '어텐션 하나로 전부 갈아탔다']);
+      wave('b', 890, '마스크드 러닝', '가리고 맞히게 해서 정답을 무한히 만들었다', GRN,
+        '#EAF7F1', ['언어에서 먼저, 그다음 이미지로', '사람 손이 필요 없다']);
+      g.push(h('text', { key: 'cap', x: 40, y: 384, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: INK },
+        '이 둘이 지난 5년 동안 판을 바꿨다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 마무리 ─────────────────────────────────────────────────
+    const wrapUp = (() => {
+      const W = 1720, H = 260;
+      const g = [];
+      const T = [['같은 자로 재게 했다', 'CLIP', ACC],
+                 ['이미지를 글자처럼 다뤘다', 'ViT · MAE', GRN],
+                 ['한 줄에 같이 세웠다', '멀티모달 LLM', VIO]];
+      T.forEach((t, i) => {
+        const x = 40 + i * 552;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 512, height: 190,
+          rx: 20, fill: 'rgba(255,255,255,.07)',
+          stroke: i === 2 ? '#C9A6FF' : 'rgba(255,255,255,.22)', strokeWidth: 3 }));
+        g.push(h('text', { key: 'n' + i, x: x + 32, y: 84, fontFamily: KR,
+          fontSize: 27, fontWeight: 800, fill: '#fff' }, t[0]));
+        g.push(h('text', { key: 's' + i, x: x + 32, y: 146, fontFamily: EN,
+          fontSize: 26, fontWeight: 800,
+          fill: i === 0 ? '#9FA8FF' : i === 1 ? '#00E49B' : '#C9A6FF' }, t[1]));
+        if (i < 2) g.push(h('text', { key: 'a' + i, x: x + 532, y: 126,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: '#6E6890' },
+          '→'));
+      });
+      g.push(h('text', { key: 'cap', x: 900, y: 248, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fontWeight: 700, fill: '#00E49B' },
+        '셋을 관통하는 것은 벡터다'));
+      return svg(W, H, g);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      weekMap, ocrPipe, twoSpaces, clipData, clipTrain, clipUse, sdHook, clipGap,
+      vitPatch, cnnVsVit, dataGap, maeMask, headsSee, oneModel, tableCase,
+      ditSwap, videoPatch, twoWaves, wrapUp,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

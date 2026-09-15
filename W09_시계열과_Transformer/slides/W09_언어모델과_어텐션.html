@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W09_언어모델과_어텐션</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:58px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.25 · 25 언어모델.ipynb — 3교시. 2교시 마지막에 인코더-디코더로 묶으면 언어 모델이 된다고 했다. 오늘은 그 길을 따라 어텐션과 트랜스포머까지 간다. 여기까지 오면 10주차 LLM 이 그냥 이어진다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(158,93,249,.32),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">9주차 · 3교시</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">언어모델 · 어텐션<br>Transformer</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">시계열을 언어로 바꾸면 무슨 일이 생기나</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">25 언어모델.ipynb · 26 Seq2Seq.ipynb · 27 attention.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="언어 모델은 확률 모델이다" data-screen-label="02" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.26 · LLM.pptx p.10 — 언어 모델의 정의부터. 앞의 단어들이 주어졌을 때 다음 단어가 무엇일 확률이 얼마인가를 계산하는 모델이다. 그게 전부다. 뒤에 나오는 초거대 모델도 이 정의에서 한 발짝도 안 벗어난다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">언어 모델은 <span style="color:var(--primary-main)">확률 모델</span>이다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Language Model</span>
+  </div>
+  <div style="height:330px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/tl_s26_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>언어 모델 정의</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="nextWord"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">앞의 단어들이 주어졌을 때 <b style="color:var(--fg-1)">다음 단어가 무엇일 확률</b>. 초거대 모델도 이 정의에서 한 발짝도 안 벗어난다.</p>
+</section>
+
+<section data-deck="0" data-label="Unigram 과 n-gram" data-screen-label="03" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.27 · LLM.pptx p.11 — 신경망 이전의 언어 모델. Unigram 은 각 단어가 독립이라 가정하고 확률을 그냥 곱한다. 너무 단순하다. n-gram 은 이전 n-1개 단어를 고려한다. n=2면 바로 앞 단어까지 본다. 문제는 두 가지다 — n을 키우면 조합이 폭발하고, 학습 데이터에 없는 조합은 확률이 0이 된다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">신경망 이전 — 세어서 맞혔다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">확률통계 모형</span>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="height:236px;background:#fff;border-radius:16px;padding:22px 26px"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s27_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Unigram 언어 모델</span></div></div></div>
+    <div style="height:236px;background:#fff;border-radius:16px;padding:22px 26px"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s27_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>n-gram 언어 모델</span></div></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px">
+    <div style="background:#FDF0F0;border-radius:14px;padding:22px 28px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#D93636">조합이 폭발한다</b> — n 을 키우면 세어야 할 경우의 수가 감당이 안 된다</div>
+    <div style="background:#FDF0F0;border-radius:14px;padding:22px 28px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#D93636">본 적 없으면 0 이다</b> — 학습 데이터에 없던 조합은 확률이 0 이 된다</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="신경망 언어 모델의 계보" data-screen-label="04" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.28 · LLM.pptx p.13 — 신경망으로 넘어온 계보다. 1990년 엘만이 시간 속의 구조를 찾자며 순환 구조를 냈고, 2010년 미콜로프가 RNN 기반 언어 모델을 냈고, 2014년 서츠케버가 Seq2Seq 를 냈다. 같은 해 인코더-디코더 논문도 나왔다. 이 네 편이 지금 LLM 의 뿌리다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">Neural Network 기반 언어 모델</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">네 편의 논문에서 시작했다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="papers"></span></div>
+</section>
+
+<section data-deck="0" data-label="Seq2Seq" data-screen-label="05" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.29 · LLM.pptx p.14 — Seq2Seq 구조. 인코더가 입력 문장을 순서대로 받아 마지막에 컨텍스트 벡터 하나를 만든다. 디코더가 그 벡터에서 출력 문장을 하나씩 뽑아낸다. 2교시의 축산차량 사례가 정확히 이 구조였다. I am a student 를 넣으면 je suis étudiant 가 나오는 식이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">인코더가 <span style="color:var(--accent-green)">벡터 하나</span>로 접고, 디코더가 편다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Seq2Seq · 2014</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s14_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>인코더-디코더 구조와 Context Vector</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">가운데 파란 칸이 <b style="color:#fff">컨텍스트 벡터</b> — 2교시의 히든 스테이트가 그대로 여기 있다.</p>
+</section>
+
+<section data-deck="0" data-label="글자를 숫자로 — 원핫" data-screen-label="06" data-speaker-notes="출처: 신규 — 05 Seq2Seq 를 실제 문장으로 풀어 보는 첫 장 · 25 언어모델.ipynb 의 어휘 사전 구성과 같은 방식이다. 모델은 글자를 모른다. 숫자만 받는다. 그래서 먼저 사전을 만든다 — 이 수업에서는 여덟 개짜리 장난감 사전이다. 각 단어에 번호를 주고, 그 번호 자리만 1 이고 나머지는 0 인 벡터를 만든다. 이것이 원핫이다. 여기서 두 가지를 짚을 것. 첫째, 사전이 5만 개면 벡터 한 칸이 5만 칸이 된다. 둘째, 더 심각한 문제 — 어떤 두 단어를 골라도 겹치는 자리가 없어서 내적이 항상 0 이다. student 와 teacher 가 가깝다는 걸 표현할 방법이 아예 없다. 다음 장 임베딩이 바로 이 두 문제를 푼다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">모델은 글자를 모른다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">One-hot · 사전은 여덟 개짜리 예시</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="oneHot"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">사전이 <b style="color:var(--fg-1)">5만 개</b>면 단어 하나가 <b style="color:var(--fg-1)">5만 칸</b>짜리 벡터가 된다.</div>
+    <div style="padding:24px 28px;background:#FDF0F0;border:2px solid #D93636;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">어떤 두 단어를 골라도 <b style="color:#D93636">겹치는 자리가 없다</b> — “student 와 teacher 가 가깝다”를 적을 방법이 없다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="임베딩 — 비슷한 것끼리 가까이" data-screen-label="07" data-speaker-notes="출처: 신규 · Mikolov et al. (2013) word2vec 의 벡터 연산 성질을 도해로 옮긴 것 — 원핫의 두 문제를 한 번에 푸는 방법이다. 원핫 벡터에 행렬 하나를 곱하면 짧고 촘촘한 벡터가 나온다. 원핫은 한 자리만 1 이므로 사실은 행렬에서 그 단어의 줄 하나를 꺼내 오는 것과 같다. 이 행렬이 학습 대상이다. 오른쪽이 그렇게 학습된 공간의 유명한 성질이다 — 남자에서 왕으로 가는 화살표와 여자에서 여왕으로 가는 화살표가 거의 같다. 왕관을 씌우는 방향이 공간 안에 벡터로 존재한다는 뜻이다. 단, 요즘 큰 모델은 이런 임베딩을 따로 떼어 학습하지 않고 모델 안에서 함께 학습한다는 점은 반드시 덧붙일 것. 발상만 남고 절차는 흡수됐다. 좌표는 개념 예시다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">짧게 줄이고, 비슷한 것끼리 가까이</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Embedding · 좌표는 개념 예시</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:44px">
+    <div style="min-height:0"><span data-dc-slot="embedPipe"></span></div>
+    <div style="min-height:0"><span data-dc-slot="wordSpace"></span></div>
+  </div>
+  <div style="padding:24px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">요즘 큰 모델은 이 임베딩을 <b style="color:var(--primary-dark)">따로 떼어 학습하지 않는다</b> — 모델 안에서 같이 학습된다. 그래도 <b style="color:var(--fg-1)">단어를 벡터 공간에 놓는다</b>는 발상은 그대로 남았다.</div>
+</section>
+
+<section data-deck="0" data-label="맥락이 벡터에 눌러 담긴다" data-screen-label="08" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.29 의 인코더 부분을 숫자로 펼친 것 · 2교시 순환신경망 08 과 같은 구조다 — 임베딩된 단어를 LSTM 이 순서대로 받는다. 2교시에 한 걸음씩 걸어 본 그 계산이다. 마지막 히든 스테이트가 컨텍스트 벡터다. 여기서는 10차원으로 잡았다 — 실제로는 훨씬 크지만 화면에 올리려고 줄인 것이라고 반드시 말할 것. 아래 두 줄이 오늘의 핵심이다. 단어 구성은 거의 같은데 순서만 다른 두 문장이 서로 다른 벡터가 된다. 순환신경망은 순서대로 먹기 때문에 무엇이 먼저 왔는지가 값에 남는다. 그래서 맥락이 보존된다고 말하는 것이다. 값은 개념 예시다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">LSTM 이 다 읽고 남긴 <span style="color:var(--accent-green)">10 개의 숫자</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Context Vector · 수업용으로 10차원까지 줄였다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="contextVec"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">단어는 거의 같은데 <b style="color:#fff">순서가 다르다.</b> 순서대로 먹었기 때문에 <b style="color:var(--accent-green)">남는 숫자가 달라진다</b> — 이것이 맥락이 보존된다는 말의 뜻이다.</p>
+</section>
+
+<section data-deck="0" data-label="디코더가 한 단어씩 뱉는다" data-screen-label="09" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.29 의 디코더 부분 · 26 Seq2Seq.ipynb — 이제 반대 방향이다. 디코더도 LSTM 이고, 시작할 때 인코더가 남긴 컨텍스트 벡터를 히든 스테이트로 받는다. 입력으로는 시작 토큰 하나만 준다. 그러면 첫 단어가 나온다. 여기가 중요한 대목인데, 그 첫 단어가 다음 칸의 입력이 된다. 자기가 뱉은 것을 다시 먹는 것이다. 그렇게 반복하다가 종료 토큰이 나오면 멈춘다. 문장 길이를 미리 정해 두지 않아도 된다는 게 이 구조의 힘이다. 영어 네 단어가 프랑스어 세 단어가 되어도 상관없다. 10주차 GPT 가 글을 쓰는 방식이 정확히 이것이다 — 자기 출력을 다시 입력으로 먹는 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">자기가 뱉은 단어를 다시 먹는다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Decoder · 종료 토큰이 나올 때까지</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="decoderGen"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">처음 주는 입력은 <b style="color:var(--fg-1)">시작 토큰 하나</b>뿐이다. 나머지는 자기가 만든다.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">영어 <b style="color:var(--fg-1)">네 단어</b>가 프랑스어 <b style="color:var(--fg-1)">세 단어</b>가 되어도 된다 — 길이를 미리 정하지 않는다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="이 구조가 실제로 서비스가 되었다" data-screen-label="10" data-speaker-notes="출처: Sutskever et al. (2014) Sequence to Sequence Learning with Neural Networks · Wu et al. (2016) arXiv:1609.08144 · Google Research Blog 2016-11 · 뉴시스 2016-12-15 · 카카오 i 번역 서비스 안내 — 논문에서 서비스까지 2년이 걸렸다. 2014년에 구조가 나왔고 2016년 가을에 한꺼번에 상용화됐다. 순서를 짚어 줄 것. 네이버 파파고 앱이 2016년 8월에 먼저 나왔고, 구글이 9월에 GNMT 논문을 냈고, 파파고가 10월에 한영 인공신경망 번역을 붙였고, 구글이 11월에 중국어에서 영어로 가는 번역을 전량 GNMT 로 돌렸다. 구글이 발표한 개선 폭이 구문 기반 대비 오류 평균 60퍼센트 감소다. 학생들이 체감했을 시점이 바로 이때다 — 번역기가 갑자기 문장다워진 그 시기. 여기 적힌 숫자는 전부 공개 발표된 값만 썼다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">번역기가 갑자기 문장다워진 그해</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2014 논문 → 2016 가을 상용화</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="nmtTimeline"></span></div>
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:34px;align-items:center">
+    <div style="padding:26px 30px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.55">구글이 밝힌 개선 폭 — 구문 기반 방식 대비 <b style="color:#00E49B">번역 오류 평균 60% 감소</b>.<br><span style="color:var(--neutral-lighter)">인코더 LSTM 8층 · 디코더 LSTM 8층 · 그 사이를 잇는 어텐션 한 층.</span></div>
+    <div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);line-height:1.6">Sutskever et al. 2014 · Wu et al. arXiv:1609.08144<br>Google Research Blog 2016.11 · 뉴시스 2016.12.15<br>카카오 i 번역 서비스 안내</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="한계" data-screen-label="11" data-speaker-notes="출처: 강의영상 ③ 48:00 — Seq2Seq의 결정적 한계. 문장이 길어지면 앞쪽 기억이 컨텍스트 벡터까지 오지 못한다. 벡터 하나에 전부 욱여넣어야 하니까. 그래서 이상한 답을 하기 시작한다. LSTM 으로도 GRU 로도 근본적으로는 해결이 안 됐다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">병목</div>
+  <h2 style="margin:0;font-size:64px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">문장 전체를<br><span style="color:#D93636">벡터 하나</span>에 욱여넣는다</h2>
+  <div style="height:250px"><span data-dc-slot="bottleneck"></span></div>
+  <div style="padding:30px 36px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1700px">문장이 길어지면 <b style="color:var(--fg-1)">앞쪽 기억이 끝까지 오지 못한다.</b><br><span style="color:var(--neutral-medium);font-size:var(--type-small)">LSTM 으로도 GRU 로도 근본 해결이 안 됐다 — 통로 자체가 좁기 때문이다.</span></div>
+</section>
+
+<section data-deck="0" data-label="버려진 히든 스테이트" data-screen-label="12" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.29 의 인코더를 다시 꺼내 온 것 · 08 맥락이 벡터에 눌러 담긴다 와 같은 그림이다 — 여기가 어텐션으로 넘어가는 다리다. 08 에서는 마지막 히든 하나만 보고 컨텍스트 벡터라고 불렀다. 그런데 인코더는 단어를 하나 먹을 때마다 히든 스테이트를 하나씩 만들었다. h₁ 은 I 까지 읽은 요약이고, h₂ 는 I am 까지 읽은 요약이다. 다시 말해 시점마다 그때까지의 컨텍스트 벡터가 이미 만들어져 있었다. 학생들에게 물어볼 것 — 그럼 앞의 셋은 어디 갔나. 답은 그냥 버렸다는 것이다. 계산은 다 해 놓고 마지막 하나만 디코더로 넘겼다. 앞 장의 병목은 구조상 어쩔 수 없어서 생긴 게 아니다. 있는 것을 안 써서 생긴 것이다. 다음 장 어텐션이 하는 일이 정확히 이것을 도로 주워 쓰는 것이라고 예고하고 넘어갈 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사실 <span style="color:#D93636">네 개</span>가 있었다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">인코더는 단어마다 하나씩 만들고 있었다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="heldStates"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:30px">
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">h₁ 은 <b style="color:var(--fg-1)">“I” 까지</b>의 요약이고 h₂ 는 <b style="color:var(--fg-1)">“I am” 까지</b>의 요약이다.</div>
+    <div style="padding:24px 28px;background:#FDF0F0;border:2px solid #D93636;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">계산은 <b style="color:var(--fg-1)">다 해 놓고</b> 마지막 하나만 넘겼다. 나머지 셋은 <b style="color:#D93636">그냥 버렸다.</b></div>
+    <div style="padding:24px 28px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.55">앞 장의 병목은 <b style="color:#00E49B">구조의 한계가 아니었다.</b> 있는 것을 안 쓴 결과였다.<br><span style="color:var(--neutral-lighter)">다음 장 — 버린 것을 도로 주워 쓰면 어떻게 되나.</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="어텐션의 발상" data-screen-label="13" data-speaker-notes="출처: 강의영상 ③ 48:20 — 어텐션의 발상. 중간 맥락을 하나로 접지 말고, 출력할 순간에 입력 전체를 다시 보자는 것이다. 교수님 표현으로는 '얘들아 손들어' — 어디에 숨어 있든 지금 기회가 왔다 싶으면 손을 들어서 자기 점수를 받아 간다. 아주 능동적인 학생들로 이루어진 모델이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(0,228,155,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">발상의 전환</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">접지 말고,<br>출력할 때마다 <span style="color:var(--accent-green)">다시 보자</span></h2>
+  <div style="height:230px"><span data-dc-slot="handsUp"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1700px">“지금 필요한 애들은 <b style="color:#fff">손을 들어라</b>” — 어디에 있든 자기 점수를 받아 간다.<br><span style="color:var(--neutral-medium);font-size:var(--type-small)">Luong et al. (2015) Effective Approaches to Attention-based Neural Machine Translation</span></p>
+</section>
+
+<section data-deck="0" data-label="어텐션 ① 점수" data-screen-label="14" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.33 · LLM.pptx p.15 — 어텐션 1단계. 디코더의 현재 은닉상태와 인코더의 모든 입력 단계 은닉상태를 하나씩 내적한다. 내적은 두 벡터가 얼마나 같은 방향인지를 재는 것이니, 결국 '지금 출력하려는 것과 이 입력 단어가 얼마나 관련 있나'를 재는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s15_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Attention Score — 디코더 은닉상태와 인코더 은닉상태들의 내적</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">① Attention Score</div>
+    <h2 style="margin:0;font-size:46px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">얼마나<br>관련 있나</h2>
+    <div style="height:180px;background:var(--surface-app);border-radius:14px;padding:18px"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s16_4.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>s_t^T × h_i</span></div></div></div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">디코더의 <b style="color:var(--fg-1)">현재 은닉상태</b>와 인코더의 <b style="color:var(--fg-1)">모든 은닉상태</b>를 하나씩 내적한다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="내적이 재는 것" data-screen-label="15" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.34 · LLM.pptx p.16 — 내적의 의미를 짚고 넘어갈 것. 두 벡터의 방향이 같으면 내적이 크고, 반대면 작다. 12주차 코사인 유사도와 같은 이야기다. 그러니까 어텐션 스코어는 '지금 이 순간과 저 단어가 얼마나 같은 방향인가'를 재는 것이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">내적은 <span style="color:var(--primary-main)">방향이 같은 정도</span>다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">12주차 코사인 유사도와 같은 이야기</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.15fr 1fr;gap:38px;align-items:center">
+    <div style="height:100%;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/lm_s28_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>dot product 로 attention score 계산</span></div></div>
+    </div>
+    <div style="height:100%"><span data-dc-slot="dotMeaning"></span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="어텐션 ② 분포" data-screen-label="16" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.35 · LLM.pptx p.17 — 2단계. 각 입력 단계마다 나온 점수를 소프트맥스에 넣어 합이 1이 되는 분포로 만든다. 이게 어텐션 분포다. 어느 단어에 얼마나 집중할지의 비율이 나온 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s17_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Attention Distribution — softmax</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">② Attention Distribution</div>
+    <h2 style="margin:0;font-size:46px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">합이 1 인<br>비율로 바꾼다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">점수를 <b style="color:var(--fg-1)">소프트맥스</b>에 넣으면 어느 단어에 얼마나 집중할지의 <b style="color:var(--fg-1)">비율</b>이 나온다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">3주차 지니, 10주차 다음 토큰 — <b style="color:var(--fg-1)">소프트맥스는 계속 나온다.</b> 점수를 확률로 바꾸는 표준 장치다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="어텐션 ③ 컨텍스트 벡터" data-screen-label="17" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.36 · LLM.pptx p.18 — 3단계. 인코더 은닉상태들을 그 비율만큼 가중합한다. 그러면 지금 출력하려는 것과 가장 관계가 높은 입력 정보들이 모인 벡터가 나온다. 어텐션 모델에서는 이걸 컨텍스트 벡터라고 부른다 — 이름은 같은데 만드는 방식이 완전히 달라졌다. Seq2Seq 는 마지막 하나였고, 어텐션은 매 출력마다 새로 만든다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s18_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Attention Value — 가중합</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">③ Context Vector</div>
+    <h2 style="margin:0;font-size:46px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">비율만큼<br>가중합한다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">지금 출력과 <b style="color:var(--fg-1)">가장 관계가 높은</b> 입력 정보들이 모인 벡터.</p>
+    <div style="padding:22px 26px;background:#fff;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">이름은 Seq2Seq 와 같지만 <b style="color:#D93636">만드는 방식이 다르다.</b><br><br>Seq2Seq — 마지막에 <b style="color:var(--fg-1)">한 번</b><br>Attention — 출력할 때마다 <b style="color:var(--fg-1)">매번 새로</b></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="어텐션 ④ 다음 토큰" data-screen-label="18" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.37 · LLM.pptx p.19 — 마지막 4단계. 출력층 은닉상태와 방금 만든 어텐션 값을 이어 붙여서 다음 단어를 추론한다. 이 네 단계가 어텐션의 전부다. 학생들에게 다시 한 번 짚어 줄 것 — 점수 재고, 비율로 바꾸고, 가중합하고, 그걸로 다음 단어를 고른다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s19_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>concatenate 후 다음 토큰 예측</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">④ Output Predict</div>
+    <h2 style="margin:0;font-size:46px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">이어 붙여서<br>다음 단어를</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">출력층 은닉상태와 어텐션 값을 <b style="color:var(--fg-1)">연결(concat)</b>해 다음 토큰을 추론한다.</p>
+    <div style="padding:24px 28px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.7">① 점수 재고<br>② 비율로 바꾸고<br>③ 가중합하고<br>④ 다음 단어를 고른다</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Attention is all you need" data-screen-label="19" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.39 · LLM.pptx p.20 — 2017년 NIPS. 제목이 선언이다. 어텐션만 있으면 된다 — 순환 구조를 아예 빼 버렸다. RNN 없이 어텐션만으로 만든 게 트랜스포머다. 그리고 이 논문이 지금 모든 것의 출발점이 됐다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 22% 76%,rgba(68,52,226,.34),transparent 62%)">
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">NIPS 2017</div>
+    <h2 style="margin:0;font-size:56px;font-weight:800;line-height:1.2;letter-spacing:-0.025em">Attention is<br>all you need</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">제목이 곧 선언이다 — <b style="color:#fff">순환 구조를 아예 뺐다.</b></p>
+    <div style="padding:26px 32px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.6">RNN 이 사라지면서 <b style="color:#fff">순서대로 흘릴 필요가 없어졌다.</b><br>한꺼번에 넣을 수 있다 → 병렬 학습이 가능해졌다.<br><br><span style="color:var(--neutral-medium)">arxiv.org/abs/1706.03762</span></div>
+  </div>
+  <div style="height:790px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s20_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>인코더 6층 · 디코더 6층</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Positional Encoding" data-screen-label="20" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.40 · LLM.pptx p.21 — 순환 구조를 뺐더니 문제가 생겼다. RNN 은 한 칸씩 순서대로 지나가니 순서가 저절로 들어갔는데, 한꺼번에 넣으면 순서가 사라진다. 그래서 각 단어의 위치 정보를 담은 값을 임베딩에 더해 준다. 이게 포지셔널 인코딩이다. 오른쪽이 그 값을 그림으로 그린 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">순서를 값으로 더해 준다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Positional Encoding</span>
+  </div>
+  <div style="height:280px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s21_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>positional encoding + embedding vector</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.3fr 1fr;gap:34px;align-items:center">
+    <div style="height:100%;background:var(--surface-app);border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/lm_s21_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>positional encoding 값의 패턴</span></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">RNN 은 한 칸씩 지나가니 순서가 <b style="color:var(--fg-1)">저절로</b> 들어갔다.</p>
+      <p style="margin:0;font-size:var(--type-body);color:#D93636;line-height:1.5;font-weight:700">한꺼번에 넣는 순간 순서가 사라진다.</p>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.55">그래서 위치마다 다른 값을 만들어 임베딩에 <b style="color:var(--fg-3)">더한다.</b> 12주차 ViT 에서도 같은 장치가 나온다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="세 가지 어텐션" data-screen-label="21" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.41 · LLM.pptx p.22 — 트랜스포머 안에는 어텐션이 세 종류 있다. 인코더의 셀프 어텐션, 디코더의 마스크드 셀프 어텐션, 그리고 인코더-디코더 어텐션이다. 오른쪽 전체 구조에서 어디에 붙어 있는지 짚어 줄 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">Transformer</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">어텐션이<br>세 군데 있다</h2>
+    <div style="height:430px;background:#fff;border-radius:16px;padding:22px"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s22_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Encoder Self / Masked Decoder Self / Encoder-Decoder Attention</span></div></div></div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">같은 어텐션 계산인데 <b style="color:var(--fg-1)">무엇을 무엇에 대고 재느냐</b>만 다르다.</p>
+  </div>
+  <div style="height:790px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s22_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>트랜스포머 전체 구조</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Query · Key · Value" data-screen-label="22" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.42 · LLM.pptx p.23 — 셀프 어텐션의 핵심 용어. 쿼리는 지금 보고 있는 타겟 단어, 키는 비교 대상들, 밸류는 실제로 가져올 내용이다. 검색으로 비유하면 검색어가 쿼리, 색인이 키, 문서가 밸류다. 오른쪽 그림이 유명한 예다 — 'it' 이 무엇을 가리키는지 어텐션이 animal 쪽으로 강하게 걸린다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">Self-Attention</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">Query · Key · Value</h2>
+    <div style="height:330px;background:var(--surface-app);border-radius:16px;padding:22px"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s23_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Query / Key / Value / Attention Value</span></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5;padding:20px 24px;background:var(--surface-app);border-radius:12px">
+      <div><b style="color:var(--fg-1)">Query</b> — 지금 보고 있는 단어 (검색어)</div>
+      <div><b style="color:var(--fg-1)">Key</b> — 비교 대상들 (색인)</div>
+      <div><b style="color:var(--fg-1)">Value</b> — 실제로 가져올 내용 (문서)</div>
+    </div>
+  </div>
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:14px">
+    <div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">“it” 은 무엇을 가리키나</div>
+    <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s23_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>it 이 animal 에 강하게 어텐션되는 시각화</span></div></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Wq · Wk · Wv" data-screen-label="23" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.43 · LLM.pptx p.24 — 쿼리·키·밸류는 하늘에서 떨어지는 게 아니다. 같은 입력 벡터에 서로 다른 가중치 행렬 Wq, Wk, Wv 를 곱해서 만든다. 이 세 행렬이 학습 대상이다. 그리고 이걸 여러 벌 만드는 게 멀티헤드다 — 헤드 수만큼 어텐션 값을 뽑아 이어 붙인다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 입력에서 <span style="color:var(--primary-main)">셋</span>을 만든다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Wq · Wk · Wv — 이 셋이 학습 대상이다</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.15fr;gap:38px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/lm_s24_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>입력 × Wq/Wk/Wv → Q/K/V</span></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">헤드 수만큼 반복해서 이어 붙인다</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s24_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Multi-head — num_heads 만큼 어텐션 값 추출 후 concat</span></div></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">헤드가 늘어난다는 건 <b style="color:var(--fg-1)">문장을 바라보는 관점이 늘어난다</b>는 뜻이다 — 주어 중심, 목적어 중심, 법률적 관점.</p>
+</section>
+
+<section data-deck="0" data-label="어텐션 점수 행렬" data-screen-label="24" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.42, 44 · LLM.pptx p.25 — Q 와 K 를 곱하면 정사각 행렬이 나온다. 모든 단어가 모든 단어를 본 점수표다. 그런데 디코더에서는 문제가 있다 — 아직 안 나온 단어를 미리 보면 안 된다. 그래서 오른쪽 위 삼각형을 까맣게 가려 버린다. 이게 마스크드 셀프 어텐션이고, 10주차 GPT 는 이 부분만 가져다 쓴다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">모두가 모두를 본 점수표</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Attention Score Matrix</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:38px">
+    <div style="background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">인코더 — 전부 본다</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s25_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Q × K^T = Attention Score Matrix</span></div></div></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:#D93636">디코더 — 앞만 본다 (Masked)</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s25_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>마스킹된 Attention Score Matrix</span></div></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">아직 안 나온 단어를 <b style="color:#D93636">미리 보면 안 된다.</b> 그래서 가린다 — 10주차 GPT 는 <b style="color:var(--fg-1)">이 부분만</b> 가져다 쓴다.</p>
+</section>
+
+<section data-deck="0" data-label="인코더–디코더 어텐션" data-screen-label="25" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.46 · LLM.pptx p.27 — 세 번째 어텐션. 앞에서 본 Seq2Seq 어텐션과 같다. 디코더 벡터를 쿼리로, 인코더 벡터를 키로 써서 점수를 계산한다. 번역으로 치면 '지금 프랑스어 단어를 만드는데 영어 문장의 어느 단어를 봐야 하나' 를 재는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s27_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>디코더 Q × 인코더 K</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">세 번째 어텐션</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">디코더가<br>인코더를 본다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">디코더 벡터가 <b style="color:var(--fg-1)">Query</b>, 인코더 벡터가 <b style="color:var(--fg-1)">Key</b>.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">“지금 프랑스어 단어를 만드는데, <b style="color:var(--fg-1)">영어 문장의 어느 단어</b>를 봐야 하나”<br><br><span style="color:var(--neutral-medium)">앞에서 본 Seq2Seq 어텐션과 같은 계산이다.</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="BERT 와 GPT" data-screen-label="26" data-speaker-notes="출처: LLM.pptx p.29 — 트랜스포머가 나오자 두 갈래로 갈렸다. 인코더만 쓴 게 BERT, 디코더만 쓴 게 GPT다. BERT는 문장을 이해하는 데 강하고, GPT는 문장을 만들어내는 데 강하다. 우리가 쓰는 챗봇은 전부 GPT 계열, 즉 디코더 계열이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(158,93,249,.28),transparent 62%)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">여기서 두 갈래로 갈린다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Encoder 계열 vs Decoder 계열</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s29_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>BERT (Encoder) vs GPT (Decoder)</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px">
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:24px 30px;font-size:var(--type-small);line-height:1.5"><b style="color:#8ED6FF">BERT — 인코더</b><br>양쪽을 다 보고 <b style="color:#fff">이해</b>한다 · 분류·검색에 강하다</div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:14px;padding:24px 30px;font-size:var(--type-small);line-height:1.5"><b style="color:#00E49B">GPT — 디코더</b><br>앞만 보고 <b style="color:#fff">생성</b>한다 · 우리가 쓰는 챗봇은 전부 이쪽</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="GPT-1 의 두 단계" data-screen-label="27" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.48–49 — GPT-1 이 제시한 것. 문제는 대량의 학습 데이터셋을 구하기 힘들다는 것이었다. 그래서 비지도 학습과 지도 학습을 섞었다. 먼저 비지도 사전학습 — 단어 순서를 주고 다음 단어의 확률을 소프트맥스 결과와 비교해 학습한다. 정답지가 필요 없다. 그다음 지도 전이학습 — 사전학습으로 얻은 디코더는 고정하고 위에 선형 층만 붙여 과제별로 학습한다. GPT-1 은 디코더 12개로 구성됐다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">GPT-1 — 두 단계로 나눴다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">디코더 12개 · Masked Multi-head Self-Attention 만 사용</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.5fr;gap:38px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">① 비지도 사전학습</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s48_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>unsupervised pretraining</span></div></div></div>
+      <p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.45">다음 단어를 맞히게 한다 — <b style="color:var(--fg-1)">정답지가 필요 없다</b></p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:#00B37A">② 지도 전이학습</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s49_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>supervised fine-tuning</span></div></div></div>
+      <p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.45">디코더는 <b style="color:var(--fg-1)">고정</b>하고 위에 선형 층만 붙여 과제별로 학습</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">이 두 단계가 10주차의 <b style="color:var(--fg-1)">Pre-training → SFT</b> 로 그대로 이어진다.</p>
+</section>
+
+<section data-deck="0" data-label="GPT 1 → 2 → 3" data-screen-label="28" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.50–51 — 버전이 올라가면서 학습 데이터 분야를 넓히고 디코더 개수·파라미터 수·토큰 사이즈를 계속 키웠다. GPT-2 는 특정 분야에 치우치지 않은 범용 언어 모델을 목표했지만 zero-shot·few-shot 성능이 저조했다. GPT-3 는 fine-tuning 을 완전히 없애고 성능을 대폭 높였다. 그리고 3.5 에서 RLHF 가 도입된다 — 10주차에서 자세히 볼 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">키우고, 또 키웠다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">GPT-1 → GPT-2 → GPT-3 → GPT-3.5</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--neutral-medium)">디코더 · 파라미터 · 토큰 사이즈</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s50_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GPT1 > GPT2 > GPT3</span></div></div></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">GPT-3 → 3.5 → chatGPT</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s51_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GPT3 / GPT3.5 / chatGPT</span></div></div></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px">
+    <div style="background:#fff;border-radius:14px;padding:20px 26px;font-size:var(--type-note);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">GPT-2</b> — 분야에 치우치지 않은 범용 모델을 노렸으나 zero/few-shot 성능이 저조</div>
+    <div style="background:#fff;border-radius:14px;padding:20px 26px;font-size:var(--type-note);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">GPT-3</b> — fine-tuning 을 없애고 성능을 대폭 높임 (davinci, 1750억)</div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;padding:20px 26px;font-size:var(--type-note);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">GPT-3.5</b> — <b style="color:var(--fg-1)">RLHF</b> 도입. 10주차에서 자세히</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="29" data-speaker-notes="정리. 언어 모델은 다음 단어의 확률을 계산하는 모델이다. Seq2Seq 가 벡터 하나로 접었더니 병목이 생겼고, 어텐션이 그걸 풀었다. 어텐션만 남기고 순환을 뺀 게 트랜스포머고, 디코더만 가져다 쓴 게 GPT다. 10주차는 여기서 곧장 이어진다 — 그 GPT 를 어떻게 학습시키고 어떻게 쓰는가." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 22% 80%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">3교시 정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:18px;font-size:32px;line-height:1.4;max-width:1700px">
+    <li>언어 모델 = <b style="color:var(--accent-green)">다음 단어의 확률</b>을 계산하는 모델.</li>
+    <li>Seq2Seq 는 <b style="color:var(--accent-green)">벡터 하나</b>로 접었다 — 길어지면 앞이 사라진다.</li>
+    <li>어텐션은 출력할 때마다 <b style="color:var(--accent-green)">입력 전체를 다시 본다</b> — 점수 · 분포 · 가중합 · 예측.</li>
+    <li>어텐션만 남기고 순환을 뺀 것이 <b style="color:var(--accent-green)">Transformer</b>, 디코더만 쓴 것이 <b style="color:var(--accent-green)">GPT</b>.</li>
+  </ol>
+  <div style="padding:28px 34px;background:rgba(68,52,226,.24);border:2px solid rgba(158,93,249,.5);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1700px">10주차 — 그 GPT 를 <b style="color:#fff">어떻게 학습시키고 어떻게 쓰는가.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">실습: 25 언어모델.ipynb · 26 Seq2Seq.ipynb · 27 attention.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W09_언어모델과_어텐션</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">29</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">언어 모델은 확률 모델이다</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">Unigram 과 n-gram</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">신경망 언어 모델의 계보</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">Seq2Seq</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">글자를 숫자로 — 원핫</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">임베딩 — 비슷한 것끼리 가까이</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">맥락이 벡터에 눌러 담긴다</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">디코더가 한 단어씩 뱉는다</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">이 구조가 실제로 서비스가 되었다</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">한계</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">버려진 히든 스테이트</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">어텐션의 발상</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">어텐션 ① 점수</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">내적이 재는 것</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">어텐션 ② 분포</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">어텐션 ③ 컨텍스트 벡터</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">어텐션 ④ 다음 토큰</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">Attention is all you need</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">Positional Encoding</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">세 가지 어텐션</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">Query · Key · Value</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">Wq · Wk · Wv</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">어텐션 점수 행렬</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">인코더–디코더 어텐션</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">BERT 와 GPT</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">GPT-1 의 두 단계</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">GPT 1 → 2 → 3</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const chip = (x, y, w, hh, t, col, bg, fs) => h('g', { key: t + '_' + x + '_' + y },
+      h('rect', { x: x, y: y, width: w, height: hh, rx: 11, fill: bg, stroke: col,
+        strokeWidth: 2 }),
+      h('text', { x: x + w / 2, y: y + hh / 2 + 9, textAnchor: 'middle', fontFamily: KR,
+        fontSize: fs || 25, fontWeight: 700, fill: col }, t));
+
+    // ── 원핫 ────────────────────────────────────────────────────
+    //    장난감 사전 여덟 개. 문장의 네 단어가 각자 한 자리만 1 이다.
+    const oneHot = (() => {
+      const VOCAB = ['<sos>', '<eos>', 'I', 'am', 'a', 'student', 'teacher', 'the'];
+      const SENT = [['I', 2], ['am', 3], ['a', 4], ['student', 5]];
+      const W = 1720, H = 560, RY = 118, RH = 50, CW = 160, GAP = 130, X0 = 580;
+      const g = [];
+      g.push(h('text', { key: 'dl', x: 40, y: 84, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: MUT }, '어휘 사전'));
+      VOCAB.forEach((w, k) => {
+        const y = RY + k * RH;
+        g.push(h('rect', { key: 'db' + k, x: 40, y: y, width: 56, height: 42, rx: 9,
+          fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'di' + k, x: 68, y: y + 29, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fontWeight: 700, fill: MUT }, String(k)));
+        g.push(h('text', { key: 'dw' + k, x: 112, y: y + 29, fontFamily: EN,
+          fontSize: 23, fontWeight: 700, fill: INK }, w));
+      });
+      SENT.forEach((s, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'sh' + i, x: x, y: 40, width: CW, height: 54, rx: 12,
+          fill: '#EEF0FE', stroke: ACC, strokeWidth: 2 }));
+        g.push(h('text', { key: 'st' + i, x: x + CW / 2, y: 76, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 24, fontWeight: 800, fill: ACC }, s[0]));
+        VOCAB.forEach((w, k) => {
+          const y = RY + k * RH, on = k === s[1];
+          g.push(h('rect', { key: 'c' + i + '_' + k, x: x, y: y, width: CW, height: 42,
+            rx: 9, fill: on ? ACC : '#F4F3F8' }));
+          g.push(h('text', { key: 'v' + i + '_' + k, x: x + CW / 2, y: y + 29,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 21, fontWeight: 700,
+            fill: on ? '#fff' : '#B9B6CC' }, on ? '1' : '0'));
+        });
+        g.push(h('text', { key: 'sx' + i, x: x + CW / 2, y: RY + 8 * RH + 34,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 20, fill: MUT },
+          '8 \u00D7 1'));
+      });
+      g.push(h('text', { key: 'nt', x: 40, y: RY + 8 * RH + 34, fontFamily: KR,
+        fontSize: 22, fill: MUT }, '단어 하나 = 사전 길이만큼의 벡터 하나'));
+      return svg(W, H, g);
+    })();
+
+    // ── 임베딩 파이프 ───────────────────────────────────────────
+    const embedPipe = (() => {
+      const W = 880, H = 560;
+      const g = [];
+      const RY = 110, RH = 44;
+      g.push(h('text', { key: 'l1', x: 96, y: 76, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 21, fontWeight: 700, fill: MUT }, 'student 의 원핫'));
+      for (let k = 0; k < 8; k++) {
+        const on = k === 5;
+        g.push(h('rect', { key: 'o' + k, x: 46, y: RY + k * RH, width: 100, height: 36,
+          rx: 8, fill: on ? ACC : '#F4F3F8' }));
+        g.push(h('text', { key: 'ot' + k, x: 96, y: RY + k * RH + 25,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 19, fontWeight: 700,
+          fill: on ? '#fff' : '#B9B6CC' }, on ? '1' : '0'));
+      }
+      g.push(h('text', { key: 'a1', x: 190, y: 292, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 32, fill: MUT }, '\u00D7'));
+
+      g.push(h('text', { key: 'l2', x: 372, y: 76, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 21, fontWeight: 700, fill: ACC }, '임베딩 행렬 — 학습 대상'));
+      for (let k = 0; k < 8; k++)
+        for (let c = 0; c < 4; c++)
+          g.push(h('rect', { key: 'm' + k + c, x: 250 + c * 62, y: RY + k * RH,
+            width: 56, height: 36, rx: 7,
+            fill: k === 5 ? '#C9C2FA' : '#EEEDF6' }));
+      g.push(h('rect', { key: 'mh', x: 246, y: RY + 5 * RH - 4, width: 256, height: 44,
+        rx: 10, fill: 'none', stroke: ACC, strokeWidth: 3 }));
+      g.push(h('text', { key: 'l2b', x: 372, y: RY + 8 * RH + 34, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 20, fill: MUT }, '8 \u00D7 4'));
+
+      g.push(h('text', { key: 'a2', x: 570, y: 292, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 32, fill: MUT }, '='));
+      g.push(h('text', { key: 'l3', x: 726, y: 76, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 21, fontWeight: 700, fill: VIO }, '4차원 벡터'));
+      const EV = ['0.42', '\u22120.18', '0.75', '0.06'];
+      EV.forEach((v, c) => {
+        g.push(h('rect', { key: 'e' + c, x: 634, y: 200 + c * 48, width: 184, height: 42,
+          rx: 9, fill: '#F6F0FF', stroke: VIO, strokeWidth: 2 }));
+        g.push(h('text', { key: 'et' + c, x: 726, y: 229 + c * 48, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fontWeight: 700, fill: INK }, v));
+      });
+      g.push(h('text', { key: 'nt', x: 440, y: 534, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 21, fill: MUT },
+        '한 자리만 1 이니 결국 행렬에서 그 단어의 줄 하나를 꺼내 오는 것이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 단어 공간 ───────────────────────────────────────────────
+    //    man → king 과 woman → queen 이 같은 화살표라는 그 성질이다.
+    const wordSpace = (() => {
+      const W = 880, H = 560;
+      const g = [];
+      const P = { man: [196, 396], king: [486, 214], woman: [318, 484],
+                  queen: [608, 302], boy: [148, 330], girl: [268, 420] };
+      g.push(h('rect', { key: 'bg', x: 40, y: 96, width: 800, height: 420, rx: 18,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'ttl', x: 40, y: 76, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: MUT }, '학습이 끝난 단어 공간 (2차원으로 줄여 그린 것)'));
+      const arrow = (key, a, b, col) => {
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const L = Math.sqrt(dx * dx + dy * dy);
+        const ux = dx / L, uy = dy / L, ex = b[0] - ux * 26, ey = b[1] - uy * 26;
+        g.push(h('line', { key: key + 'l', x1: a[0] + ux * 26, y1: a[1] + uy * 26,
+          x2: ex, y2: ey, stroke: col, strokeWidth: 3.5, strokeDasharray: '9 6' }));
+        g.push(h('path', { key: key + 'h',
+          d: 'M' + ex + ' ' + ey + ' L' + (ex - ux * 18 - uy * 8) + ' '
+            + (ey - uy * 18 + ux * 8) + ' L' + (ex - ux * 18 + uy * 8) + ' '
+            + (ey - uy * 18 - ux * 8) + ' Z', fill: col }));
+      };
+      arrow('a1', P.man, P.king, ACC);
+      arrow('a2', P.woman, P.queen, GRN);
+      const dot = (key, p, lab, col) => {
+        g.push(h('circle', { key: key + 'c', cx: p[0], cy: p[1], r: 13, fill: col,
+          stroke: '#fff', strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: p[0], y: p[1] - 24, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 800, fill: col }, lab));
+      };
+      dot('d5', P.boy, '소년', MUT);
+      dot('d6', P.girl, '소녀', MUT);
+      dot('d1', P.man, '남자', ACC);
+      dot('d2', P.king, '왕', ACC);
+      dot('d3', P.woman, '여자', GRN);
+      dot('d4', P.queen, '여왕', GRN);
+      g.push(h('text', { key: 'lb1', x: 300, y: 352, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: ACC }, '+ 왕관'));
+      g.push(h('text', { key: 'lb2', x: 424, y: 444, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: GRN }, '+ 왕관'));
+      g.push(h('text', { key: 'eq', x: 440, y: 546, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 24, fontWeight: 700, fill: INK },
+        '\uC655 \u2212 \uB0A8\uC790 + \uC5EC\uC790 \u2248 \uC5EC\uC655'));
+      return svg(W, H, g);
+    })();
+
+    // ── 컨텍스트 벡터 10차원 ────────────────────────────────────
+    const contextVec = (() => {
+      const W = 1720, H = 700;
+      const g = [];
+      const V1 = [0.62, -0.31, 0.08, 0.77, -0.45, 0.19, -0.66, 0.34, 0.51, -0.12];
+      const V2 = [0.15, -0.72, 0.41, 0.29, -0.08, 0.63, -0.24, -0.55, 0.37, 0.48];
+      const fmt = (v) => (v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(2);
+
+      // 인코더 한 줄
+      const WORDS = ['I', 'am', 'a', 'student'];
+      const CW = 168, GAP = 78, X0 = 96, CT = 58, CB = 178;
+      WORDS.forEach((w, i) => {
+        const x = X0 + i * (CW + GAP), c = x + CW / 2;
+        g.push(h('rect', { key: 'lc' + i, x: x, y: CT, width: CW, height: CB - CT,
+          rx: 14, fill: 'rgba(255,255,255,.08)', stroke: 'rgba(255,255,255,.35)',
+          strokeWidth: 2 }));
+        g.push(h('text', { key: 'lt' + i, x: c, y: CT + 74, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 26, fontWeight: 700, fill: '#fff' }, 'LSTM'));
+        g.push(h('rect', { key: 'wb' + i, x: x + 22, y: 216, width: CW - 44, height: 54,
+          rx: 12, fill: 'rgba(158,93,249,.22)' }));
+        g.push(h('text', { key: 'wt' + i, x: c, y: 252, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 24, fontWeight: 700, fill: '#D9C6FF' }, w));
+        g.push(h('line', { key: 'wl' + i, x1: c, y1: 214, x2: c, y2: CB,
+          stroke: 'rgba(255,255,255,.3)', strokeWidth: 2 }));
+        if (i < 3)
+          g.push(h('line', { key: 'he' + i, x1: x + CW, y1: (CT + CB) / 2,
+            x2: x + CW + GAP, y2: (CT + CB) / 2, stroke: VIO, strokeWidth: 3.5 }));
+      });
+      const XE = X0 + 3 * (CW + GAP) + CW;
+      const MY = (CT + CB) / 2;
+      g.push(h('line', { key: 'oe', x1: XE, y1: MY, x2: XE + 110, y2: MY, stroke: GRN,
+        strokeWidth: 5 }));
+      g.push(h('rect', { key: 'ob', x: XE + 110, y: MY - 38, width: 340, height: 76,
+        rx: 16, fill: 'rgba(0,179,122,.16)', stroke: GRN, strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'ot', x: XE + 280, y: MY + 10, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 800, fill: '#00E49B' },
+        '마지막 히든 = 컨텍스트 벡터'));
+      g.push(h('line', { key: 'od', x1: XE + 280, y1: MY + 38, x2: XE + 280, y2: 372,
+        stroke: GRN, strokeWidth: 3, strokeDasharray: '9 7' }));
+      g.push(h('path', { key: 'oa', d: 'M' + (XE + 270) + ' 372 L' + (XE + 280)
+        + ' 388 L' + (XE + 290) + ' 372 Z', fill: GRN }));
+      g.push(h('text', { key: 'wl2', x: 96, y: 300, fontFamily: KR, fontSize: 21,
+        fill: 'var(--neutral-medium)' }, '임베딩된 단어가 순서대로 들어간다'));
+
+      // 두 문장의 컨텍스트 벡터
+      const strip = (key, y, lab, vals, col) => {
+        const SW = 110, SG = 10, SX = 470;
+        g.push(h('text', { key: key + 'l', x: 96, y: y + 52, fontFamily: EN,
+          fontSize: 25, fontWeight: 700, fill: col }, lab));
+        vals.forEach((v, i) => {
+          const x = SX + i * (SW + SG), mid = y + 44;
+          g.push(h('rect', { key: key + 'b' + i, x: x, y: y, width: SW, height: 96,
+            rx: 10, fill: 'rgba(255,255,255,.07)' }));
+          g.push(h('line', { key: key + 'z' + i, x1: x + 8, y1: mid, x2: x + SW - 8,
+            y2: mid, stroke: 'rgba(255,255,255,.22)', strokeWidth: 1.5 }));
+          g.push(h('rect', { key: key + 'v' + i, x: x + 34, width: 42,
+            y: v >= 0 ? mid - v * 34 : mid, height: Math.abs(v) * 34, rx: 4,
+            fill: v >= 0 ? col : '#FF7AA2' }));
+          g.push(h('text', { key: key + 't' + i, x: x + SW / 2, y: y + 88,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 18, fontWeight: 700,
+            fill: '#D8D5E8' }, fmt(v)));
+        });
+      };
+      strip('s1', 388, '\u201CI am a student\u201D', V1, GRN);
+      strip('s2', 528, '\u201CAm I a student ?\u201D', V2, '#4DA3FF');
+      g.push(h('text', { key: 'cap', x: 1700, y: 660, textAnchor: 'end', fontFamily: KR,
+        fontSize: 20, fill: 'var(--neutral-medium)' },
+        '값은 개념 예시 \u2014 실제 모델의 컨텍스트 벡터는 훨씬 크다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 디코더 생성 ─────────────────────────────────────────────
+    const decoderGen = (() => {
+      const W = 1720, H = 560;
+      const g = [];
+      const IN = ['<sos>', 'je', 'suis', '\u00E9tudiant'];
+      const OUT = ['je', 'suis', '\u00E9tudiant', '<eos>'];
+      const CW = 200, GAP = 118, X0 = 400, CT = 214, CB = 344, CY = 279;
+
+      // 왼쪽 — 인코더가 넘겨준 컨텍스트 벡터
+      g.push(h('rect', { key: 'cv', x: 40, y: 232, width: 260, height: 94, rx: 14,
+        fill: '#EDF9F4', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'cvl', x: 170, y: 268, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: GRN }, '컨텍스트 벡터'));
+      g.push(h('text', { key: 'cvn', x: 170, y: 302, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 21, fill: INK }, '10 \u00D7 1'));
+      g.push(h('line', { key: 'cve', x1: 300, y1: CY, x2: X0, y2: CY, stroke: GRN,
+        strokeWidth: 5 }));
+
+      IN.forEach((w, i) => {
+        const x = X0 + i * (CW + GAP), c = x + CW / 2, first = i === 0;
+        g.push(h('rect', { key: 'dc' + i, x: x, y: CT, width: CW, height: CB - CT,
+          rx: 16, fill: '#fff', stroke: VIO, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'dt' + i, x: c, y: CY + 12, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 27, fontWeight: 700, fill: VIO }, 'LSTM'));
+        if (i < 3)
+          g.push(h('line', { key: 'dh' + i, x1: x + CW, y1: CY, x2: x + CW + GAP,
+            y2: CY, stroke: VIO, strokeWidth: 3.5 }));
+
+        // 입력 — 첫 칸만 우리가 준다
+        g.push(h('rect', { key: 'ib' + i, x: c - 92, y: 430, width: 184, height: 58,
+          rx: 12, fill: first ? '#EEF0FE' : '#fff',
+          stroke: first ? ACC : '#D9D7E6', strokeWidth: first ? 3 : 2 }));
+        g.push(h('text', { key: 'it' + i, x: c, y: 468, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 23, fontWeight: 700,
+          fill: first ? ACC : INK }, w));
+        g.push(h('line', { key: 'il' + i, x1: c, y1: 428, x2: c, y2: CB,
+          stroke: '#C9C7D6', strokeWidth: 2.5 }));
+
+        // 출력
+        g.push(h('rect', { key: 'ob' + i, x: c - 92, y: 76, width: 184, height: 58,
+          rx: 12, fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'ot' + i, x: c, y: 114, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 23, fontWeight: 700, fill: GRN }, OUT[i]));
+        g.push(h('line', { key: 'ol' + i, x1: c, y1: CT, x2: c, y2: 136, stroke: GRN,
+          strokeWidth: 3 }));
+
+        // 뱉은 단어를 다음 칸이 먹는다
+        if (i < 3) {
+          const nx = X0 + (i + 1) * (CW + GAP) + CW / 2;
+          const mx = (c + nx) / 2;
+          g.push(h('path', { key: 'fb' + i,
+            d: 'M' + c + ' 74 V 46 H' + mx + ' V 459 H' + (nx - 104),
+            fill: 'none', stroke: RED, strokeWidth: 2.5, strokeDasharray: '8 6' }));
+          g.push(h('path', { key: 'fa' + i, d: 'M' + (nx - 104) + ' 451 L' + (nx - 90)
+            + ' 459 L' + (nx - 104) + ' 467 Z', fill: RED }));
+        }
+      });
+      g.push(h('text', { key: 'lo', x: 40, y: 114, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: GRN }, '출력'));
+      g.push(h('text', { key: 'li', x: 40, y: 468, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: MUT }, '입력'));
+      g.push(h('text', { key: 'fbl', x: 1700, y: 528, textAnchor: 'end', fontFamily: KR,
+        fontSize: 21, fontWeight: 700, fill: RED },
+        '빨간 점선 — 방금 뱉은 단어가 다음 입력이 된다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 신경망 번역이 서비스가 된 시기 ──────────────────────────
+    const nmtTimeline = (() => {
+      const W = 1720, H = 460;
+      const EV = [
+        { t: '2014.09', k: 'Seq2Seq 논문', d: 'Sutskever et al. · NIPS', c: MUT, up: 1 },
+        { t: '2016.08', k: '네이버 파파고 앱', d: '8일 첫 출시', c: GRN, up: 0 },
+        { t: '2016.09', k: '구글 GNMT 논문', d: 'LSTM 8층 + 어텐션', c: ACC, up: 1 },
+        { t: '2016.10', k: '파파고 한\u2194영 NMT', d: '구글보다 한 달 앞섰다', c: GRN, up: 0 },
+        { t: '2016.11', k: '구글 번역 전환', d: '중\u2192영 전량 · 하루 약 1,800만 건',
+          c: ACC, up: 1 },
+        { t: '2017.09', k: '카카오 i 번역', d: '베타 공개', c: VIO, up: 0 },
+      ];
+      const g = [];
+      const AY = 230, X0 = 132, DX = (1720 - 264) / 5;
+      g.push(h('line', { key: 'ax', x1: 60, y1: AY, x2: 1660, y2: AY, stroke: '#DCDAE8',
+        strokeWidth: 4 }));
+      EV.forEach((e, i) => {
+        const x = X0 + i * DX, up = e.up === 1;
+        const by = up ? AY - 148 : AY + 34;
+        g.push(h('line', { key: 'tk' + i, x1: x, y1: up ? AY - 14 : AY - 2, x2: x,
+          y2: up ? AY + 2 : AY + 14, stroke: e.c, strokeWidth: 4 }));
+        g.push(h('circle', { key: 'cd' + i, cx: x, cy: AY, r: 13, fill: '#fff',
+          stroke: e.c, strokeWidth: 5 }));
+        g.push(h('line', { key: 'st' + i, x1: x, y1: up ? AY - 16 : AY + 16, x2: x,
+          y2: up ? by + 114 : by, stroke: e.c, strokeWidth: 2 }));
+        g.push(h('rect', { key: 'bx' + i, x: x - 128, y: by, width: 256, height: 114,
+          rx: 14, fill: '#fff', stroke: e.c, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'dt' + i, x: x, y: by + 34, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 22, fontWeight: 800, fill: e.c }, e.t));
+        g.push(h('text', { key: 'kt' + i, x: x, y: by + 66, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fontWeight: 700, fill: INK }, e.k));
+        g.push(h('text', { key: 'dd' + i, x: x, y: by + 96, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 18, fill: MUT }, e.d));
+      });
+      return svg(W, H, g);
+    })();
+
+    // ── 버려진 히든 스테이트 ────────────────────────────────────
+    //    08 의 인코더를 그대로 다시 그리되, 이번엔 중간 히든까지 위로 올린다.
+    //    어텐션이 주워 쓰는 것이 바로 이 셋이라는 걸 먼저 보여 주려는 그림이다.
+    const heldStates = (() => {
+      const W = 1720, H = 640;
+      const WORDS = ['I', 'am', 'a', 'student'];
+      const CW = 200, GAP = 120, X0 = 150, CT = 330, CB = 450, CY = 390;
+      const cxi = (i) => X0 + i * (CW + GAP) + CW / 2;   // 250 570 890 1210
+      const SUB = ['\u2081', '\u2082', '\u2083', '\u2084'];
+      const g = [];
+
+      // 버린 셋을 한 덩어리로 묶어 둔다
+      g.push(h('rect', { key: 'db', x: 134, y: 152, width: 872, height: 124, rx: 18,
+        fill: 'none', stroke: RED, strokeWidth: 2.5, strokeDasharray: '10 7',
+        opacity: 0.55 }));
+      g.push(h('text', { key: 'dt', x: 570, y: 132, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 800, fill: RED },
+        '쓰지 않고 버렸다'));
+      g.push(h('text', { key: 'kt', x: 1210, y: 132, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 800, fill: GRN },
+        '이 하나만 썼다'));
+
+      WORDS.forEach((w, i) => {
+        const x = X0 + i * (CW + GAP), c = cxi(i), used = i === 3;
+        const col = used ? GRN : '#B9B6CC';
+
+        // 히든 스테이트 칩
+        g.push(h('rect', { key: 'hb' + i, x: c - 90, y: 170, width: 180, height: 86,
+          rx: 13, fill: used ? '#EDF9F4' : '#F2F1F6', stroke: col,
+          strokeWidth: used ? 3.5 : 2, strokeDasharray: used ? 'none' : '7 5' }));
+        g.push(h('text', { key: 'ht' + i, x: c, y: 200, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 22, fontWeight: 800, fill: col }, 'h' + SUB[i]));
+        for (let k = 0; k < 5; k++)
+          g.push(h('rect', { key: 'hc' + i + k, x: c - 77 + k * 32, y: 214, width: 26,
+            height: 26, rx: 6, fill: used ? 'rgba(0,179,122,.30)' : '#E2E0EA' }));
+
+        // 칸에서 위로
+        g.push(h('line', { key: 'up' + i, x1: c, y1: CT, x2: c, y2: 272, stroke: col,
+          strokeWidth: used ? 4 : 2.5, strokeDasharray: used ? 'none' : '8 6' }));
+        g.push(h('path', { key: 'ua' + i, d: 'M' + (c - 9) + ' 276 L' + c + ' 260 L'
+          + (c + 9) + ' 276 Z', fill: col }));
+
+        // LSTM 칸
+        g.push(h('rect', { key: 'cb' + i, x: x, y: CT, width: CW, height: CB - CT,
+          rx: 16, fill: '#fff', stroke: VIO, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'ct' + i, x: c, y: CY + 12, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 27, fontWeight: 700, fill: VIO }, 'LSTM'));
+        if (i < 3)
+          g.push(h('line', { key: 'hh' + i, x1: x + CW, y1: CY, x2: x + CW + GAP,
+            y2: CY, stroke: VIO, strokeWidth: 3.5 }));
+
+        // 입력 단어
+        g.push(h('line', { key: 'wl' + i, x1: c, y1: 508, x2: c, y2: CB,
+          stroke: '#C9C7D6', strokeWidth: 2.5 }));
+        g.push(h('rect', { key: 'wb' + i, x: c - 84, y: 510, width: 168, height: 58,
+          rx: 12, fill: '#fff', stroke: '#D9D7E6', strokeWidth: 2 }));
+        g.push(h('text', { key: 'wt' + i, x: c, y: 548, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 24, fontWeight: 700, fill: INK }, w));
+      });
+
+      // 실제로 넘어간 길
+      const XR = X0 + 3 * (CW + GAP) + CW;
+      g.push(h('line', { key: 'de', x1: XR, y1: CY, x2: 1420, y2: CY, stroke: GRN,
+        strokeWidth: 5 }));
+      g.push(h('rect', { key: 'db2', x: 1420, y: 350, width: 270, height: 80, rx: 16,
+        fill: '#F6F0FF', stroke: VIO, strokeWidth: 3 }));
+      g.push(h('text', { key: 'dt2', x: 1555, y: 400, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 26, fontWeight: 800, fill: VIO }, '디코더'));
+      g.push(h('text', { key: 'nt', x: 1690, y: 614, textAnchor: 'end', fontFamily: KR,
+        fontSize: 22, fill: MUT },
+        '인코더는 단어마다 그때까지의 요약을 이미 만들고 있었다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 다음 단어 확률 ──────────────────────────────────────────
+    const nextWord = (() => {
+      const W = 1720, H = 240;
+      const IN = ['도시', '기본', '계획', '을'];
+      const CAND = [['수립', 0.34], ['변경', 0.19], ['승인', 0.15], ['위한', 0.11],
+                    ['…', 0.21]];
+      const g = [];
+      IN.forEach((t, i) => g.push(chip(40 + i * 150, 74, 134, 68, t, MUT,
+        'var(--surface-app)')));
+      g.push(h('text', { key: 'ar', x: 690, y: 116, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 36, fill: MUT }, '→'));
+      CAND.forEach((c, i) => {
+        const x = 760 + i * 176;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 168 - c[1] * 150, width: 148,
+          height: c[1] * 150, rx: 8, fill: i === 0 ? ACC : '#D9D7E3' }));
+        g.push(h('text', { key: 't' + i, x: x + 74, y: 200, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 24, fontWeight: 700,
+          fill: i === 0 ? ACC : MUT }, c[0]));
+        g.push(h('text', { key: 'p' + i, x: x + 74, y: 160 - c[1] * 150,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 21, fontWeight: 700,
+          fill: i === 0 ? ACC : MUT }, (c[1] * 100).toFixed(0) + '%'));
+      });
+      return svg(W, H, [g,
+        h('text', { key: 'l1', x: 40, y: 44, fontFamily: KR, fontSize: 22, fill: MUT },
+          '지금까지의 단어'),
+        h('text', { key: 'l2', x: 760, y: 44, fontFamily: KR, fontSize: 22, fill: MUT },
+          '다음 단어의 확률'),
+        h('text', { key: 'n', x: W - 40, y: 232, textAnchor: 'end', fontFamily: KR,
+          fontSize: 20, fill: MUT }, '개념 예시')]);
+    })();
+
+    // ── 논문 계보 ───────────────────────────────────────────────
+    const papers = (() => {
+      const W = 1720, H = 470;
+      const P = [
+        ['1990', 'Elman', 'Finding Structure in Time', '순환 구조로 시간을 담다', MUT],
+        ['2010', 'Mikolov et al.', 'RNN based language model', 'RNN 을 언어 모델로', MUT],
+        ['2014', 'Sutskever et al.', 'Sequence to Sequence Learning', '문장 → 문장', ACC],
+        ['2014', 'Cho et al.', 'RNN Encoder–Decoder', '인코더–디코더 구조', ACC],
+      ];
+      const g = [];
+      P.forEach((p, i) => {
+        const x = 20 + i * 428;
+        g.push(h('rect', { key: 'r' + i, x: x, y: 50, width: 400, height: 320, rx: 18,
+          fill: p[4] === ACC ? '#EEF0FE' : 'var(--surface-app)', stroke: p[4],
+          strokeWidth: p[4] === ACC ? 3 : 2 }));
+        g.push(h('text', { key: 'y' + i, x: x + 30, y: 108, fontFamily: EN,
+          fontSize: 34, fontWeight: 800, fill: p[4] }, p[0]));
+        g.push(h('text', { key: 'a' + i, x: x + 30, y: 158, fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: INK }, p[1]));
+        g.push(h('text', { key: 't' + i, x: x + 30, y: 216, fontFamily: EN,
+          fontSize: 20, fill: 'var(--fg-3)' }, p[2].slice(0, 26)));
+        g.push(h('text', { key: 'd' + i, x: x + 30, y: 300, fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: p[4] }, p[3]));
+        if (i < 3) g.push(h('text', { key: 'ar' + i, x: x + 414, y: 216,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: AX }, '→'));
+      });
+      return svg(W, H, [g,
+        h('text', { key: 'n', x: 20, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '이 네 편이 지금 LLM 의 뿌리다 — 2017년 Transformer 가 여기서 갈라져 나온다')]);
+    })();
+
+    // ── 병목 ────────────────────────────────────────────────────
+    const bottleneck = (() => {
+      const W = 1720, H = 250;
+      const g = [];
+      const words = ['도시', '기본', '계획', '은', '20년', '단위', '로', '수립', '한다'];
+      words.forEach((t, i) => {
+        g.push(h('rect', { key: 'w' + i, x: 40 + i * 118, y: 46, width: 104, height: 62,
+          rx: 10, fill: '#EEF0FE', stroke: ACC, strokeWidth: 2 }));
+        g.push(h('text', { key: 'wt' + i, x: 92 + i * 118, y: 86, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fontWeight: 700, fill: ACC }, t));
+        g.push(h('line', { key: 'l' + i, x1: 92 + i * 118, y1: 112, x2: 1160, y2: 150,
+          stroke: i < 3 ? '#E4E2EC' : ACC, strokeWidth: i < 3 ? 1.5 : 2.5,
+          opacity: i < 3 ? 0.5 : 0.8 }));
+      });
+      return svg(W, H, [g,
+        h('rect', { key: 'cv', x: 1160, y: 112, width: 210, height: 76, rx: 14,
+          fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }),
+        h('text', { key: 'cvt', x: 1265, y: 158, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fontWeight: 800, fill: RED }, '벡터 하나'),
+        h('text', { key: 'n1', x: 40, y: 168, fontFamily: KR, fontSize: 22, fill: MUT },
+          '앞쪽은 흐릿해진다'),
+        h('text', { key: 'n2', x: 1400, y: 158, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' }, '전부 여기로 접힌다'),
+        h('text', { key: 'n3', x: 40, y: 224, fontFamily: KR, fontSize: 22, fill: MUT },
+          '문장이 길수록 왼쪽 정보가 도달하지 못한다')]);
+    })();
+
+    // ── 손들기 비유 ─────────────────────────────────────────────
+    const handsUp = (() => {
+      const W = 1720, H = 230;
+      const words = ['도시', '기본', '계획', '은', '20년', '단위', '로', '수립', '한다'];
+      const score = [0.05, 0.04, 0.28, 0.03, 0.30, 0.06, 0.03, 0.18, 0.03];
+      const g = [];
+      words.forEach((t, i) => {
+        const hi = score[i] > 0.15;
+        g.push(h('rect', { key: 'w' + i, x: 40 + i * 132, y: 120, width: 116,
+          height: 66, rx: 10,
+          fill: hi ? 'rgba(0,228,155,.20)' : 'rgba(255,255,255,.07)',
+          stroke: hi ? '#00E49B' : 'rgba(255,255,255,.2)',
+          strokeWidth: hi ? 3 : 1.5 }));
+        g.push(h('text', { key: 'wt' + i, x: 98 + i * 132, y: 162, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 700,
+          fill: hi ? '#00E49B' : 'var(--neutral-medium)' }, t));
+        g.push(h('rect', { key: 'b' + i, x: 68 + i * 132, y: 108 - score[i] * 200,
+          width: 60, height: score[i] * 200, rx: 5,
+          fill: hi ? '#00E49B' : '#4A4763' }));
+      });
+      return svg(W, H, [g,
+        h('text', { key: 'n', x: 1290, y: 162, fontFamily: KR, fontSize: 24,
+          fill: 'var(--neutral-lighter)' }, '지금 필요한 애들만 손을 든다'),
+        h('text', { key: 'n2', x: 40, y: 34, fontFamily: KR, fontSize: 22,
+          fill: 'var(--neutral-medium)' }, '어텐션 점수')]);
+    })();
+
+    // ── 내적의 의미 ─────────────────────────────────────────────
+    const dotMeaning = (() => {
+      const W = 900, H = 620, cx = 180, cy = 470;
+      const vec = (dx, dy, col, lab) => h('g', { key: lab },
+        h('line', { x1: cx, y1: cy, x2: cx + dx, y2: cy - dy, stroke: col,
+          strokeWidth: 5 }),
+        h('circle', { cx: cx + dx, cy: cy - dy, r: 9, fill: col }),
+        h('text', { x: cx + dx + 16, y: cy - dy + 6, fontFamily: KR, fontSize: 22,
+          fontWeight: 700, fill: col }, lab));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('line', { key: 'ax', x1: cx - 40, y1: cy, x2: 860, y2: cy, stroke: '#EEEDF3',
+          strokeWidth: 2 }),
+        h('line', { key: 'ay', x1: cx, y1: cy + 40, x2: cx, y2: 70, stroke: '#EEEDF3',
+          strokeWidth: 2 }),
+        vec(500, 340, ACC, '지금 출력할 것'),
+        vec(540, 290, GRN, '관련 있는 단어 — 내적 큼'),
+        vec(160, 400, RED, '관련 없는 단어 — 내적 작음'),
+        h('text', { key: 'n1', x: 40, y: 58, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: INK }, '방향이 같으면 내적이 크다'),
+        h('text', { key: 'n2', x: 40, y: 578, fontFamily: KR, fontSize: 22, fill: MUT },
+          '실제 벡터는 수백 차원 — 그림은 2차원으로 줄인 것')]);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      oneHot, embedPipe, wordSpace, contextVec, decoderGen, nmtTimeline,
+      heldStates,
+      nextWord, papers, bottleneck, handsUp, dotMeaning,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

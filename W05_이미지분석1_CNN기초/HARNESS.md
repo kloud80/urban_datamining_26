@@ -10,6 +10,9 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W05_이미지분석1_CNN기초/slides/W05_CNN기초.html`
+
 노트북
 - `W05_이미지분석1_CNN기초/notebooks/11 ConvolutionLayer.ipynb`
 - `W05_이미지분석1_CNN기초/notebooks/12 이미지구조.ipynb`

@@ -10,6 +10,9 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W06_이미지분석1-2_탐지와분할/slides/W06_탐지와분할.html`
+
 노트북
 - `W06_이미지분석1-2_탐지와분할/notebooks/18 CNN_application.ipynb`
 - `W06_이미지분석1-2_탐지와분할/notebooks/19 YOLO.ipynb`

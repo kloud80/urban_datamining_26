@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W10_LLM_학습_3단계</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 10주차 강의영상 ② 21:40 · 29 LLM.ipynb — 2교시. 1교시에서 구조를 봤으니 이제 그 덩어리를 어떻게 사람이 쓸 수 있는 물건으로 만드는지를 본다. LLM은 한 번에 학습되지 않는다. 절차가 있고, 그 절차마다 데이터의 출처가 다르다. 이게 오늘의 핵심이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 76% 26%,rgba(0,228,155,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">10주차 · 2교시</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">LLM 은 세 번<br>학습된다</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">Pre-training · SFT · RLHF</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">28 GPT.ipynb · 29 LLM.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="세 단계" data-screen-label="02" data-speaker-notes="출처: LLM.pptx p.30 · 강의영상 ② 21:40–23:20 — 지금까지 우리가 한 학습은 데이터 넣고 몇 바퀴 돌리면 끝이었다. LLM은 그렇게 안 돌아간다. 세 단계인데, 세 단계 모두 데이터로 학습하는 건 같다. 다른 건 그 데이터의 출처와 목적이다. 위 그림에서 SFT와 RLHF를 묶어 Alignment 라고 부른다 — 사람이 원하는 방향에 맞춘다는 뜻이다. 은행권은 이미 LLM Ops 가 전산에 들어가 있고, 이 용어들이 곧 실무 용어가 된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">세 단계 — 다른 건 <span style="color:var(--primary-main)">데이터의 출처</span>다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">뒤의 둘을 묶어 Alignment 라고 부른다</span>
+  </div>
+  <div style="height:330px;background:var(--surface-app);border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s30_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Pre-Training → SFT → RLHF (Alignment)</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="threeStages"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">이 용어들은 곧 실무 용어가 된다 — 시중은행은 이미 <b style="color:var(--fg-1)">LLM Ops</b> 를 전산에 얹었다.</p>
+</section>
+
+<section data-deck="0" data-label="① 인터넷의 글" data-screen-label="03" data-speaker-notes="출처: 강의영상 ② 26:00–27:40 — 여기서 반드시 생각해 봐야 할 게 있다. LLM이 왜 튀어나왔나. 오픈AI 대표가 인터뷰에서 억지로 만든 게 아니라 필연적으로 그렇게 됐다고 했는데, 그 이유가 뭐냐면 여러분이 인터넷에 글을 너무 많이 써 놨기 때문이다. 유물론적으로 그냥 생겨난 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 28%,rgba(68,52,226,.32),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">단계 ① Pre-training</div>
+  <h2 style="margin:0;font-size:64px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">“우리가 인터넷에 글을<br>너무 많이 써 놔서<br>생긴 일이다”</h2>
+  <div style="height:520px;border-radius:20px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/s107_corpus.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>종이가 파도처럼 밀려와 작은 큐브 하나로 빨려 드는 그림</span></div></div></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1700px">억지로 만들어낸 게 아니라 <b style="color:#fff">필연적으로 생겨났다</b>는 말이 나온다. 위키백과와 뉴스에서 시작해, 지금은 저작권 계약을 맺고 사들인다.</p>
+</section>
+
+<section data-deck="0" data-label="정답지가 필요 없었다" data-screen-label="04" data-speaker-notes="출처: 강의영상 ② 27:00–28:40 — 여기가 정말 중요하다. 우리가 지금까지 배운 지도학습은 항상 라벨링이 문제였다. 정답지를 만드는 데 시간이 엄청 든다. 그런데 LLM은 어떻게 이렇게 많은 걸 학습했나? 정답지가 필요 없었기 때문이다. 문장을 가져와서 랜덤하게 마스킹하면, 그 자리에 뭐가 들어가야 하는지는 이미 알고 있다. 인터넷의 모든 텍스트가 그냥 무제한의 학습 데이터셋이 된 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정답지를 만들 필요가 없었다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Masked Learning</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="masking"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">가린 자리의 답을 <b style="color:var(--fg-1)">이미 알고 있다.</b> 라벨링 없이 <b style="color:#00B37A">무제한</b>의 학습 데이터가 만들어진다.</p>
+</section>
+
+<section data-deck="0" data-label="마스킹은 여기서 끝나지 않는다" data-screen-label="05" data-speaker-notes="출처: 강의영상 ② 28:00–28:40 + 영상 ③ 54:00 — 이 마스킹 기법을 잘 기억해 둘 것. 나중에 이미지에서도 똑같이 쓰인다. 패치를 가리고 복원시키는 MAE가 OCR을 없애 버렸다. 부동산 시세 모델에서도 빠진 방 개수를 이 방식으로 채운다. 데이터가 충분히 모이면 마스킹 자체가 엄청난 데이터를 만들어낸다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">기억해 둘 것</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">가리고 맞히기는 <span style="color:var(--primary-main)">언어만의 기법이 아니다</span></h2>
+  <div style="height:270px;background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/s109_masking.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>가려진 조각을 다시 그려 넣는 세 개의 판</span></div></div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px">
+    <div style="background:#fff;border-radius:16px;padding:32px 34px;display:flex;flex-direction:column;gap:14px"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">텍스트</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">단어를 가리고 맞힌다 — 오늘</p></div>
+    <div style="background:#fff;border-radius:16px;padding:32px 34px;display:flex;flex-direction:column;gap:14px"><div style="font-size:30px;font-weight:800;color:#9E5DF9">이미지</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">패치를 가리고 복원한다 — <b style="color:var(--fg-1)">OCR 을 없앴다</b></p></div>
+    <div style="background:#fff;border-radius:16px;padding:32px 34px;display:flex;flex-direction:column;gap:14px"><div style="font-size:30px;font-weight:800;color:#00B37A">표 데이터</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">빠진 칸을 채운다 — 부동산 시세 모델의 실제 기법</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">데이터가 충분히 모이면 <b style="color:var(--fg-1)">마스킹 그 자체가</b> 엄청난 학습 데이터를 만들어낸다.</p>
+</section>
+
+<section data-deck="0" data-label="압축이라는 관점" data-screen-label="06" data-speaker-notes="출처: LLM.pptx p.31 · 강의영상 ② 29:00–31:00 — 공개된 학습 데이터셋과 그걸로 학습한 공개 모델이 있다. EleutherAI 가 만든 Pile 이라는 말뭉치가 825GB고, 그걸로 학습한 Pythia-12B 의 가중치 파일이 24GB다. 파라미터가 120억 개. 그래서 프리트레이닝을 825GB 를 24GB 로 압축한 것이라고 표현하는 사람도 있다. 압축이 왜 되냐면 반복되는 패턴을 인덱스로 줄이는 것이니까 — 정보 이론 엔트로피 얘기할 때 나왔던 것과 같은 발상이다. 다만 무엇이 어떻게 담긴 건지는 아직도 연구 중이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:740px"><span data-dc-slot="compression"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">한 가지 관점</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">“압축했다”<br>는 표현</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--surface-app);border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">Pile</b> — EleutherAI 가 구성한 대규모 말뭉치 · 825GB</div>
+      <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">Pythia-12B</b> — 그것으로 학습한 공개 모델 · 파라미터 120억 · 파일 24GB</div>
+    </div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">반복되는 것을 <b style="color:var(--fg-1)">인덱스로 줄이는</b> 것이 압축이다.</p>
+    <div style="padding:20px 24px;background:#FDF0F0;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">다만 <b style="color:#D93636">무엇이 어떻게 담긴 것인지</b>는 아직 연구 중이다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="직접 돌려 보면" data-screen-label="07" data-speaker-notes="출처: 강의영상 ② 31:00–33:30 · 28 GPT.ipynb — GPT-2까지는 프리트레이닝 모델이 공개돼 있다. 토크나이저 1.36MB에 가중치 548MB. 크지 않다. 이걸 불러서 문장을 넣고 제너레이트하면 계속 말을 만들어낸다. 그런데 우리가 쓰는 챗GPT와는 아무 상관이 없는 물건이다. 그냥 확률이 제일 높은 토큰을 하나씩 골라 이어 붙일 뿐이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">프리트레이닝 모델을 직접 돌려 보면</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">28 GPT.ipynb · GPT-2 는 아직 공개돼 있다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="gpt2Run"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">우리가 쓰는 챗GPT 와는 <b style="color:#D93636">아무 상관이 없다.</b> 그냥 확률 1등 토큰을 이어 붙일 뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="정리되지 않은 덩어리" data-screen-label="08" data-speaker-notes="출처: 강의영상 ② 36:00–37:20 — 프리트레이닝만 끝난 모델은 정리되지 않은 덩어리다. 언어를 잘 만들어낼 수는 있는데 목적도 의미도 담기지 않는다. 초기에 이 상태로 서비스했더니 폭탄 만드는 법도 알려주고 주식 종목도 추천해 줬다. 그래서 두 단계가 더 필요했다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">프리트레이닝만 끝난 상태</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.2;letter-spacing:-0.02em;max-width:1700px">언어는 잘 만드는데<br>목적이 없다</h2>
+  <div style="height:280px"><span data-dc-slot="rawModel"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45;max-width:1700px">초기에 이 상태로 서비스했더니 <b style="color:#fff">뭐든 다 알려 줬다.</b> 그래서 두 단계가 더 필요했다.</p>
+</section>
+
+<section data-deck="0" data-label="② SFT" data-screen-label="09" data-speaker-notes="출처: 강의영상 ② 23:20–25:00, 37:20–38:40 — 두 번째 단계. Supervised Fine-Tuning. 슈퍼바이즈드는 우리가 계속 해 온 그것 — 정답을 알고 하는 학습이다. 파인튜닝은 이미 학습된 가중치를 조금만 이동시키는 것. 우리가 열 번 돌리고 잘 안 맞아서 열 번 더 돌리던 것, 그 열 번 더가 파인튜닝이고 처음 열 번이 프리트레이닝이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">단계 ② SFT</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">원하는 방향으로<br>밀어 준다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">Supervised</b> — 정답을 알고 하는 학습. 우리가 계속 해 온 그것이다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">“열 번 돌렸는데 잘 안 맞아서 <b style="color:var(--fg-1)">열 번 더</b> 돌린다” —<br>그 열 번 더가 파인튜닝, 처음 열 번이 프리트레이닝이다.</div>
+  </div>
+  <div style="height:720px"><span data-dc-slot="sftShift"></span></div>
+</section>
+
+<section data-deck="0" data-label="SFT 데이터의 모양" data-screen-label="10" data-speaker-notes="출처: LLM.pptx p.32 · 강의영상 ② 37:20–38:40 — 그럼 SFT 데이터는 어떻게 생겼나. 이건 AI2 가 공개한 OLMo 의 SFT 데이터셋이다. 보면 그냥 대화다. role 이 user 인 줄과 role 이 assistant 인 줄이 짝을 이룬다. 사람이 이렇게 물으면 이렇게 답해라, 를 통째로 정답지로 준 것이다. 여기서 role 과 content 라는 형식을 눈여겨 둘 것 — 다음 주에 우리가 API 로 프롬프트를 넣을 때 정확히 이 형식으로 넣는다. 챗GPT 화면의 대화창이 아니라 이 JSON 이 진짜 인터페이스다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정답지는 그냥 <span style="color:var(--primary-main)">대화</span>다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">AI2 · OLMo 의 공개 SFT 데이터셋</span>
+  </div>
+  <div style="height:560px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s32_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>role: user / role: assistant 쌍으로 된 SFT 데이터</span></div></div>
+  </div>
+  <div style="height:170px;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:#fff;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--primary-main);font-weight:700">role &#183; content</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">“이렇게 물으면 이렇게 답해라”를 통째로 정답지로 준다.</p>
+    </div>
+    <div style="background:var(--neutral-black);color:#fff;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:var(--font-display);font-size:22px;color:#00E49B;font-weight:700">기억해 둘 것</div>
+      <p style="margin:0;font-size:var(--type-small);line-height:1.5;opacity:.92">다음 주 API 로 프롬프트를 넣을 때 <b>정확히 이 형식</b>으로 넣는다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="채팅이냐 리즈닝이냐" data-screen-label="11" data-speaker-notes="출처: 강의영상 ② 38:40–42:00 — SFT에서 무엇으로 하느냐에 따라 완전히 다른 모델이 나온다. 채팅용 데이터로 하면 채팅 모델, 생각하는 과정을 정답지로 삼으면 리즈닝 모델. 똑같은 프리트레이닝 모델에서 갈라진다. 요즘 재미나이 같은 데서는 여러 모델을 같이 쓴다. 답변 전략을 짜는 애가 따로 있고 최종 답을 대화체로 주는 애가 따로 있다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 뿌리에서 갈라진다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">무엇으로 파인튜닝하느냐</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="chatVsReason"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">요즘 서비스는 <b style="color:var(--fg-1)">여러 모델을 같이 쓴다</b> — 전략을 짜는 애와 대화체로 답하는 애가 따로 있다.</p>
+</section>
+
+<section data-deck="0" data-label="SFT 의 한계" data-screen-label="12" data-speaker-notes="출처: 강의영상 ② 38:30–39:00 — SFT까지 하면 문제가 하나 생긴다. 어떻게든 답을 한다. 헛소리라도 하고 꾸며서라도 한다. 누구 직장을 물어보면 없는 말도 만들어낸다. 이게 채팅 모델의 한계였다. 여기서 세 번째 단계가 필요해진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">SFT 의 한계</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">“어떻게든 <span style="color:#D93636">답을 한다</span>”</h2>
+  <div style="height:380px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/s116_confident.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>연단에서 자신만만하게 빈 말풍선을 띄우는 로봇</span></div></div></div>
+  <div style="padding:34px 40px;background:var(--surface-app);border-radius:18px;font-size:var(--type-body);color:var(--fg-3);line-height:1.55;max-width:1700px">헛소리라도 한다. 꾸며서라도 한다.<br>누구의 직장을 물어보면 <b style="color:var(--fg-1)">없는 말도 만들어낸다.</b></div>
+  <div style="padding:34px 40px;background:var(--neutral-black);color:#fff;border-radius:18px;font-size:var(--type-body);line-height:1.55;max-width:1700px">대화는 되는데 <b style="color:#00E49B">서비스는 못 하겠다</b> — 그래서 세 번째 단계가 나왔다.</div>
+</section>
+
+<section data-deck="0" data-label="③ RLHF" data-screen-label="13" data-speaker-notes="출처: LLM.pptx p.33 · 강의영상 ② 42:00–46:20 — 세 번째 단계. 왼쪽이 원 논문의 3단계다. 1단계는 시범 답변을 모아 지도학습, 2단계는 같은 질문에 여러 답을 만들어 사람이 순위를 매기고 그걸로 보상 모델을 학습, 3단계는 그 보상 모델로 본 모델을 강화학습(PPO)한다. 오른쪽이 실제 순위 데이터의 모양이다 — 같은 질문에 답이 여러 개 있고 ranking 배열이 붙어 있다. 핵심은 사람이 채점하는 구간이 앞쪽 한 번뿐이라는 것. 그 뒤로는 보상 모델이 사람을 대신해 무한히 채점한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사람이 채점하고, 채점기를 학습한다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">RLHF — 사람이 개입하는 건 앞쪽 한 번뿐이다</span>
+  </div>
+  <div style="height:700px;display:grid;grid-template-columns:1.3fr 1fr;gap:40px">
+    <div style="height:700px;background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:var(--font-display);font-size:21px;color:var(--neutral-medium)">InstructGPT 의 세 단계</div>
+      <div style="height:632px"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s33_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>시범 답변 → 순위 비교 → PPO 강화학습</span></div></div></div>
+    </div>
+    <div style="height:700px;display:flex;flex-direction:column;gap:20px">
+      <div style="height:392px;background:var(--surface-app);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-family:var(--font-display);font-size:21px;color:var(--neutral-medium)">순위 데이터의 모양</div>
+        <div style="height:328px"><div class="imgslot fit-contain" style=""><img src="uploads/lm_s33_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>같은 질문에 여러 답 + ranking 배열</span></div></div></div>
+      </div>
+      <div style="height:288px;display:flex;flex-direction:column;gap:16px;justify-content:center">
+        <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">같은 질문에 <b style="color:var(--fg-1)">답을 여러 개</b> 만들고 사람이 <b style="color:var(--fg-1)">순위</b>를 매긴다.</p>
+        <div style="background:var(--primary-pale);border-left:5px solid var(--primary-main);border-radius:10px;padding:18px 22px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">그 순위로 <b style="color:var(--primary-dark)">보상 모델</b>을 먼저 학습시킨다.<br>이후로는 <b style="color:var(--fg-1)">사람 없이</b> 그 채점기가 무한히 채점한다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="RLHF 가 만든 것들" data-screen-label="14" data-speaker-notes="출처: 강의영상 ② 44:00–45:00 — 이 과정에서 튀어나온 게 시스템 프롬프트다. 역할을 부여하면 다른 답이 나오게끔 보상을 더 준 것. 그리고 모르면 모른다고 하라는 것도 여기서 학습됐다. 모른다고 답한 것에 더 좋은 점수를 준 것이다. 주식 추천이나 인종차별적 질문에 계속 빵점을 매겨서 그쪽으로 안 가게 만들었다. GPT-2까지는 이게 없었고, 3에서 이슈가 생기면서 도입됐다. 지금은 이거 없이는 아예 서비스를 안 연다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">이 과정에서 나온 것들</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">우리가 아는 챗봇의 습관은 대부분 여기서 생겼다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:26px">
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">시스템 프롬프트</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">역할을 부여하면 그대로 따르도록 <b style="color:var(--fg-1)">보상을 줬다.</b></p></div>
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">“모르면 모른다고”</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">모른다고 답한 쪽에 <b style="color:var(--fg-1)">더 좋은 점수</b>를 줬다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:#D93636">거절하는 답변</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">투자 권유·위험한 질문에 <b style="color:var(--fg-1)">계속 빵점</b>을 매겼다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:#D93636">말투와 형식</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">“도움이 되었길 바랍니다” 같은 습관도 <b style="color:var(--fg-1)">보상의 결과</b>다.</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">GPT-2 까지는 없었다. 지금은 <b style="color:var(--fg-1)">이것 없이 서비스를 열지 않는다.</b></p>
+</section>
+
+<section data-deck="0" data-label="세 단계 한눈에" data-screen-label="15" data-speaker-notes="출처: 강의영상 ② 45:00–46:20 — 정리. 세 단계 다 데이터로 학습하는데 그 원천이 다르고 목적이 다르다. 프리트레이닝은 인터넷 텍스트를 마스킹해서 다음 단어를 잘 맞히게. SFT는 그 확률 분포 엔진을 내가 원하는 방향으로 시프트. RLHF는 밖으로 꺼내도 되는지를 만든 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">세 단계 한눈에</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">같은 학습, 다른 <span style="color:var(--accent-green)">출처</span>와 <span style="color:var(--accent-green)">목적</span></h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="stageTable"></span></div>
+</section>
+
+<section data-deck="0" data-label="왜 오픈소스를 쓰나" data-screen-label="16" data-speaker-notes="출처: 강의영상 ② 34:00–36:00 — 실무 이야기. API를 마음껏 못 쓰는 이유가 있다. 사내 데이터를 올리면 정보가 밖으로 나가는 것이고, 삼성전자에서 내부 비밀을 올려 보고서 쓰게 했다가 감사에 걸린 사건 이후로 도메인을 막는 일이 수시로 생긴다. 성능은 좋은데 보안 때문에 못 쓴다. 그래서 사내에서 돌아가는 걸 원하고, 그러려면 프리트레이닝된 모델이 있어야 하는데 우리가 못 만드니까 오픈소스를 가져오는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">실무의 벽</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">성능은 좋은데<br>못 쓴다</h2>
+    <div style="background:#FDF0F0;border-radius:14px;padding:26px 30px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">사내 데이터를 올리면 <b style="color:#D93636">정보가 밖으로 나간다.</b><br><br>내부 자료를 올려 보고서를 쓰게 했다가 감사에 걸린 사건 이후, 도메인을 막는 일이 수시로 생긴다.</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">그래서 <b style="color:var(--fg-1)">사내에서 돌아가는 것</b>을 원한다.</p>
+  </div>
+  <div style="height:730px"><span data-dc-slot="openSource"></span></div>
+</section>
+
+<section data-deck="0" data-label="DeepSeek 충격" data-screen-label="17" data-speaker-notes="출처: 강의영상 ② 47:00–49:40 — 딥시크가 터졌을 때 무슨 일이 있었나. 그전까지 전 세계가 LLM은 미국 외에는 못 하는 거구나, 포기하자 하고 있었다. 그런데 갑자기 오픈소스를 내놓고 성능이 좋았다. 게다가 일주일 간격으로 시리즈 논문을 계속 냈다. 구글은 어텐션 논문을 마지막으로 내부 연구 공개를 금지했고 메타도 학습 과정은 안 알려 줬는데, 딥시크가 과정을 계속 열어 준 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(217,54,54,.28),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">2025 · 판이 흔들린 순간</div>
+  <h2 style="margin:0;font-size:60px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">닫혀 있던 판에<br><span style="color:#FF7AA2">과정을 열어 준</span> 팀이 나타났다</h2>
+  <div style="height:300px;border-radius:20px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/s121_opendoor.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>닫힌 금고문들 사이에서 하나만 열려 빛이 쏟아지는 그림</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:27px;font-weight:700;color:var(--neutral-lighter)">그전까지</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">“미국 외에는 못 한다, 포기하자” 가 국내외 대기업의 분위기였다. 논문 공개도 막혔다.</p></div>
+    <div style="background:rgba(255,122,162,.14);border:2px solid rgba(255,122,162,.4);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:27px;font-weight:700;color:#FF7AA2">그 뒤</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">오픈소스 공개 + <b style="color:#fff">일주일 간격의 시리즈 논문</b>. 만드는 과정을 통째로 열었다.</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45;max-width:1700px">거기서 나온 두 가지를 오늘 본다 — <b style="color:#fff">MoE</b> 와 <b style="color:#fff">RLVR</b>.</p>
+</section>
+
+<section data-deck="0" data-label="MoE" data-screen-label="18" data-speaker-notes="출처: 강의영상 ② 49:40–52:20 — MoE. 원래 사람들이 이상하다고 생각했다. 토큰 하나 만드는데 전체 가중치를 다 통과해야 하는데, 1억 명이 동시에 쓰는데 속도가 왜 이렇게 빠르지? 다들 오픈AI가 이걸 쓸 거라고 상상은 했는데 구현해서 검증한 발표가 없었다. 라우터가 어느 전문가를 켤지 정한다. LSTM의 시그모이드 스위치와 정확히 같은 아이디어다. 그리고 데이터로 통제한 게 아닌데 실제로 수학 질문엔 수학 담당이 켜지는 식으로 학습됐다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">필요한 전문가만 켠다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Mixture of Experts</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="moeFig"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">라우터는 <b style="color:var(--fg-1)">LSTM 의 시그모이드 스위치</b>와 같은 아이디어다. 데이터로 시키지 않았는데 <b style="color:var(--fg-1)">분야별로 갈라져 학습됐다.</b></p>
+</section>
+
+<section data-deck="0" data-label="MoE 가 바꾼 것" data-screen-label="19" data-speaker-notes="출처: 강의영상 ② 52:00–52:40 — MoE의 효과. 학습은 오히려 더 오래 걸린다. 라우터까지 학습해야 하니까. 그런데 추론에서는 일부만 켜지니 전기도 훨씬 적게 들고 속도가 엄청 빨라졌다. 그리고 여기서 1교시에 말한 그 주의사항이 나온다. 총 파라미터와 활성 파라미터가 다르다는 것. 어느 쪽인지 안 밝힌 숫자는 쓰지 않는다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">MoE 가 바꾼 것</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">학습은 더 느리게, 추론은 훨씬 빠르게</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <div style="background:#fff;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:14px;border-left:8px solid #D93636"><div style="font-size:30px;font-weight:800;color:#D93636">학습 — 오히려 느리다</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">라우터까지 함께 학습해야 한다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:14px;border-left:8px solid #00B37A"><div style="font-size:30px;font-weight:800;color:#00B37A">추론 — 훨씬 빠르다</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">일부만 켜지니 <b style="color:var(--fg-1)">전력과 속도</b>가 함께 좋아진다.</p></div>
+  </div>
+  <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">그래서 <b style="color:#00E49B">총 파라미터</b> 와 토큰 하나가 실제 쓰는 <b style="color:#00E49B">활성 파라미터</b> 가 갈라졌다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">어느 쪽인지 밝히지 않은 수치는 강의에서 쓰지 않는다.</span></div>
+</section>
+
+<section data-deck="0" data-label="RLVR" data-screen-label="20" data-speaker-notes="출처: 강의영상 ② 52:40–55:20 — RLHF의 문제는 사람이 필요하다는 것이다. 그것도 전문가가. 의사가 봐야 할 수도 있다. 그 전문가를 다 동원할 수가 없다. 그래서 휴먼 피드백을 아예 빼 봤다. 수학 문제는 마지막 정답이 맞았는지만 본다. 맞으면 1점, 형식까지 잘 썼으면 2점, 틀리면 0점. 코딩도 똑같다. 작동하면 1점, 표준을 따랐으면 2점, 안 돌아가면 0점. 이걸 공개하고부터 LLM의 수학과 코드 성능이 미친 듯이 올라갔다. 지금 코드 제너레이터가 잘 되는 이유가 이것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사람 없이 채점할 수 있는 것들</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">RLVR — 검증 가능한 보상</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="rlvrFig"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">이걸 공개하고부터 <b style="color:var(--fg-1)">수학과 코드 성능이 급격히 올라갔다.</b> 지금 코드 제너레이터가 잘 되는 이유다.</p>
+</section>
+
+<section data-deck="0" data-label="내 방향으로 고치고 싶다" data-screen-label="21" data-speaker-notes="출처: 강의영상 ② 55:20–57:40 — 오픈소스를 가져왔는데 내가 원하는 방향의 파인튜닝이 아니다. 특히 전문 영역이 문제다. 은행에서 LLM을 도입하고 나서 나온 이슈가 이거였다. 은행 안에서는 단어 하나 차이로 법령이 바뀌고 시행령이 바뀌는데, 모델은 그 단어들을 비슷비슷한 벡터로 이해한다. 완전히 벌어져 있어야 하는데 안 벌어져 있는 것이다. 도시계획도 똑같다 — 용도지역 용어 하나가 그렇다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">전문 영역의 함정</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">비슷한 단어가<br>비슷한 벡터가 된다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">일반인에게는 비슷하게 들리지만, 그 안에서는 <b style="color:#fff">단어 하나로 법령이 바뀐다.</b></p>
+    <div style="padding:24px 28px;background:rgba(255,122,162,.14);border:2px solid rgba(255,122,162,.4);border-radius:14px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">두 벡터가 <b style="color:#fff">완전히 벌어져 있어야</b> 하는데 그렇지 않다.<br><br>도시계획도 똑같다 — <b style="color:#fff">용도지역</b> 용어 하나가 그렇다.</div>
+  </div>
+  <div style="height:700px"><span data-dc-slot="vectorConfusion"></span></div>
+</section>
+
+<section data-deck="0" data-label="LoRA" data-screen-label="22" data-speaker-notes="출처: 강의영상 ② 57:40–59:20 — 그럼 파인튜닝을 해야 하는데 가중치가 너무 많아서 감당이 안 된다. 그래서 나온 게 LoRA다. 큰 사각형 가중치를 전부 학습하는 대신, 그걸 잘 근사할 수 있는 아주 작은 벡터 두 개를 만들어서 곱셈으로 비슷한 크기를 만든다. 행렬 분해다. 학습해야 할 가중치 개수가 엄청나게 줄어든다. 물론 성능은 떨어지지만 맥락은 대충 맞게 간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">큰 행렬 대신 작은 것 둘</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">LoRA — Low-Rank Adaptation</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="loraFig"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">성능은 조금 떨어지지만 <b style="color:var(--fg-1)">맥락은 맞게</b> 간다. 이미지의 스테이블 디퓨전에서도 같은 기법을 봤다.</p>
+</section>
+
+<section data-deck="0" data-label="양자화" data-screen-label="23" data-speaker-notes="출처: 강의영상 ② 59:20–61:00 — 또 하나가 양자화다. 가중치가 부동소수점인데, 그 소수점 아래 수천만 가지 경우의 수가 정말 다 쓰일까? 시그모이드에 넣으면 0 아니면 1로 나오는데. 그래서 실제로 잘 쓰이는 값들만 남기고 줄인다. 원본 30GB짜리가 8GB, 심하면 3.5GB까지 내려간다. 품질은 당연히 떨어지지만 GPU 없이도 어느 정도 돌아가는 모델을 만들 수 있다. 이진화까지 해 본 실험도 있다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:740px"><span data-dc-slot="quantFig"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">QUANTIZATION</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그 소수점이<br>다 쓰일까?</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">시그모이드에 넣으면 <b style="color:var(--fg-1)">0 아니면 1</b>로 나오는데, 그 사이 수천만 가지가 정말 다 필요한가.</p>
+    <div style="padding:22px 26px;background:#fff;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">품질은 떨어진다. 대신 <b style="color:var(--fg-1)">GPU 없이도</b> 어느 정도 도는 모델이 된다.<br><br><span style="color:var(--neutral-medium)">가중치를 0/1 로만 두는 이진화 실험까지 나왔다.</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="24" data-speaker-notes="정리. LLM은 세 번 학습되고 그 세 번이 각각 다른 데이터에서 온다. 프리트레이닝은 인터넷 텍스트를 마스킹해서, SFT는 대화나 사고 과정 데이터로, RLHF는 자기가 뱉은 답에 매긴 점수로. 여기까지 오면 백프로퍼게이션이나 수식은 머릿속에 없어도 된다. 이미 라이브러리가 다 해 준다. 남는 건 방향성이다. 다음 시간은 이 모델이 모르는 것을 어떻게 알게 할지 — RAG로 간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 22% 80%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">2교시 정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:18px;font-size:32px;line-height:1.4;max-width:1700px">
+    <li><b style="color:var(--accent-green)">Pre-training</b> — 인터넷 텍스트를 가리고 맞힌다. 라벨링이 필요 없었다.</li>
+    <li><b style="color:var(--accent-green)">SFT</b> — 대화냐 사고 과정이냐로 모델의 성격이 갈린다.</li>
+    <li><b style="color:var(--accent-green)">RLHF</b> — 자기가 뱉은 답에 점수를 매겨 서비스 가능한 물건으로 만든다.</li>
+    <li><b style="color:var(--accent-green)">MoE · RLVR · LoRA · 양자화</b> — 더 빠르게, 더 싸게, 더 작게.</li>
+  </ol>
+  <div style="padding:26px 34px;background:rgba(68,52,226,.24);border:2px solid rgba(158,93,249,.5);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1700px">여기까지 오면 수식은 머릿속에 없어도 된다 — 라이브러리가 다 해 준다. 남는 건 <b style="color:#fff">방향성</b>이다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">다음 — 모델이 <b style="color:#00E49B">모르는 것</b>을 어떻게 알게 하는가. 프롬프트와 증강 생성.</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W10_LLM_학습_3단계</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">24</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">세 단계</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">① 인터넷의 글</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">정답지가 필요 없었다</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">마스킹은 여기서 끝나지 않는다</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">압축이라는 관점</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">직접 돌려 보면</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">정리되지 않은 덩어리</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">② SFT</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">SFT 데이터의 모양</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">채팅이냐 리즈닝이냐</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">SFT 의 한계</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">③ RLHF</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">RLHF 가 만든 것들</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">세 단계 한눈에</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">왜 오픈소스를 쓰나</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">DeepSeek 충격</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">MoE</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">MoE 가 바꾼 것</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">RLVR</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">내 방향으로 고치고 싶다</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">LoRA</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">양자화</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const AMB = '#F59E0B';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const chip = (x, y, w, hh, t, col, bg, fs) => h('g', { key: t + '_' + x + '_' + y },
+      h('rect', { x: x, y: y, width: w, height: hh, rx: 11, fill: bg, stroke: col,
+        strokeWidth: 2 }),
+      h('text', { x: x + w / 2, y: y + hh / 2 + 9, textAnchor: 'middle', fontFamily: KR,
+        fontSize: fs || 25, fontWeight: 700, fill: col }, t));
+
+    // ── 세 단계 ────────────────────────────────────────────────
+    const threeStages = (() => {
+      const W = 1720, H = 470;
+      const st = (x, w, n, t, sub, src, col, bg) => h('g', { key: t },
+        h('rect', { x: x, y: 40, width: w, height: 330, rx: 20, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('circle', { cx: x + 52, cy: 96, r: 30, fill: col }),
+        h('text', { x: x + 52, y: 108, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: '#fff' }, n),
+        h('text', { x: x + 102, y: 108, fontFamily: EN, fontSize: 34, fontWeight: 800,
+          fill: col }, t),
+        h('text', { x: x + 34, y: 178, fontFamily: KR, fontSize: 27, fontWeight: 700,
+          fill: INK }, sub),
+        h('text', { x: x + 34, y: 246, fontFamily: KR, fontSize: 21, fill: MUT },
+          '학습 데이터'),
+        h('text', { x: x + 34, y: 288, fontFamily: KR, fontSize: 24, fill: 'var(--fg-2)' },
+          src));
+      const arw = (x) => h('text', { key: 'a' + x, x: x, y: 216, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fill: AX }, '→');
+      return svg(W, H, [
+        st(20, 520, '1', 'Pre-training', '언어를 만들 줄 알게 된다',
+          '인터넷의 텍스트', ACC, '#F7F8FF'),
+        arw(566),
+        st(600, 520, '2', 'SFT', '내가 원하는 방향으로 민다',
+          '사람이 만든 대화·풀이', VIO, '#FAF6FF'),
+        arw(1146),
+        st(1180, 520, '3', 'RLHF', '밖에 내놓아도 되게 만든다',
+          '자기가 뱉은 답 + 점수', GRN, '#F2FBF7'),
+        h('text', { key: 'n', x: 20, y: 428, fontFamily: KR, fontSize: 23, fill: MUT },
+          '세 단계 모두 “데이터로 학습” 은 같다 — 다른 건 그 데이터가 어디서 왔는가.'),
+      ]);
+    })();
+
+    // ── 마스킹 ──────────────────────────────────────────────────
+    const masking = (() => {
+      const W = 1720, H = 470;
+      const TOK = ['도시', '기본', '계획', '은', '20년', '단위', '로', '수립', '한다'];
+      const HIDE = [2, 5];
+      const g = [];
+      TOK.forEach((t, i) => {
+        const hid = HIDE.indexOf(i) >= 0;
+        const x = 60 + i * 178;
+        g.push(h('rect', { key: 'r' + i, x: x, y: 118, width: 158, height: 90, rx: 14,
+          fill: hid ? '#1E1B2E' : '#fff', stroke: hid ? RED : 'var(--border-1)',
+          strokeWidth: hid ? 3 : 2 }));
+        g.push(h('text', { key: 't' + i, x: x + 79, y: 174, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 29, fontWeight: 700,
+          fill: hid ? '#fff' : INK }, hid ? '?' : t));
+        if (hid) {
+          g.push(h('line', { key: 'l' + i, x1: x + 79, y1: 214, x2: x + 79, y2: 288,
+            stroke: GRN, strokeWidth: 3, strokeDasharray: '8 6' }));
+          g.push(h('rect', { key: 'a' + i, x: x, y: 292, width: 158, height: 78, rx: 14,
+            fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }));
+          g.push(h('text', { key: 'at' + i, x: x + 79, y: 340, textAnchor: 'middle',
+            fontFamily: KR, fontSize: 27, fontWeight: 800, fill: GRN }, t));
+        }
+      });
+      return svg(W, H, [
+        h('text', { key: 'l1', x: 60, y: 88, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: INK }, '인터넷에서 가져온 문장 — 일부를 가린다'),
+        g,
+        h('text', { key: 'l2', x: 60, y: 344, textAnchor: 'end', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: GRN }, ''),
+        h('text', { key: 'l3', x: 60, y: 428, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-3)' },
+          '가린 자리의 정답은 원문에 이미 있다 — 사람이 만들 필요가 없다'),
+      ]);
+    })();
+
+    // ── 압축 ────────────────────────────────────────────────────
+    const compression = (() => {
+      const W = 1080, H = 740;
+      const box = (x, y, w, hh, big, lab, col, bg) => h('g', { key: lab },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 18, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + w / 2, y: y + hh / 2 - 4, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 52, fontWeight: 800, fill: col }, big),
+        h('text', { x: x + w / 2, y: y + hh / 2 + 44, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fill: MUT }, lab));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        box(90, 80, 900, 300, '825 GB', '학습에 쓴 텍스트', MUT, 'var(--surface-app)'),
+        h('text', { key: 'ar', x: 540, y: 452, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 42, fill: AX }, '↓'),
+        h('text', { key: 'art', x: 540, y: 500, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fill: MUT }, '프리트레이닝'),
+        box(340, 528, 400, 150, '24 GB', '학습된 가중치 파일', ACC, '#EEF0FE'),
+        h('text', { key: 'n', x: 90, y: 716, fontFamily: KR, fontSize: 21, fill: MUT },
+          '강의에서 든 공개 데이터셋·공개 모델의 사례다'),
+      ]);
+    })();
+
+    // ── GPT-2 실행 ──────────────────────────────────────────────
+    const gpt2Run = (() => {
+      const W = 1720, H = 470;
+      const g = [];
+      const spec = [['토크나이저', '1.36 MB'], ['가중치', '548 MB']];
+      spec.forEach((s, i) => {
+        g.push(h('rect', { key: 'r' + i, x: 40, y: 60 + i * 120, width: 460, height: 100,
+          rx: 14, fill: '#fff', stroke: 'var(--border-1)', strokeWidth: 2 }));
+        g.push(h('text', { key: 'a' + i, x: 72, y: 122 + i * 120, fontFamily: KR,
+          fontSize: 26, fill: MUT }, s[0]));
+        g.push(h('text', { key: 'b' + i, x: 468, y: 124 + i * 120, textAnchor: 'end',
+          fontFamily: EN, fontSize: 34, fontWeight: 800, fill: INK }, s[1]));
+      });
+      return svg(W, H, [
+        g,
+        h('text', { key: 'h1', x: 40, y: 38, fontFamily: KR, fontSize: 24, fill: MUT },
+          'GPT-2 프리트레이닝 모델'),
+        h('text', { key: 'n1', x: 40, y: 372, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-3)' }, '크지 않다 — 코랩에서 바로 돈다'),
+        h('rect', { key: 'term', x: 560, y: 46, width: 1120, height: 330, rx: 16,
+          fill: '#1E1B2E' }),
+        h('text', { key: 'p1', x: 600, y: 108, fontFamily: EN, fontSize: 25,
+          fill: '#8ED6FF' }, 'prompt  ▸'),
+        h('text', { key: 'p2', x: 600, y: 156, fontFamily: EN, fontSize: 25,
+          fill: '#fff' }, '“The city plan for the next twenty years”'),
+        h('text', { key: 'p3', x: 600, y: 224, fontFamily: EN, fontSize: 25,
+          fill: '#00E49B' }, 'generate  ▸'),
+        h('text', { key: 'p4', x: 600, y: 272, fontFamily: EN, fontSize: 25,
+          fill: '#C9C7D6' }, '“… is going to have to do something about”'),
+        h('text', { key: 'p5', x: 600, y: 320, fontFamily: EN, fontSize: 25,
+          fill: '#C9C7D6' }, '“ it, and I am not sure if I will be able to …”'),
+        h('text', { key: 'n2', x: 560, y: 424, fontFamily: KR, fontSize: 23, fill: RED },
+          '질문에 답한 게 아니다 — 그냥 다음 토큰을 계속 이어 붙인 것이다'),
+      ]);
+    })();
+
+    // ── 정리되지 않은 덩어리 ────────────────────────────────────
+    const rawModel = (() => {
+      const W = 1720, H = 280;
+      const q = (x, t, col) => h('g', { key: t },
+        h('rect', { x: x, y: 60, width: 520, height: 150, rx: 16,
+          fill: 'rgba(255,255,255,.07)', stroke: col, strokeWidth: 2.5 }),
+        h('text', { x: x + 30, y: 120, fontFamily: KR, fontSize: 24,
+          fill: 'var(--neutral-lighter)' }, '“' + t + '”'),
+        h('text', { x: x + 30, y: 172, fontFamily: KR, fontSize: 25, fontWeight: 700,
+          fill: col }, '→ 그대로 알려 준다'));
+      return svg(W, H, [
+        q(40, '위험한 물건 만드는 법', '#FF7AA2'),
+        q(600, '이 종목 사도 될까?', '#FF7AA2'),
+        q(1160, '이 사람 어디 다니지?', '#FF7AA2'),
+        h('text', { key: 'n', x: 40, y: 42, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' }, '프리트레이닝만 끝난 모델에 물어보면'),
+        h('text', { key: 'n2', x: 40, y: 252, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' },
+          '거절이라는 개념 자체가 학습된 적이 없다'),
+      ]);
+    })();
+
+    // ── SFT 시프트 ──────────────────────────────────────────────
+    const sftShift = (() => {
+      const W = 1000, H = 720;
+      const cloud = (cx, cy, seed, col, op) => {
+        const r = (s => () => { s = (s * 1664525 + 1013904223) % 4294967296;
+          return s / 4294967296; })(seed);
+        const pts = [];
+        for (let i = 0; i < 90; i++) {
+          const a = r() * Math.PI * 2, rad = Math.sqrt(r()) * 150;
+          pts.push(h('circle', { key: i, cx: cx + Math.cos(a) * rad,
+            cy: cy + Math.sin(a) * rad * 0.8, r: 5, fill: col, opacity: op }));
+        }
+        return pts;
+      };
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        cloud(330, 300, 11, MUT, 0.45),
+        cloud(660, 420, 29, ACC, 0.8),
+        h('line', { key: 'ar', x1: 400, y1: 320, x2: 590, y2: 400, stroke: ACC,
+          strokeWidth: 5 }),
+        h('text', { key: 't1', x: 330, y: 130, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: MUT }, '프리트레이닝'),
+        h('text', { key: 't1b', x: 330, y: 168, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '“그럴듯한 문장” 전부'),
+        h('text', { key: 't2', x: 690, y: 618, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: ACC }, 'SFT 이후'),
+        h('text', { key: 't2b', x: 690, y: 656, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '“대화로 쓸 만한 문장” 쪽으로'),
+        h('text', { key: 'n', x: 40, y: 700, fontFamily: KR, fontSize: 21, fill: MUT },
+          '가중치를 통째로 다시 만드는 게 아니라 조금 옮기는 것'),
+      ]);
+    })();
+
+    // ── 채팅 vs 리즈닝 ──────────────────────────────────────────
+    const chatVsReason = (() => {
+      const W = 1720, H = 470;
+      const bubble = (x, y, w, t, col, bg, fs) => h('g', { key: t + x + y },
+        h('rect', { x: x, y: y, width: w, height: 62, rx: 14, fill: bg, stroke: col,
+          strokeWidth: 2 }),
+        h('text', { x: x + 22, y: y + 40, fontFamily: KR, fontSize: fs || 23,
+          fill: INK }, t));
+      return svg(W, H, [
+        h('rect', { key: 'root', x: 640, y: 20, width: 440, height: 76, rx: 16,
+          fill: 'var(--surface-app)', stroke: MUT, strokeWidth: 2.5 }),
+        h('text', { key: 'roott', x: 860, y: 68, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 28, fontWeight: 700, fill: INK }, 'Pre-trained Model'),
+        h('line', { key: 'l1', x1: 860, y1: 98, x2: 430, y2: 150, stroke: AX,
+          strokeWidth: 3 }),
+        h('line', { key: 'l2', x1: 860, y1: 98, x2: 1290, y2: 150, stroke: AX,
+          strokeWidth: 3 }),
+        h('rect', { key: 'c1', x: 40, y: 152, width: 790, height: 292, rx: 18,
+          fill: '#F7F8FF', stroke: ACC, strokeWidth: 3 }),
+        h('text', { key: 'c1t', x: 72, y: 206, fontFamily: EN, fontSize: 30,
+          fontWeight: 800, fill: ACC }, 'Chat SFT'),
+        bubble(72, 226, 380, '질문: 계획인구가 뭐죠?', ACC, '#fff'),
+        bubble(72, 302, 720, '답: 도시기본계획에서 목표연도에 설정한 인구입니다.',
+          ACC, '#fff'),
+        h('text', { key: 'c1n', x: 72, y: 412, fontFamily: KR, fontSize: 22, fill: MUT },
+          '질문 → 답 쌍을 학습한다'),
+        h('rect', { key: 'c2', x: 890, y: 152, width: 790, height: 292, rx: 18,
+          fill: '#FAF6FF', stroke: VIO, strokeWidth: 3 }),
+        h('text', { key: 'c2t', x: 922, y: 206, fontFamily: EN, fontSize: 30,
+          fontWeight: 800, fill: VIO }, 'Reasoning SFT'),
+        bubble(922, 226, 380, '질문: 계획인구가 뭐죠?', VIO, '#fff'),
+        bubble(922, 302, 720, '① 근거 법령을 떠올린다 ② 목표연도를 확인한다 …',
+          VIO, '#fff'),
+        h('text', { key: 'c2n', x: 922, y: 412, fontFamily: KR, fontSize: 22, fill: MUT },
+          '답이 아니라 “생각하는 과정” 을 정답지로 삼는다'),
+      ]);
+    })();
+
+    // ── RLHF 흐름 ───────────────────────────────────────────────
+    const rlhfFlow = (() => {
+      const W = 1720, H = 470;
+      const node = (x, w, t, sub, col, bg) => h('g', { key: t },
+        h('rect', { x: x, y: 120, width: w, height: 150, rx: 18, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + w / 2, y: 182, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 27, fontWeight: 800, fill: col }, t),
+        h('text', { x: x + w / 2, y: 224, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, sub));
+      const arw = (x) => h('text', { key: 'a' + x, x: x, y: 208, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 38, fill: AX }, '→');
+      return svg(W, H, [
+        node(30, 300, '질문을 던진다', '아주 많이', MUT, '#fff'),
+        arw(348),
+        node(368, 300, '모델이 답한다', '같은 질문에 여러 번', ACC, '#EEF0FE'),
+        arw(686),
+        node(706, 300, '사람이 채점', '0 · 1 · 2 점', AMB, '#FFF8EC'),
+        arw(1024),
+        node(1044, 320, '보상 모델 학습', '경량 트랜스포머', VIO, '#FAF6FF'),
+        arw(1382),
+        node(1402, 288, '본 모델 갱신', '높은 점수 쪽으로', GRN, '#EDF9F4'),
+        h('line', { key: 'loop', x1: 1546, y1: 274, x2: 1546, y2: 340, stroke: GRN,
+          strokeWidth: 3 }),
+        h('line', { key: 'loop2', x1: 1546, y1: 340, x2: 518, y2: 340, stroke: GRN,
+          strokeWidth: 3 }),
+        h('line', { key: 'loop3', x1: 518, y1: 340, x2: 518, y2: 276, stroke: GRN,
+          strokeWidth: 3 }),
+        h('text', { key: 'loopt', x: 1030, y: 374, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: GRN }, '이후로는 사람 없이 반복'),
+        h('text', { key: 'n', x: 30, y: 88, fontFamily: KR, fontSize: 24, fill: MUT },
+          '핵심 — 사람이 채점하는 구간은 앞쪽 한 번뿐이다'),
+      ]);
+    })();
+
+    // ── 3단계 표 ───────────────────────────────────────────────
+    const stageTable = (() => {
+      const COL = ['단계', '데이터의 출처', '무엇을 배우나', '없으면'];
+      const ROW = [
+        ['Pre-training', '인터넷 텍스트 (마스킹)', '언어의 확률 분포', '말을 못 만든다'],
+        ['SFT', '사람이 만든 대화·풀이', '대화 형식 · 사고 과정', '질문에 답하지 않는다'],
+        ['RLHF', '모델의 답 + 사람의 점수', '해도 되는 말과 안 되는 말', '서비스를 못 연다'],
+      ];
+      const cell = (t, k, st) => h('div', { key: k, style: Object.assign({
+        padding: '26px 24px', fontFamily: KR, fontSize: '25px',
+        color: 'var(--neutral-lighter)' }, st) }, t);
+      const kids = [];
+      COL.forEach((t, i) => kids.push(cell(t, 'h' + i, { fontSize: '22px',
+        fontWeight: 700, color: 'var(--neutral-medium)' })));
+      const COLOR = ['#8ED6FF', '#C4A2FF', '#00E49B'];
+      ROW.forEach((r, i) => r.forEach((t, j) => kids.push(cell(t, i + '_' + j, {
+        borderTop: '1px solid rgba(255,255,255,.16)',
+        fontFamily: j === 0 ? EN : KR,
+        fontSize: j === 0 ? '30px' : '25px',
+        fontWeight: j === 0 ? 800 : 400,
+        color: j === 0 ? COLOR[i] : (j === 3 ? '#FF7AA2' : 'var(--neutral-lighter)') }))));
+      return h('div', { style: { display: 'grid',
+        gridTemplateColumns: '0.85fr 1.15fr 1.15fr 1fr', width: '100%',
+        background: 'rgba(255,255,255,.05)', borderRadius: '18px', overflow: 'hidden',
+        alignSelf: 'center' } }, kids);
+    })();
+
+    // ── 오픈소스 ────────────────────────────────────────────────
+    const openSource = (() => {
+      const W = 1060, H = 730;
+      const row = (y, t, sub, col) => h('g', { key: t },
+        h('rect', { x: 40, y: y, width: 980, height: 132, rx: 16, fill: '#fff',
+          stroke: col, strokeWidth: 2.5 }),
+        h('text', { x: 76, y: y + 62, fontFamily: EN, fontSize: 32, fontWeight: 800,
+          fill: col }, t),
+        h('text', { x: 76, y: y + 104, fontFamily: KR, fontSize: 22, fill: MUT }, sub));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: 'var(--surface-app)', rx: 16 }),
+        h('text', { key: 'h', x: 40, y: 56, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: INK }, '그래서 가져다 쓰는 것들'),
+        row(84, 'Llama', '메타가 공개. 2 버전부터 상업용 허용 — 오픈소스 물꼬를 텄다', ACC),
+        row(240, 'Qwen · DeepSeek', '중국 모델. 공개가 잘 돼 있어 점유가 빠르게 늘었다', VIO),
+        row(396, 'Ollama 류 실행기', '오프라인에서 돌리는 도구. 이름이 그대로 용어가 됐다', GRN),
+        h('text', { key: 'n', x: 40, y: 608, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' }, '고를 때 보는 것 — 라이선스 · 한국어 성능 ·'),
+        h('text', { key: 'n2', x: 40, y: 648, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' }, '우리 GPU 에 올라가는 크기인가'),
+        h('text', { key: 'n3', x: 40, y: 698, fontFamily: KR, fontSize: 21, fill: RED },
+          '모델 지형은 매우 빠르게 바뀐다 — 수업 때 최신 목록을 다시 확인할 것'),
+      ]);
+    })();
+
+    // ── MoE ─────────────────────────────────────────────────────
+    const moeFig = (() => {
+      const W = 1720, H = 480;
+      const EXP = ['수학', '코드', '역사', '법률', '일반'];
+      const ON = 1;
+      const g = [];
+      EXP.forEach((t, i) => {
+        const on = i === ON || i === 4;
+        const x = 700 + i * 202;
+        g.push(h('rect', { key: 'e' + i, x: x, y: 130, width: 176, height: 200, rx: 18,
+          fill: on ? '#EEF0FE' : '#F6F5F9',
+          stroke: on ? ACC : '#E2E0E9', strokeWidth: on ? 4 : 2 }));
+        g.push(h('text', { key: 'et' + i, x: x + 88, y: 222, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 28, fontWeight: 800,
+          fill: on ? ACC : '#C9C7D6' }, t));
+        g.push(h('text', { key: 'es' + i, x: x + 88, y: 268, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fontWeight: 700,
+          fill: on ? GRN : '#D9D7E3' }, on ? 'ON' : 'off'));
+        g.push(h('line', { key: 'el' + i, x1: 600, y1: 230, x2: x - 6, y2: 230,
+          stroke: on ? ACC : '#EAE8F0', strokeWidth: on ? 3.5 : 1.6 }));
+      });
+      return svg(W, H, [
+        h('rect', { key: 'q', x: 30, y: 174, width: 300, height: 112, rx: 16,
+          fill: '#fff', stroke: MUT, strokeWidth: 2.5 }),
+        h('text', { key: 'qt', x: 180, y: 226, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: INK }, '“이 코드 고쳐 줘”'),
+        h('text', { key: 'ar', x: 366, y: 242, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 36, fill: AX }, '→'),
+        h('rect', { key: 'r', x: 400, y: 164, width: 200, height: 132, rx: 18,
+          fill: '#FFF8EC', stroke: AMB, strokeWidth: 3 }),
+        h('text', { key: 'rt', x: 500, y: 224, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 28, fontWeight: 800, fill: AMB }, 'Router'),
+        h('text', { key: 'rt2', x: 500, y: 262, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, '어디를 켤까'),
+        g,
+        h('text', { key: 'n1', x: 700, y: 100, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: INK }, '작게 쪼갠 트랜스포머 = 전문가들'),
+        h('text', { key: 'n2', x: 700, y: 400, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' },
+          '보통 기본 하나 + 한두 개만 켠다 — 나머지는 전기를 쓰지 않는다'),
+      ]);
+    })();
+
+    // ── RLVR ────────────────────────────────────────────────────
+    const rlvrFig = (() => {
+      const W = 1720, H = 470;
+      const card = (x, t, sub, rules, col, bg) => h('g', { key: t },
+        h('rect', { x: x, y: 30, width: 820, height: 340, rx: 20, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + 36, y: 92, fontFamily: KR, fontSize: 34, fontWeight: 800,
+          fill: col }, t),
+        h('text', { x: x + 36, y: 132, fontFamily: KR, fontSize: 22, fill: MUT }, sub),
+        rules.map((r, i) => h('g', { key: i },
+          h('circle', { cx: x + 60, cy: 186 + i * 60, r: 22,
+            fill: r[0] === '2' ? GRN : (r[0] === '1' ? AMB : RED) }),
+          h('text', { x: x + 60, y: 195 + i * 60, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 24, fontWeight: 800, fill: '#fff' }, r[0]),
+          h('text', { x: x + 100, y: 196 + i * 60, fontFamily: KR, fontSize: 25,
+            fill: 'var(--fg-2)' }, r[1]))));
+      return svg(W, H, [
+        card(20, '수학', '사람이 안 봐도 채점된다',
+          [['0', '정답이 틀렸다'], ['1', '정답이 맞았다'],
+           ['2', '풀이 형식까지 갖췄다']], ACC, '#F7F8FF'),
+        card(880, '코드', '실행해 보면 알 수 있다',
+          [['0', '실행이 안 된다'], ['1', '오류 없이 돌아간다'],
+           ['2', '표준 형식까지 따랐다']], VIO, '#FAF6FF'),
+        h('text', { key: 'n', x: 20, y: 428, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' },
+          'RLHF 의 병목은 사람이었다 — 전문가를 무한정 동원할 수 없다. 그래서 사람을 뺐다.'),
+      ]);
+    })();
+
+    // ── 벡터 혼동 ───────────────────────────────────────────────
+    const vectorConfusion = (() => {
+      const W = 1000, H = 700;
+      const dot = (x, y, t, col, r) => h('g', { key: t },
+        h('circle', { cx: x, cy: y, r: r || 13, fill: col }),
+        h('text', { x: x + 24, y: y + 9, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-lighter)' }, t));
+      return svg(W, H, [
+        h('rect', { key: 'p1', x: 40, y: 60, width: 900, height: 262, rx: 18,
+          fill: 'rgba(255,255,255,.06)', stroke: '#FF7AA2', strokeWidth: 2.5 }),
+        h('text', { key: 't1', x: 70, y: 108, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: '#FF7AA2' }, '지금 — 거의 붙어 있다'),
+        dot(300, 210, '제1종 일반주거지역', '#FF7AA2'),
+        dot(336, 246, '제2종 일반주거지역', '#FF7AA2'),
+        dot(318, 174, '제1종 전용주거지역', '#FF7AA2'),
+        h('rect', { key: 'p2', x: 40, y: 366, width: 900, height: 262, rx: 18,
+          fill: 'rgba(0,228,155,.10)', stroke: '#00E49B', strokeWidth: 2.5 }),
+        h('text', { key: 't2', x: 70, y: 414, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: '#00E49B' }, '원하는 것 — 충분히 벌어져 있다'),
+        dot(160, 470, '제1종 전용주거지역', '#00E49B'),
+        dot(150, 566, '제1종 일반주거지역', '#00E49B'),
+        dot(560, 520, '제2종 일반주거지역', '#00E49B'),
+        h('text', { key: 'n', x: 40, y: 674, fontFamily: KR, fontSize: 21,
+          fill: 'var(--neutral-medium)' },
+          '한 단어 차이로 건폐율·용적률·허용 용도가 전부 달라진다'),
+      ]);
+    })();
+
+    // ── LoRA ────────────────────────────────────────────────────
+    const loraFig = (() => {
+      const W = 1720, H = 470;
+      const cells = (x, y, cols, rows, cw, col, op) => {
+        const g = [];
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
+          g.push(h('rect', { key: r + '_' + c, x: x + c * cw, y: y + r * cw,
+            width: cw - 2, height: cw - 2, rx: 3, fill: col, opacity: op }));
+        return g;
+      };
+      return svg(W, H, [
+        h('text', { key: 'h1', x: 40, y: 52, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: RED }, '전부 학습하면 — 감당이 안 된다'),
+        cells(40, 80, 16, 16, 18, RED, 0.55),
+        h('text', { key: 'c1', x: 184, y: 412, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: RED }, '256 개'),
+        h('text', { key: 'ar', x: 480, y: 224, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 40, fill: AX }, '→'),
+        h('text', { key: 'art', x: 480, y: 272, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '행렬 분해'),
+        h('text', { key: 'h2', x: 660, y: 52, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: GRN }, '작은 것 둘만 학습한다'),
+        cells(660, 80, 2, 16, 18, GRN, 0.75),
+        h('text', { key: 'x', x: 740, y: 224, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 32, fill: MUT }, '×'),
+        cells(776, 80, 16, 2, 18, GRN, 0.75),
+        h('text', { key: 'c2', x: 776, y: 412, fontFamily: EN, fontSize: 30,
+          fontWeight: 800, fill: GRN }, '32 + 32 = 64 개'),
+        h('rect', { key: 'nb', x: 1230, y: 120, width: 450, height: 210, rx: 18,
+          fill: 'var(--surface-app)' }),
+        h('text', { key: 'nt', x: 1455, y: 208, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 58, fontWeight: 800, fill: GRN }, '1/4'),
+        h('text', { key: 'nt2', x: 1455, y: 260, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fill: MUT }, '학습할 가중치'),
+        h('text', { key: 'n', x: 40, y: 452, fontFamily: KR, fontSize: 22, fill: MUT },
+          '16×16 예시 — 실제 모델에서는 줄어드는 비율이 훨씬 크다'),
+      ]);
+    })();
+
+    // ── 양자화 ──────────────────────────────────────────────────
+    const quantFig = (() => {
+      const W = 1080, H = 740;
+      const bar = (y, lab, gb, col, note) => h('g', { key: lab },
+        h('text', { x: 40, y: y + 44, fontFamily: KR, fontSize: 26, fontWeight: 700,
+          fill: col }, lab),
+        h('rect', { x: 330, y: y, width: gb / 30 * 600, height: 64, rx: 12, fill: col,
+          opacity: 0.85 }),
+        h('text', { x: 330 + gb / 30 * 600 + 20, y: y + 46, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: col }, gb + ' GB'),
+        h('text', { x: 330, y: y + 98, fontFamily: KR, fontSize: 21, fill: MUT }, note));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('text', { key: 'h', x: 40, y: 58, fontFamily: KR, fontSize: 24, fill: MUT },
+          '같은 모델을 양자화 수준만 바꿔 저장하면'),
+        bar(96, '원본', 30, MUT, '부동소수점 그대로'),
+        bar(256, '중간 단계', 8, ACC, '실무에서 가장 많이 쓰는 구간'),
+        bar(416, '더 줄이면', 3.5, GRN, '노트북에서도 돈다'),
+        h('rect', { key: 'w', x: 40, y: 580, width: 1000, height: 116, rx: 14,
+          fill: '#FDF0F0' }),
+        h('text', { key: 'wt', x: 70, y: 630, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: RED }, '품질은 떨어진다'),
+        h('text', { key: 'wt2', x: 70, y: 670, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, '섬세한 맥락·전문 용어에서 먼저 티가 난다'),
+        h('text', { key: 'n', x: 40, y: 550, fontFamily: KR, fontSize: 21, fill: MUT },
+          '강의에서 든 예시 수치 — 모델·방식에 따라 달라진다'),
+      ]);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      threeStages, masking, compression, gpt2Run, rawModel, sftShift, chatVsReason,
+      rlhfFlow, stageTable, openSource, moeFig, rlvrFig, vectorConfusion, loraFig,
+      quantFig,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

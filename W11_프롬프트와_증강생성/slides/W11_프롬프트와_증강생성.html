@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W11_프롬프트와_증강생성</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 11주차 강의영상 ② 71:00 · 30 LLM RAG.ipynb — 지난 시간에 LLM이 어떻게 학습되는지를 봤다. 이제 잘 써야 한다. 그런데 큰 이슈가 하나 있다. 얘가 답변할 때 쓰는 지식은 학습 시점에 가중치에 박힌 것뿐이라는 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 26%,rgba(0,228,155,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">11주차</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">프롬프트와<br>증강 생성</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">모델이 모르는 것을 어떻게 알게 하는가</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">한양대학교 도시공학과 · 30 LLM RAG.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="02" data-speaker-notes="출처: 11주차 HARNESS · 강의영상 ② 71:00 — 오늘 165분 내내 붙잡고 갈 질문은 하나다. 모델이 모르는 것을 어떻게 알게 하는가. 답을 미리 말하면 — 가중치를 고치는 게 아니라 입력을 고친다. 마지막 슬라이드에서 이 질문으로 다시 돌아온다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:38px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">오늘의 질문</div>
+  <h2 style="margin:0;font-size:72px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">모델이 <span style="color:var(--primary-main)">모르는 것</span>을<br>어떻게 알게 하는가</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px;max-width:1700px">
+    <div style="background:#fff;border-radius:16px;padding:30px 36px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:28px;font-weight:800;color:#D93636">이 길은 오늘 안 간다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">가중치를 다시 학습시킨다 — 돈도 시간도 데이터도 없다.</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:30px 36px;display:flex;flex-direction:column;gap:12px;border-left:6px solid var(--primary-main)">
+      <div style="font-size:28px;font-weight:800;color:var(--primary-main)">오늘 가는 길</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">입력을 고친다.</b> 프롬프트 · RAG · 도구 호출 · MCP.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">마지막 슬라이드가 이 질문에 답하지 못하면 오늘 수업이 빈 것이다.</p>
+</section>
+
+<section data-deck="0" data-label="두 가지 지식" data-screen-label="03" data-speaker-notes="출처: 강의영상 ② 71:20–72:40, 77:20–78:20 — 오늘 수업 전체가 이 두 단어 위에 있다. 파라메트릭 지식은 학습 과정에서 가중치 안에 박힌 고정 지식이다. 컨텍스트 지식은 입력 토큰으로 내가 준 것이다. 오늘 하는 모든 일은 두 번째를 늘려서 첫 번째의 약점을 덮는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘 수업 전체가 이 두 단어 위에 있다</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">지식이 오는 곳은 둘뿐이다</h2>
+  <div style="height:210px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/s132_two_knowledge.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>잠긴 큐브 안의 결정과, 옆으로 자료를 밀어 넣는 손</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:38px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:38px 42px;display:flex;flex-direction:column;gap:18px;border-top:8px solid #D93636">
+      <div style="font-family:var(--font-display);font-size:38px;font-weight:800;color:#D93636">Parametric Knowledge</div>
+      <div style="font-size:var(--type-body);font-weight:700">가중치 안에 박힌 지식</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">프리트레이닝·SFT·RLHF 를 거치며 들어갔다. <b style="color:var(--fg-1)">고정</b>이고, 바꾸려면 다시 학습해야 한다.</p>
+    </div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:18px;padding:38px 42px;display:flex;flex-direction:column;gap:18px;border-top:8px solid var(--primary-main)">
+      <div style="font-family:var(--font-display);font-size:38px;font-weight:800;color:var(--primary-dark)">Context Knowledge</div>
+      <div style="font-size:var(--type-body);font-weight:700">입력 토큰으로 준 지식</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">지금 이 요청에만 유효하다. <b style="color:var(--fg-1)">내가 통제할 수 있는</b> 유일한 지식이다.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">오늘 하는 모든 일은 <b style="color:var(--fg-1)">두 번째를 늘려</b> 첫 번째의 약점을 덮는 것이다.</p>
+</section>
+
+<section data-deck="0" data-label="아는 것과 모르는 것" data-screen-label="04" data-speaker-notes="출처: LLM.pptx p.35 · 강의영상 ② 77:20–78:20 — 그림을 보자. 왼쪽 파란 영역이 모델이 이미 아는 것, Parametric Knowledge. 오른쪽이 인스트럭션 튜닝 데이터가 다루는 영역인데 모델이 모를 수도 있는 것. 가운데 겹치는 데서만 &quot;I know&quot; 로봇이 제대로 답한다. 겹치지 않는 데서는 &quot;I don't know&quot; 여야 하는데 — 실제로는 모른다고 안 하고 지어낸다. 그게 다음 장의 할루시네이션이다. 우리가 오늘 하는 일은 저 겹치는 영역을 억지로 넓히는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:720px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s35_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Parametric Knowledge 와 Instruction Tuning Data 의 교집합</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">겹치는 데서만 답이 된다</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">“I know”<br>가 서는 자리</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--surface-app);border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">겹치는 영역 — <b style="color:var(--fg-1)">아는 것을 아는 형식으로</b> 답한다.</div>
+      <div style="background:#FDF0F0;border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">겹치지 않는 영역 — 모른다고 해야 하는데 <b style="color:#D93636">지어낸다.</b></div>
+    </div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">오늘 하는 일은 저 <b style="color:var(--fg-1)">겹치는 영역을 억지로 넓히는</b> 것이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="현실과 안 맞는다" data-screen-label="05" data-speaker-notes="출처: 강의영상 ② 72:00–73:20 — 파라메트릭 지식만으로 답하면 이런 일이 생긴다. 아주 오래 전에 학습한 내용으로 계속 답한다. 실제로 써 보면 지금 현실과 하나도 안 맞는다는 생각이 든다. 도시 쪽은 특히 심하다 — 법령이 바뀌고 계획이 갱신되는데 모델은 학습 시점에 멈춰 있다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">모델의 시계는 멈춰 있다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Knowledge Cutoff</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="cutoff"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도시 쪽은 특히 심하다 — <b style="color:var(--fg-1)">법령이 바뀌고 계획이 갱신되는데</b> 모델은 학습 시점에 멈춰 있다.</p>
+</section>
+
+<section data-deck="0" data-label="할루시네이션의 기계적 원인" data-screen-label="06" data-speaker-notes="출처: 강의영상 ② 73:20–74:20 — 할루시네이션이라는 말이 너무 익숙해졌는데, 그 원인 중 하나는 아주 기계적이다. 마지막에 소프트맥스로 확률표가 나오면 거기서 하나를 골라야 하는데, 항상 1등을 고르지 않는다. 하이퍼파라미터 두 개가 그 선택을 흔든다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">할루시네이션</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">원인의 하나는<br>아주 <span style="color:#D93636">기계적</span>이다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 38px;display:flex;flex-direction:column;gap:14px"><div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">temperature</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">확률표를 <b style="color:var(--fg-1)">뾰족하게</b> 할지 <b style="color:var(--fg-1)">평평하게</b> 할지</p></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 38px;display:flex;flex-direction:column;gap:14px"><div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:#9E5DF9">top_p</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">누적 확률 몇 %까지를 <b style="color:var(--fg-1)">후보</b>로 남길지</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">그리고 남은 후보들 중에서 <b style="color:#D93636">랜덤으로 하나</b>를 뽑는다.</p>
+</section>
+
+<section data-deck="0" data-label="온도를 두 번 바꿔 물어봤다" data-screen-label="07" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.53 — 실제로 해 본 것이다. 똑같은 질문을 다섯 번씩 던졌다. &quot;한국건설기술연구원에 대해서 한 문장으로 설명해줘.&quot; 온도 1.0에서는 다섯 번 모두 다른 문장이 나왔다. 내용은 비슷한데 표현도 다르고 담긴 항목도 다르다 — 어떤 답은 국제협력을 말하고 어떤 답은 인허가와 검사를 말한다. 온도 0.0에서는 다섯 번 모두 글자 하나까지 똑같다. 연구에 쓰려면 어느 쪽이어야 하는지는 자명하다. 그런데 여기서 착각하면 안 되는 게 — 오른쪽이 정답이라는 뜻이 아니다. 그냥 재현 가능할 뿐이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 질문을 <span style="color:var(--primary-main)">다섯 번</span>씩</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Q. 한국건설기술연구원에 대해서 한 문장으로 설명해줘</span>
+  </div>
+  <div style="height:690px;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:#fff;border-radius:16px;padding:26px 30px;display:flex;flex-direction:column;gap:14px;border-top:8px solid #D93636">
+      <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:#D93636">temperature = 1.0</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:22px;line-height:1.45;color:var(--fg-3)">
+        <div style="background:var(--surface-app);border-radius:8px;padding:12px 16px">건설 산업 발전을 위한 기술 연구 및 개발, 기술 지원, <b style="color:#D93636">국제협력</b> 등을 수행하는 정부 출연 연구기관입니다.</div>
+        <div style="background:var(--surface-app);border-radius:8px;padding:12px 16px">건설 산업의 기술 발전 및 <b style="color:#D93636">혁신을 촉진</b>하는 연구 개발 기관입니다.</div>
+        <div style="background:var(--surface-app);border-radius:8px;padding:12px 16px">건설 기술의 연구, 개발 및 <b style="color:#D93636">지식 보급</b>을 통해 건설 산업 발전에 기여하는 국가 연구소입니다.</div>
+        <div style="background:var(--surface-app);border-radius:8px;padding:12px 16px">국내 건설 분야의 기술 발전과 <b style="color:#D93636">산업 선도</b>를 위한 기술 연구 및 개발을 수행하는 기관입니다.</div>
+        <div style="background:var(--surface-app);border-radius:8px;padding:12px 16px">건설 분야 기술 연구 및 개발, <b style="color:#D93636">인허가 및 검사</b>, 기술 정보 제공 등 … 지속 가능한 발전을 추진하는 기관입니다.</div>
+      </div>
+      <div style="margin-top:auto;font-size:23px;color:#D93636;font-weight:700">다섯 번 모두 다르다 — 담긴 항목까지 다르다</div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:26px 30px;display:flex;flex-direction:column;gap:14px;border-top:8px solid var(--primary-main)">
+      <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--primary-main)">temperature = 0.0</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:22px;line-height:1.45;color:var(--fg-3)">
+        <div style="background:var(--primary-pale);border-radius:8px;padding:12px 16px">건설 분야의 기술 연구 및 개발을 수행하는 국가 연구기관입니다.</div>
+        <div style="background:var(--primary-pale);border-radius:8px;padding:12px 16px">건설 분야의 기술 연구 및 개발을 수행하는 국가 연구기관입니다.</div>
+        <div style="background:var(--primary-pale);border-radius:8px;padding:12px 16px">건설 분야의 기술 연구 및 개발을 수행하는 국가 연구기관입니다.</div>
+        <div style="background:var(--primary-pale);border-radius:8px;padding:12px 16px">건설 분야의 기술 연구 및 개발을 수행하는 국가 연구기관입니다.</div>
+        <div style="background:var(--primary-pale);border-radius:8px;padding:12px 16px">건설 분야의 기술 연구 및 개발을 수행하는 국가 연구기관입니다.</div>
+      </div>
+      <div style="margin-top:auto;font-size:23px;color:var(--primary-main);font-weight:700">글자 하나까지 같다 — 재현이 된다</div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">연구에 쓰려면 오른쪽이어야 한다. 단, <b style="color:var(--fg-1)">오른쪽이 정답이라는 뜻은 아니다</b> — 재현될 뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="직접 움직여 보기" data-screen-label="08" data-speaker-notes="출처: 강의영상 ② 74:20–76:40 — 슬라이더를 직접 움직이면서 설명할 것. 온도를 낮추면 1등의 확률이 0.99까지 올라가서 사실상 혼자 뽑힌다. 온도를 올리면 확률이 평평해져서 들어올 수 있는 단어가 엄청나게 늘어난다. top_p 0.9면 누적 90%가 찰 때까지의 후보만 남기고 그중에서 랜덤이다. 그리고 한 단어라도 다르게 나오는 순간 맥락이 바뀌고 그다음 단어들이 줄줄이 달라진다." style="background:#fff;padding:56px var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:18px;font-family:var(--font-sans);color:var(--fg-1);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:54px;font-weight:800;line-height:1.1;letter-spacing:-0.03em">확률표를 흔들어 본다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">softmax(logit / T) — 직접 움직여 볼 것</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="tempDemo"></span></div>
+</section>
+
+<section data-deck="0" data-label="온도별 확률 분포" data-screen-label="09" data-speaker-notes="출처: LLM.pptx p.36 · 실제 로짓으로 계산한 그래프 — 앞의 슬라이더를 실제 로짓으로 계산해 본 것이다. 가로축이 확률 순위, 세로축이 확률. 온도 0.5면 1등이 0.86까지 올라가 사실상 혼자 뽑힌다. 0.7이면 0.71. 1.0으로 올리면 1등도 0.19밖에 안 되고, 1.5까지 올리면 아예 평평해져서 순위 자체가 의미가 없어진다. 온도를 올린다는 건 창의적으로 만든다는 게 아니라 순위를 무너뜨린다는 뜻이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">온도를 올린다 = <span style="color:var(--primary-main)">순위를 무너뜨린다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">실제 로짓으로 계산한 상위 6 토큰</span>
+  </div>
+  <div style="height:590px;background:var(--surface-app);border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s36_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Softmax Probability Distribution by Temperature</span></div></div>
+  </div>
+  <div style="height:150px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+    <div style="background:var(--surface-app);border-radius:14px;padding:18px 22px"><div style="font-family:var(--font-display);font-size:26px;font-weight:800;color:#F5A623">T = 0.5</div><p style="margin:6px 0 0;font-size:23px;color:var(--fg-3);line-height:1.4">1 등 <b style="color:var(--fg-1)">0.86</b> — 사실상 혼자 뽑힌다</p></div>
+    <div style="background:var(--surface-app);border-radius:14px;padding:18px 22px"><div style="font-family:var(--font-display);font-size:26px;font-weight:800;color:#E8622C">T = 0.7</div><p style="margin:6px 0 0;font-size:23px;color:var(--fg-3);line-height:1.4">1 등 <b style="color:var(--fg-1)">0.71</b> — 가끔 2 등이 들어온다</p></div>
+    <div style="background:var(--surface-app);border-radius:14px;padding:18px 22px"><div style="font-family:var(--font-display);font-size:26px;font-weight:800;color:#E11D48">T = 1.0</div><p style="margin:6px 0 0;font-size:23px;color:var(--fg-3);line-height:1.4">1 등 <b style="color:var(--fg-1)">0.19</b> — 후보가 확 늘어난다</p></div>
+    <div style="background:#FDF0F0;border-radius:14px;padding:18px 22px"><div style="font-family:var(--font-display);font-size:26px;font-weight:800;color:#F472B6">T = 1.5</div><p style="margin:6px 0 0;font-size:23px;color:var(--fg-3);line-height:1.4">거의 <b style="color:#D93636">평평</b> — 순위가 의미를 잃는다</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Top-K 의 딜레마" data-screen-label="10" data-speaker-notes="출처: LLM.pptx p.36 (image53) · 강의영상 ② 75:00 — 그럼 후보를 몇 개 남길 것인가. Top-K 는 무조건 상위 K 개만 남긴다. 왼쪽 예를 보자. &quot;The dress color was ___&quot; 는 확률이 다 고만고만하다. red 0.03, white 0.03, black 0.02 … violet 도 olive 도 0.02다. 여기서 Top-4 만 남기면 똑같이 그럴듯한 색깔들을 잘라 버리는 것이다 — 너무 적다. 오른쪽 &quot;The light was ___&quot; 는 on 0.45, off 0.44 로 사실상 둘뿐인데 Top-4 를 하면 확률 0.01 짜리 in, at 까지 후보에 넣는다 — 너무 많다. 같은 K 인데 어떤 문장이냐에 따라 반대 방향으로 틀린다. 그래서 개수를 고정하지 말고 누적 확률로 자르자는 게 top_p 다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 K 인데 <span style="color:#D93636">반대 방향</span>으로 틀린다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Top-K 를 4 로 고정했을 때</span>
+  </div>
+  <div style="height:520px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s36_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Top-K for a flat distribution / for a peaky distribution</span></div></div>
+  </div>
+  <div style="height:220px;display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:28px">
+    <div style="background:#fff;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:10px"><div style="font-size:27px;font-weight:800;color:#D93636">평평한 분포 — 너무 적다</div><p style="margin:0;font-size:23px;color:var(--fg-3);line-height:1.45">색깔이 다 0.02~0.03. Top-4 는 <b style="color:var(--fg-1)">똑같이 그럴듯한</b> blue·violet·olive 를 잘라 버린다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:10px"><div style="font-size:27px;font-weight:800;color:#D93636">뾰족한 분포 — 너무 많다</div><p style="margin:0;font-size:23px;color:var(--fg-3);line-height:1.45">on 0.45 / off 0.44 로 사실상 둘뿐인데 <b style="color:var(--fg-1)">0.01 짜리</b>까지 후보로 넣는다.</p></div>
+    <div style="background:var(--neutral-black);color:#fff;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:10px"><div style="font-size:27px;font-weight:800;color:#00E49B">그래서 top_p</div><p style="margin:0;font-size:23px;line-height:1.45;opacity:.92">개수를 고정하지 말고 <b>누적 확률 90 %</b> 가 찰 때까지만 남긴다 — 분포가 알아서 개수를 정한다.</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="1등이 정답은 아니다" data-screen-label="11" data-speaker-notes="출처: 강의영상 ② 75:40–76:00 — 여기가 중요하다. 온도를 0으로 낮춰서 항상 1등만 뽑는다고 해서 그게 정답이라는 뜻이 아니다. 1등은 프리트레이닝에 들어간 문장들 안에서 확률적으로 가장 많이 나왔던 애를 찾아낸 것이지, 정답을 찾아낸 게 아니다. 이 구분을 학생들이 꼭 가져가야 한다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 22% 76%,rgba(217,54,54,.26),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">꼭 구분할 것</div>
+  <h2 style="margin:0;font-size:60px;font-weight:800;line-height:1.3;letter-spacing:-0.025em;max-width:1700px">온도를 0 으로 낮춰도<br><span style="color:#FF7AA2">정답이 나오는 게 아니다</span></h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:34px 38px"><div style="font-size:28px;font-weight:700;margin-bottom:14px;color:var(--neutral-lighter)">1 등 토큰이란</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.55">학습에 들어간 문장들 안에서 <b style="color:#fff">가장 자주 이어졌던</b> 토큰이다.</p></div>
+    <div style="background:rgba(255,122,162,.14);border:2px solid rgba(255,122,162,.4);border-radius:18px;padding:34px 38px"><div style="font-size:28px;font-weight:700;margin-bottom:14px;color:#FF7AA2">1 등 토큰이 아닌 것</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">사실 확인을 거친 <b style="color:#fff">정답</b>. 그런 검증은 어디에도 없었다.</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">그래서 <b style="color:#fff">근거를 함께 주는 일</b>이 필요해진다 — 그게 오늘 남은 이야기다.</p>
+</section>
+
+<section data-deck="0" data-label="ChatML" data-screen-label="12" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.54 · LLM.pptx p.32 — 이제 입력을 어떻게 넣느냐로 넘어간다. 채팅창에 글자를 치는 건 사람이 보는 화면이고, 실제로 모델에 들어가는 건 이 구조체다. ChatML — Chat Markup Language. role 과 content 두 키를 가진 딕셔너리의 리스트다. role 은 system, user, assistant 셋. 지난 시간에 본 OLMo 의 SFT 데이터가 정확히 이 모양이었다는 걸 기억할 것 — 그 형식으로 학습했으니 그 형식으로 넣어야 한다. assistant 줄까지 우리가 채워 넣을 수 있는데, 이건 &quot;이렇게 답했었다&quot; 고 과거를 심어 주는 것이다. 대화를 이어 가는 것처럼 보이는 것의 정체가 이거다 — 매번 전체 리스트를 다시 보낸다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px;background:var(--neutral-black);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:16px;justify-content:center;overflow:hidden">
+    <div style="font-family:var(--font-display);font-size:24px;color:#00E49B;font-weight:700;letter-spacing:.06em">messages = [</div>
+    <div style="background:rgba(0,228,155,.12);border-left:5px solid #00E49B;border-radius:8px;padding:16px 20px;font-family:var(--font-mono,monospace);font-size:23px;color:#fff;line-height:1.5">{ "role": <b style="color:#00E49B">"system"</b>,<br>&nbsp;&nbsp;"content": "너는 초등학교 1학년이고, 반말로 대답한다." }</div>
+    <div style="background:rgba(158,93,249,.14);border-left:5px solid #9E5DF9;border-radius:8px;padding:16px 20px;font-family:var(--font-mono,monospace);font-size:23px;color:#fff;line-height:1.5">{ "role": <b style="color:#C4A0FF">"user"</b>,<br>&nbsp;&nbsp;"content": "안녕 넌 누구니?" }</div>
+    <div style="background:rgba(255,255,255,.07);border-left:5px solid #8E8BA8;border-radius:8px;padding:16px 20px;font-family:var(--font-mono,monospace);font-size:23px;color:#fff;line-height:1.5">{ "role": <b style="color:#C9C7D6">"assistant"</b>,<br>&nbsp;&nbsp;"content": "나는 AI 챗봇이야. 네 명령을 받아들이고 대답할 수 있어." }</div>
+    <div style="font-family:var(--font-display);font-size:24px;color:#00E49B;font-weight:700">]</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">Chat Markup Language</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">진짜 입력은<br>채팅창이 아니다</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--surface-app);border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">role · content</b> 두 키의 딕셔너리 리스트 — 지난 시간 OLMo 의 SFT 데이터와 같은 모양이다.</div>
+      <div style="background:var(--surface-app);border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">role 은 <b style="color:var(--fg-1)">system · user · assistant</b> 셋. 그 형식으로 학습했으니 그 형식으로 넣는다.</div>
+      <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">대화가 <b style="color:var(--primary-dark)">이어지는 것처럼 보이는</b> 이유 — 매번 이 리스트 전체를 다시 보낸다.</div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="system 한 줄이 말투를 바꾼다" data-screen-label="13" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.54 — 똑같은 질문 &quot;안녕 넌 누구니?&quot; 에 system 줄만 바꿔 봤다. 세 답이 전부 다르다. 반말, 정중한 말투, 친근한 말투. 내용이 아니라 어조와 형식이 통째로 바뀐다. 지난 시간 RLHF 얘기할 때 시스템 프롬프트를 특별히 강하게 따르도록 학습시켰다고 한 게 이 효과다. 실습에서 여러분이 만질 곳이 정확히 이 한 줄이다 — 그리고 연구에서는 이게 통제변수가 된다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">바꾼 것은 <span style="color:var(--primary-main)">system 한 줄</span>뿐</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">user 는 셋 다 “안녕 넌 누구니?”</span>
+  </div>
+  <div style="height:700px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:18px;border-top:8px solid #00B37A">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em">system</div>
+      <div style="background:var(--surface-app);border-radius:10px;padding:18px 20px;font-size:24px;line-height:1.5;color:var(--fg-1);font-weight:700">“너는 초등학교 1학년이고,<br>반말로 대답한다.”</div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em;margin-top:auto">assistant</div>
+      <div style="background:rgba(0,179,122,.10);border-radius:10px;padding:18px 20px;font-size:25px;line-height:1.5;color:var(--fg-1)">“나는 AI 챗봇<b style="color:#00B37A">이야</b>. 네 명령을 받아들이고 대답할 수 <b style="color:#00B37A">있어</b>.”</div>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:18px;border-top:8px solid var(--primary-main)">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em">system</div>
+      <div style="background:var(--surface-app);border-radius:10px;padding:18px 20px;font-size:24px;line-height:1.5;color:var(--fg-1);font-weight:700">“정중한 말투로 답변한다.”</div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em;margin-top:auto">assistant</div>
+      <div style="background:var(--primary-pale);border-radius:10px;padding:18px 20px;font-size:25px;line-height:1.5;color:var(--fg-1)">“<b style="color:var(--primary-dark)">안녕하세요</b>, 저는 OpenAI의 인공지능 어시스턴트<b style="color:var(--primary-dark)">입니다</b>. 무엇을 도와드릴까요?”</div>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:18px;border-top:8px solid #9E5DF9">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em">system</div>
+      <div style="background:var(--surface-app);border-radius:10px;padding:18px 20px;font-size:24px;line-height:1.5;color:var(--fg-1);font-weight:700">“친근한 말투로 답변해줘.”</div>
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em;margin-top:auto">assistant</div>
+      <div style="background:rgba(158,93,249,.10);border-radius:10px;padding:18px 20px;font-size:25px;line-height:1.5;color:var(--fg-1)">“안녕하세요! 저는 당신이 지금 이 채팅방에서 만난 인공지능 챗봇입니다. 무엇을 도와드릴까요? <b style="color:#9E5DF9">:)</b>”</div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">실습에서 만질 곳이 정확히 이 한 줄이다 — 연구에서는 이게 <b style="color:var(--fg-1)">통제변수</b>가 된다.</p>
+</section>
+
+<section data-deck="0" data-label="언제 생긴 개념인가" data-screen-label="14" data-speaker-notes="출처: LLM.pptx p.37 — 이 개념이 언제 생겼는지 짚고 가자. 2021~2022년, InstructGPT 와 ChatGPT 를 만들면서다. RLHF 를 적용하다 보니 모델의 역할을 미리 정해 줄 필요가 생겼고 그래서 system 이라는 role 이 만들어졌다. 처음부터 있던 게 아니라 필요해서 만든 것이다. 오늘 볼 네 단계 중 첫 번째다 — 프롬프트가 점점 프로토콜이 되어 가는 과정." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px;background:var(--surface-app);border-radius:18px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s37_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>시스템 프롬프트의 개념 정립 (2021~2022)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2021 ~ 2022 · 1 단계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">처음부터<br>있던 게 아니다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">RLHF 를 적용하다 보니 <b style="color:var(--fg-1)">모델의 역할을 미리 정해 줄</b> 필요가 생겼고, 그래서 <code style="font-family:var(--font-mono,monospace);background:var(--surface-app);padding:2px 8px;border-radius:6px">system</code> 이라는 role 이 만들어졌다.</p>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">오늘 볼 <b style="color:var(--primary-dark)">네 단계</b> 중 첫 번째 —<br>프롬프트가 점점 <b style="color:var(--primary-dark)">프로토콜</b>이 되어 가는 과정이다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="시스템 프롬프트" data-screen-label="15" data-speaker-notes="출처: 강의영상 ② 78:20–80:20 — 컨텍스트 지식을 넣는 첫 단계가 시스템 프롬프트였다. RLHF에서 시스템 프롬프트를 따르도록 특별히 강하게 학습시켰기 때문에 잘 먹힌다. 역할을 부여하면 말투가 바뀌고 답변 형식이 바뀐다. 그런데 여기서 사람들이 한 발 더 나갔다 — 역할 말고 정보도 넣으면 되지 않을까?" style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">시스템 프롬프트</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">RLHF 가 “이건 반드시 따르라” 고 학습시킨 자리</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="sysPrompt"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">여기서 한 발 더 — <b style="color:var(--fg-1)">역할 말고 정보</b>를 넣으면 어떻게 되나?</p>
+</section>
+
+<section data-deck="0" data-label="정보를 실어 보면" data-screen-label="16" data-speaker-notes="출처: 강의영상 ② 80:20–82:20 · 30 LLM RAG.ipynb — 실제 실험이다. 그냥 물으면 공개된 자료가 아니라 답할 수 없다고 하고 일반론으로 넘어간다. 그런데 시스템 프롬프트에 명단을 실어 주면 그 안에서 정확히 답한다. 이게 1단계였다. 이걸 보고 사람들이 생각하기 시작했다 — 생각보다 많은 걸 할 수 있겠구나." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 질문, 다른 답</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">차이는 시스템 프롬프트에 자료를 실었느냐뿐</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="withContext"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">모델이 <b style="color:var(--fg-1)">똑똑해진 게 아니다.</b> 답할 재료를 줬을 뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="RAG 라는 이름" data-screen-label="17" data-speaker-notes="출처: 강의영상 ② 82:20–83:20 — 2022년에 랭체인이 나오면서 이게 표준화됐고 RAG라는 이름이 붙었다. Retrieval-Augmented Generation. 검색해서 증강시켜서 생성하자. 말은 그럴듯한데 결과적으로는 시스템 프롬프트에 외부 데이터를 실어서 답을 잘하게 만드는 것이다. 앞의 실험은 사실 검색을 한 게 아니라 내가 손으로 넣은 것이라 '검색' 부분이 빠져 있었다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">2022 · LangChain 이후</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">RAG — Retrieval-Augmented Generation</h2>
+  <div style="height:300px"><span data-dc-slot="ragName"></span></div>
+  <div style="padding:30px 36px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1700px">말은 그럴듯하지만 하는 일은 하나다 — <b style="color:var(--fg-1)">시스템 프롬프트에 자료를 실어 준다.</b><br><span style="color:var(--neutral-medium);font-size:var(--type-small)">앞 실험은 자료를 손으로 넣었으니 아직 “검색” 부분이 빠져 있다.</span></div>
+</section>
+
+<section data-deck="0" data-label="LangChain 이 한 일" data-screen-label="18" data-speaker-notes="출처: LLM.pptx p.38 — 2 단계. 2022~2023년, LangChain 과 LlamaIndex, ReAct 가 나왔다. 두 가지가 동시에 일어났다. 하나는 RAG — 외부 문서를 붙여 지식을 확장한다. 다른 하나는 tool — LLM 에게 도구를 쥐여 준다. 아래 코드를 보면 Search 와 Calculator 를 tools 리스트에 담아서 에이전트를 초기화한다. LLM 이 외부 API 를 호출하고, 응답을 받아 문맥에 넣고, 다시 답을 만든다. 이 왕복이 생기는 순간 챗봇이 아니라 에이전트가 된다. 여러분이 지금 쓰는 코딩 어시스턴트가 정확히 이 구조다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px;background:#fff;border-radius:18px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s38_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>LangChain 과 RAG + Tool Agent 패러다임의 부상 (2022~2023)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2022 ~ 2023 · 2 단계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">지식 확장과<br>도구 사용</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#fff;border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">RAG</b> — 외부 문서로 지식을 확장한다.</div>
+      <div style="background:#fff;border-radius:12px;padding:18px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">tool</b> — 검색·계산 같은 도구를 쥐여 준다.</div>
+      <div style="background:var(--neutral-black);color:#fff;border-radius:12px;padding:18px 24px;font-size:var(--type-small);line-height:1.5">호출 → 응답을 문맥에 넣고 → 다시 생성.<br>이 왕복이 생기는 순간 <b style="color:#00E49B">챗봇이 아니라 에이전트</b>다.</div>
+    </div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">여러분이 지금 쓰는 코딩 어시스턴트가 정확히 이 구조다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="RAG 의 전체 그림" data-screen-label="19" data-speaker-notes="출처: 강의영상 ② 83:00–85:00 — RAG의 전체 흐름을 한 장으로. 질문이 들어오면 그걸로 자료를 찾고, 찾은 자료를 시스템 프롬프트에 실어서 다시 모델에 넣는다. 여기서 한 번 더 왔다 갔다 하는 게 핵심이다. 사용자에게는 한 번 물어본 것처럼 보이지만 뒤에서는 두 번 이상 돈다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">전체 흐름</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">뒤에서는 <span style="color:var(--accent-green)">두 번 이상</span> 돈다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="ragFlow"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">사용자에게는 <b style="color:#fff">한 번 물어본 것</b>처럼 보인다 — 그래서 응답이 느려지는 것이다.</p>
+</section>
+
+<section data-deck="0" data-label="한계 — 컨텍스트 길이" data-screen-label="20" data-speaker-notes="출처: 강의영상 ③ 20:00–21:00 — RAG에는 명확한 한계가 있다. 지식을 무제한으로 넣을 수 없다. 입력 토큰 한도가 있기 때문이다. 577페이지짜리 기본계획을 통째로 넣고 여기서 분석해 달라고 할 수가 없다. 그래서 미리 잘라 두고 필요한 조각만 골라 넣어야 한다. 어떻게 고르나 — 다음 시간 벡터DB." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">전부 넣을 수는<br>없다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">577 페이지짜리 도시기본계획을 <b style="color:var(--fg-1)">통째로</b> 넣고 분석해 달라고 할 수 없다.</p>
+    <div style="padding:22px 26px;background:#FDF0F0;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">그래서 <b style="color:#D93636">미리 잘라 두고</b> 필요한 조각만 골라 넣어야 한다.<br><br>어떻게 고르나 — <b style="color:var(--fg-1)">다음 시간.</b></div>
+  </div>
+  <div style="height:740px"><span data-dc-slot="ctxLimit"></span></div>
+</section>
+
+<section data-deck="0" data-label="도구를 부르는 형식" data-screen-label="21" data-speaker-notes="출처: LLM.pptx p.39 — 3 단계. 2023년 중반부터 OpenAI 가 LangChain 이 하던 도구 연결을 아예 모델 안으로 집어넣었다. Function Calling 이라고 부르다가 Tool Calling 으로 바뀌었다. 오른쪽 JSON 을 보면 tool_calls 안에 name 과 arguments 가 들어 있다. 여기서 중요한 건, 이게 모델이 만들어낸 텍스트가 아니라 구조화된 토큰으로 처리된다는 것이다. 파라메트릭 함수 호출을 텍스트가 아니라 구조로 다룬다 — LLM 의 입출력이 자연어에서 구조체로 넘어간 지점이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px;background:var(--surface-app);border-radius:18px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s39_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Function Calling → Tool Calling (2023~2024)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2023 ~ 2024 · 3 단계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">프레임워크가<br>모델 안으로</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">LangChain 이 밖에서 하던 도구 연결을 <b style="color:var(--fg-1)">OpenAI 가 모델에 내재화</b>했다.</p>
+    <div style="padding:22px 26px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55"><code style="font-family:var(--font-mono,monospace)">tool_call</code> 은 모델이 지어낸 <b style="color:#D93636">문장이 아니라</b><br><b style="color:var(--primary-dark)">구조화된 토큰</b>으로 처리된다.</div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">LLM 의 입출력이 자연어에서 <b style="color:var(--fg-3)">구조체</b>로 넘어간 지점이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="MCP 가 나온 이유" data-screen-label="22" data-speaker-notes="출처: LLM.pptx p.40 — 4 단계. 여기서 문제가 생겼다. OpenAI 도 하고 Claude 도 하고 Gemini 도 하는데 셋 다 호출 형식이 다르다. 다 JSON 인데 필드 이름도 다르고 응답 포맷도 다르고 컨텍스트 관리 방식도 다르다. 도구 하나 만들면 세 벌을 만들어야 한다. 그래서 2024~2025년에 MCP 가 나왔다 — Model Context Protocol. 모델과 도구 사이의 문맥 관리·도구 호출·응답 포맷을 표준으로 정한 것이다. role 도 여기서 늘어났다. user, assistant, system 셋이던 게 tool, function 까지 다섯이 됐고, tool 응답은 tool_response 로 따로 구분한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:770px;background:#fff;border-radius:18px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s40_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>MCP (Model Context Protocol) 의 등장 (2024~2025)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2024 ~ 2025 · 4 단계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">도구 하나에<br>세 벌을 만들 순 없다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">OpenAI · Claude · Gemini 가 <b style="color:var(--fg-1)">각자 다른 형식</b>으로 도구를 불렀다. 다 JSON 인데 필드도 응답도 다르다.</p>
+    <div style="padding:22px 26px;background:var(--neutral-black);color:#fff;border-radius:12px;font-size:var(--type-small);line-height:1.55">role 이 늘었다 — <code style="font-family:var(--font-mono,monospace);color:#00E49B">user</code> <code style="font-family:var(--font-mono,monospace);color:#00E49B">assistant</code> <code style="font-family:var(--font-mono,monospace);color:#00E49B">system</code> 에<br><code style="font-family:var(--font-mono,monospace);color:#00E49B">tool</code> <code style="font-family:var(--font-mono,monospace);color:#00E49B">function</code> 이 붙고, tool 응답은 <code style="font-family:var(--font-mono,monospace);color:#00E49B">tool_response</code> 로 따로 구분된다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="MCP 가 만든 것" data-screen-label="23" data-speaker-notes="출처: LLM.pptx p.40 · p.43 — MCP 의 결과와 기술적 특징. 결과는 호환성이다. LangChain, Anthropic Claude, LlamaIndex 가 같은 형식으로 통신하게 됐다. 기술적으로는 JSON-RPC 2.0 하나로 통일했고, 통신 방식이 두 가지다 — stdio 는 내 PC 에 설치해서 표준입출력으로 주고받는 것이고 SSE 는 서버에서 스트리밍으로 받는 것이다. stdio 로 설치하면 내 PC 안에서 도는 것이라 통제가 가능하다. 사내 데이터를 밖으로 안 내보내면서 도구를 붙일 수 있다는 뜻이고, 지난 시간에 말한 보안 이슈의 답이 여기 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">표준이 생기면 <span style="color:var(--primary-main)">붙일 수 있다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">MCP 의 의의와 기술적 특징</span>
+  </div>
+  <div style="height:380px;background:var(--surface-app);border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/lm_s40_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>MCP 의 의의 — 툴 기반 LLM 시스템 간의 호환성 확보</span></div></div>
+  </div>
+  <div style="height:280px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:var(--primary-main)">JSON-RPC 2.0</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">호출 형식을 <b style="color:var(--fg-1)">하나로 통일</b>했다. 이미 있던 표준을 가져다 쓴 것이다.</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:#9E5DF9">stdio · SSE</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">스트리밍</b>이 되는 두 가지 통신 방식. 답이 나오는 대로 흘려보낸다.</p>
+    </div>
+    <div style="background:var(--neutral-black);color:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:#00E49B">PC 통제 가능</div>
+      <p style="margin:0;font-size:var(--type-small);line-height:1.5;opacity:.92">stdio 로 설치하면 <b>내 PC 안에서</b> 돈다 — 사내 데이터를 안 내보내고 도구를 붙일 수 있다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="실제 통신 로그" data-screen-label="24" data-speaker-notes="출처: LLM.pptx p.44 · BV_Flow_MCP 실측 로그 — 말로만 하면 안 와닿으니 실제로 오간 것을 보자. stdio 로 붙었을 때의 로그다. 위에서부터 순서대로 — initialize 로 프로토콜 버전과 클라이언트 정보를 알린다. 여기 clientInfo 가 claude-ai 인 게 보인다. 그 다음 tools/list, resources/list, prompts/list 로 &quot;너 뭐 할 수 있어?&quot; 를 세 번 묻는다. 도구 목록, 자원 목록, 프롬프트 목록. 그리고 마지막에 tools/call 로 실제 실행이다. execute_flow_code 에 flow_id 와 buffer_distance 500 을 넣어서 호출했다. 여기까지 오면 LLM 이 우리 회사 공간분석 엔진을 그냥 부르는 것이다. 이게 MCP 로 도시 데이터를 붙인 실제 모습이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">실제로 오간 것</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--accent-green)">MCP stdio 통신 · JSON-RPC 2.0</span>
+  </div>
+  <div style="height:640px;background:rgba(255,255,255,.05);border-radius:18px;padding:30px 36px;display:flex;flex-direction:column;gap:14px;font-family:var(--font-mono,monospace);font-size:21px;line-height:1.45;overflow:hidden">
+    <div style="display:flex;gap:18px;align-items:flex-start"><span style="color:#00E49B;min-width:210px;font-weight:700">initialize</span><span style="opacity:.85;word-break:break-all">{"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":<b style="color:#FFB86B">"claude-ai"</b>,"version":"0.1.0"}},"jsonrpc":"2.0","id":0}</span></div>
+    <div style="display:flex;gap:18px;align-items:flex-start"><span style="color:#00E49B;min-width:210px;font-weight:700">initialized</span><span style="opacity:.85">{"method":"notifications/initialized","jsonrpc":"2.0"}</span></div>
+    <div style="display:flex;gap:18px;align-items:flex-start"><span style="color:#9E5DF9;min-width:210px;font-weight:700">tools/list</span><span style="opacity:.85">{"method":"tools/list","params":{},"jsonrpc":"2.0","id":1}</span></div>
+    <div style="display:flex;gap:18px;align-items:flex-start"><span style="color:#9E5DF9;min-width:210px;font-weight:700">resources/list</span><span style="opacity:.85">{"method":"resources/list","params":{},"jsonrpc":"2.0","id":2}</span></div>
+    <div style="display:flex;gap:18px;align-items:flex-start"><span style="color:#9E5DF9;min-width:210px;font-weight:700">prompts/list</span><span style="opacity:.85">{"method":"prompts/list","params":{},"jsonrpc":"2.0","id":3}</span></div>
+    <div style="display:flex;gap:18px;align-items:flex-start"><span style="color:#FF7AA2;min-width:210px;font-weight:700">tools/call</span><span style="opacity:.85">{"method":"tools/call","params":{"name":<b style="color:#FFB86B">"get_flow_info"</b>,"arguments":{}},"jsonrpc":"2.0","id":4}</span></div>
+    <div style="display:flex;gap:18px;align-items:flex-start;background:rgba(255,122,162,.14);border-radius:10px;padding:14px 16px;margin:-14px -16px"><span style="color:#FF7AA2;min-width:194px;font-weight:700">tools/call</span><span style="opacity:.95;word-break:break-all">{"method":"tools/call","params":{"name":<b style="color:#FFB86B">"execute_flow_code"</b>,"arguments":{"input_data":"kodata","flow_id":"N-F-d5c0dd6b…-000001724",<b style="color:#00E49B">"buffer_distance":"500"</b>}},"jsonrpc":"2.0","id":5}</span></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">“너 뭐 할 수 있어?” 를 세 번 묻고 → 실행한다. 여기까지 오면 LLM 이 <b style="color:#fff">공간분석 엔진을 그냥 부른다.</b></p>
+</section>
+
+<section data-deck="0" data-label="도시 데이터에 붙이면" data-screen-label="25" data-speaker-notes="출처: LLM.pptx p.45 · Data Hub 온톨로지 사례 — 실제 사례. 사내 데이터 탐색 역량을 강화하려고 만든 것인데, 문제는 데이터가 어디에 어떻게 들어 있는지를 사람이 다 모른다는 것이다. 그래서 온톨로지 레이어를 하나 만들고, LLM 이 그 온톨로지를 읽어서 질문을 쿼리로 바꾸게 했다. 아래 두 질문을 보라. 사람이 SQL 을 쓰지 않는다. &quot;2025년에 강남구 대치동에서 창업한 사업자를 찾아주고 개업시기, 사업장명, 주소, 국세청 업종분류를 알려줘&quot; 라고 말하면 된다. 여기서 여러분이 가져갈 것 — 도시 데이터에 LLM 을 붙이는 일의 8할은 모델이 아니라 데이터 쪽 구조를 정리하는 일이다. 온톨로지가 없으면 LLM 이 아무리 좋아도 못 찾는다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사람이 SQL 을 쓰지 않는다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Data Hub · 온톨로지 레이어 사례</span>
+  </div>
+  <div style="height:250px"><span data-dc-slot="ontologyChain"></span></div>
+  <div style="height:300px;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em">사람이 던진 말</div>
+      <p style="margin:0;font-size:27px;color:var(--fg-1);line-height:1.5">“서울특별시 강남구 역삼동에 2025년도에 창업한 사업자 <b style="color:var(--primary-main)">홍두선 대표님</b>이 운영하는 사업자 목록과 주소 좀 구해 줄래?”</p>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <div style="font-family:var(--font-display);font-size:22px;color:var(--neutral-medium);letter-spacing:.05em">사람이 던진 말</div>
+      <p style="margin:0;font-size:27px;color:var(--fg-1);line-height:1.5">“2025년에 강남구 대치동에서 창업한 사업자를 찾아주고 <b style="color:var(--primary-main)">개업시기, 사업장명, 주소, 국세청 업종분류</b>를 알려줘.”</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도시 데이터에 LLM 을 붙이는 일의 8 할은 모델이 아니라 <b style="color:var(--fg-1)">데이터 쪽 구조를 정리하는 일</b>이다.</p>
+</section>
+
+<section data-deck="0" data-label="네 단계 한눈에" data-screen-label="26" data-speaker-notes="출처: LLM.pptx p.37–40 정리 — 오늘 본 네 단계를 한 줄로. 프롬프트가 점점 프로토콜이 되어 갔다. 처음엔 system 이라는 role 하나였는데, 도구가 붙고, 그 도구 호출이 모델 안으로 들어가고, 마지막에 표준이 됐다. 방향이 보이는가 — 사람이 말로 쓰던 것이 기계가 파싱하는 구조체로 계속 굳어져 왔다. 다음 단계가 뭘지도 이 방향으로 짐작할 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">프롬프트가 <span style="color:var(--primary-main)">프로토콜</span>이 되기까지</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2021 → 2025</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="protoTimeline"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">사람이 말로 쓰던 것이 <b style="color:var(--fg-1)">기계가 파싱하는 구조체</b>로 계속 굳어져 왔다.</p>
+</section>
+
+<section data-deck="0" data-label="실무 감각" data-screen-label="27" data-speaker-notes="출처: 강의영상 ② 전반 · 실습 안내 — 실습으로 넘어가기 전에 짚을 것. 학생들이 API 키를 받았는데 잘 안 쓴다. 작년에는 다 합쳐 얼마 안 나왔다. 만 원 이상은 써 봐야 감이 온다. 자꾸 시도해 보고, 코드 제너레이터도 잘 되니까 이렇게 저렇게 계속 바꿔 보라고 할 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실습 전에</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">채팅창 말고 <span style="color:var(--primary-main)">API</span> 로</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:24px">
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:29px;font-weight:800;color:var(--primary-main)">시스템 프롬프트를 직접 만진다</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">채팅창에서는 못 하는 일 — 연구에서 통제 변수가 된다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:29px;font-weight:800;color:var(--primary-main)">temperature 를 고정한다</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">낮게 고정해야 <b style="color:var(--fg-1)">같은 입력에 비슷한 출력</b>이 나온다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:29px;font-weight:800;color:var(--primary-main)">수백 건을 한 번에 돌린다</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">계획서 170 개, 민원 수천 건 — 손으로는 못 한다.</p></div>
+    <div style="background:#fff;border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:29px;font-weight:800;color:#D93636">비용을 눈으로 본다</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">토큰이 곧 돈이다 — 한글이 왜 비싼지 여기서 체감한다.</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">만 원어치는 써 봐야 감이 온다 — <b style="color:var(--fg-1)">자꾸 시도해 보는 것</b>이 실력이 된다.</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 실습" data-screen-label="28" data-speaker-notes="출처: 30 LLM RAG.ipynb — 실습 순서. 먼저 API 키를 넣고 가장 단순한 호출부터 한다. messages 리스트에 user 한 줄만 넣는 것. 그 다음 system 을 넣어서 답이 어떻게 바뀌는지 본다. 세 번째로 temperature 를 0 과 1 로 각각 다섯 번씩 돌려서 아까 슬라이드의 실험을 직접 재현한다. 네 번째가 오늘의 본론 — system 에 자료를 실어서 RAG 를 손으로 만들어 본다. 마지막으로 토큰 사용량과 비용을 찍어 본다. 한글이 왜 비싼지 숫자로 보게 될 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">실습 · 30 LLM RAG.ipynb</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">직접 다섯 번 돌려 본다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);gap:22px">
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:26px 24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--accent-green)">1</div><div style="font-size:26px;font-weight:700">가장 단순한 호출</div><p style="margin:0;font-size:22px;color:var(--neutral-lighter);line-height:1.45">messages 에 user 한 줄만.</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:26px 24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--accent-green)">2</div><div style="font-size:26px;font-weight:700">system 을 넣는다</div><p style="margin:0;font-size:22px;color:var(--neutral-lighter);line-height:1.45">말투와 형식이 바뀌는 것을 본다.</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:26px 24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--accent-green)">3</div><div style="font-size:26px;font-weight:700">temperature 0 vs 1</div><p style="margin:0;font-size:22px;color:var(--neutral-lighter);line-height:1.45">각각 다섯 번 — 앞 슬라이드를 재현한다.</p></div>
+    <div style="background:rgba(0,228,155,.16);border:2px solid rgba(0,228,155,.45);border-radius:16px;padding:26px 24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--accent-green)">4</div><div style="font-size:26px;font-weight:700">RAG 를 손으로</div><p style="margin:0;font-size:22px;color:#fff;line-height:1.45">system 에 자료를 실어 답이 바뀌는지 본다.</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:26px 24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--accent-green)">5</div><div style="font-size:26px;font-weight:700">토큰과 비용</div><p style="margin:0;font-size:22px;color:var(--neutral-lighter);line-height:1.45">한글이 왜 비싼지 숫자로 본다.</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="29" data-speaker-notes="출처: 학습참여도 평가 활동 — 여기서 한 번 끊고 이야기를 시켜라. 세 질문 중 하나를 골라 옆 사람과 3분. 특히 두 번째가 중요하다. RAG 로 자료를 실어 줬는데도 모델이 그 자료와 다른 말을 하면 어떻게 알아채는가 — 실무에서 제일 자주 터지는 문제다. 답을 정해 놓지 말고 학생이 말하게 둘 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3 분 · 옆 사람과</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">하나만 골라 이야기해 보자</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+    <div style="background:#fff;border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:16px;justify-content:center"><div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">Q1</div><p style="margin:0;font-size:29px;color:var(--fg-1);line-height:1.5">내 연구에 쓴다면 temperature 를 <b>얼마로</b> 두겠는가. 그 이유는?</p></div>
+    <div style="background:#fff;border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:16px;justify-content:center;border-top:8px solid #D93636"><div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:#D93636">Q2</div><p style="margin:0;font-size:29px;color:var(--fg-1);line-height:1.5">자료를 실어 줬는데도 모델이 <b>그 자료와 다른 말</b>을 하면, 어떻게 알아채겠는가?</p></div>
+    <div style="background:#fff;border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:16px;justify-content:center"><div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:#9E5DF9">Q3</div><p style="margin:0;font-size:29px;color:var(--fg-1);line-height:1.5">내가 다루는 도시 데이터에 MCP 를 붙인다면 <b>어떤 도구</b>를 먼저 만들겠는가?</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="30" data-speaker-notes="정리. 모델의 지식은 가중치에 박혀 있고 고정이다. 우리가 통제할 수 있는 건 입력 토큰뿐이다. 시스템 프롬프트로 역할을 주고, 자료를 실어 주면 그 안에서 답한다. 그게 RAG다. 그런데 길이 한계 때문에 자료를 골라 넣어야 하고, 그 고르는 법이 다음 시간이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 22% 80%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:20px;font-size:34px;line-height:1.4;max-width:1700px">
+    <li>모델의 지식은 <b style="color:var(--accent-green)">가중치에 박혀 있고 고정</b>이다.</li>
+    <li>우리가 통제할 수 있는 건 <b style="color:var(--accent-green)">입력 토큰</b>뿐이다.</li>
+    <li>거기에 자료를 실어 주는 것 — 그게 <b style="color:var(--accent-green)">RAG</b> 다.</li>
+    <li>단, <b style="color:var(--accent-green)">길이 한계</b> 때문에 골라 넣어야 한다.</li>
+  </ol>
+  <div style="padding:28px 34px;background:rgba(68,52,226,.24);border:2px solid rgba(158,93,249,.5);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1700px">다음 — <b style="color:#fff">무엇을 골라 넣을 것인가.</b> ‘비슷하다’ 를 컴퓨터는 어떻게 재는가.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">벡터 데이터베이스 · 실습: 31 LLAMA INDEX.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W11_프롬프트와_증강생성</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">30</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">두 가지 지식</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">아는 것과 모르는 것</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">현실과 안 맞는다</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">할루시네이션의 기계적 원인</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">온도를 두 번 바꿔 물어봤다</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">직접 움직여 보기</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">온도별 확률 분포</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">Top-K 의 딜레마</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">1등이 정답은 아니다</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">ChatML</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">system 한 줄이 말투를 바꾼다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">언제 생긴 개념인가</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">시스템 프롬프트</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">정보를 실어 보면</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">RAG 라는 이름</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">LangChain 이 한 일</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">RAG 의 전체 그림</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">한계 — 컨텍스트 길이</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">도구를 부르는 형식</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">MCP 가 나온 이유</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">MCP 가 만든 것</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">실제 통신 로그</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">도시 데이터에 붙이면</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">네 단계 한눈에</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">실무 감각</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">오늘의 실습</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
+<button class="ov-card" data-go="29"><div class="ov-thumb"><div class="ov-num">30</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  state = { temp: 70, topp: 90 };
+
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const AMB = '#F59E0B';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+
+    // ── 지식 컷오프 ─────────────────────────────────────────────
+    const cutoff = (() => {
+      const W = 1720, H = 470;
+      const ev = (x, t, sub, col, up) => h('g', { key: t },
+        h('circle', { cx: x, cy: 230, r: 11, fill: col }),
+        h('line', { x1: x, y1: 230, x2: x, y2: up ? 150 : 310, stroke: col,
+          strokeWidth: 2.5 }),
+        h('text', { x: x, y: up ? 132 : 344, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: col }, t),
+        h('text', { x: x, y: up ? 100 : 376, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 20, fill: MUT }, sub));
+      return svg(W, H, [
+        h('line', { key: 'ax', x1: 60, y1: 230, x2: 1660, y2: 230, stroke: AX,
+          strokeWidth: 3 }),
+        h('rect', { key: 'cut', x: 700, y: 60, width: 8, height: 340, fill: RED }),
+        h('text', { key: 'cutt', x: 716, y: 84, fontFamily: KR, fontSize: 25,
+          fontWeight: 800, fill: RED }, '학습이 끝난 시점'),
+        h('rect', { key: 'known', x: 60, y: 196, width: 640, height: 68, rx: 10,
+          fill: ACC, opacity: 0.14 }),
+        h('text', { key: 'kt', x: 380, y: 240, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: ACC }, '가중치 안에 들어간 세계'),
+        h('rect', { key: 'unk', x: 708, y: 196, width: 952, height: 68, rx: 10,
+          fill: RED, opacity: 0.10 }),
+        h('text', { key: 'ut', x: 1180, y: 240, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: RED }, '모델이 모르는 세계'),
+        ev(300, '옛 법령', '이걸로 답한다', ACC, true),
+        ev(980, '법령 개정', '모른다', RED, false),
+        ev(1320, '계획 갱신', '모른다', RED, true),
+        h('text', { key: 'n', x: 60, y: 442, fontFamily: KR, fontSize: 23, fill: MUT },
+          '“지금 현실과 하나도 안 맞는데” 라는 느낌의 정체'),
+      ]);
+    })();
+
+    // ── 온도 · top_p 데모 ───────────────────────────────────────
+    const tempDemo = (() => {
+      const T = Math.max(0.1, this.state.temp / 100), P = this.state.topp / 100;
+      const LOG = [3.2, 2.6, 2.1, 1.7, 1.35, 1.0, 0.7, 0.4, 0.1, -0.2];
+      const WORD = ['지역', '계획', '인구', '면적', '정책', '용도', '개발', '보전',
+                    '기반', '경관'];
+      const ex = LOG.map(l => Math.exp(l / T));
+      const sum = ex.reduce((a, b) => a + b, 0);
+      const p = ex.map(v => v / sum);
+      let acc = 0, cut = p.length;
+      for (let i = 0; i < p.length; i++) { acc += p[i]; if (acc >= P) { cut = i + 1; break; } }
+      const W = 1120, H = 520, pad = 70;
+      const bw = (W - pad * 2) / p.length;
+      const bars = p.map((v, i) => {
+        const inSet = i < cut;
+        const hh = v * 380;
+        return h('g', { key: i },
+          h('rect', { x: pad + i * bw + 8, y: 424 - hh, width: bw - 16, height: hh,
+            rx: 7, fill: inSet ? (i === 0 ? ACC : VIO) : '#DEDCE6' }),
+          h('text', { x: pad + i * bw + bw / 2, y: 452, textAnchor: 'middle',
+            fontFamily: KR, fontSize: 21, fontWeight: 700,
+            fill: inSet ? INK : '#C9C7D6' }, WORD[i]),
+          h('text', { x: pad + i * bw + bw / 2, y: 416 - hh, textAnchor: 'middle',
+            fontFamily: EN, fontSize: 19, fontWeight: 700,
+            fill: inSet ? (i === 0 ? ACC : VIO) : '#C9C7D6' },
+            (v * 100).toFixed(0) + '%'));
+      });
+      const slider = (lab, key, min, max, col, fmt) => h('div', { key: key,
+          style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+        h('div', { style: { display: 'flex', justifyContent: 'space-between',
+          alignItems: 'baseline' } },
+          h('span', { style: { fontFamily: EN, fontSize: '25px', color: col,
+            fontWeight: 700 } }, lab),
+          h('span', { style: { fontFamily: EN, fontSize: '30px', color: INK,
+            fontWeight: 800 } }, fmt)),
+        h('input', { type: 'range', min: min, max: max, step: 5, value: this.state[key],
+          onChange: e => this.setState({ [key]: Number(e.target.value) }),
+          style: { width: '100%', accentColor: col, height: '30px' } }));
+      return h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1.85fr',
+          gap: '40px', width: '100%', height: '640px', alignItems: 'center' } },
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '26px' } },
+          slider('temperature', 'temp', 10, 200, ACC, T.toFixed(2)),
+          slider('top_p', 'topp', 10, 100, VIO, P.toFixed(2)),
+          h('div', { style: { background: 'var(--surface-app)', borderRadius: '16px',
+              padding: '26px 30px', display: 'flex', flexDirection: 'column',
+              gap: '10px' } },
+            h('div', { style: { fontFamily: KR, fontSize: '23px', color: MUT } },
+              '남은 후보'),
+            h('div', { style: { fontFamily: EN, fontSize: '52px', fontWeight: 800,
+              color: cut === 1 ? GRN : VIO } }, cut + ' 개'),
+            h('div', { style: { fontFamily: KR, fontSize: '22px',
+              color: cut === 1 ? GRN : RED, lineHeight: 1.5 } },
+              cut === 1 ? '항상 같은 답이 나온다'
+                        : '이 중에서 랜덤으로 하나를 뽑는다')),
+          h('div', { style: { fontFamily: KR, fontSize: '22px', color: 'var(--fg-3)',
+            lineHeight: 1.55 } }, '한 단어라도 달라지면 ',
+            h('b', { style: { color: INK } }, '맥락이 바뀌고'),
+            ' 그다음 단어들이 줄줄이 달라진다.')),
+        svg(W, H, [
+          h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+            stroke: 'var(--border-1)' }),
+          h('line', { key: 'ax', x1: pad, y1: 424, x2: W - pad, y2: 424, stroke: AX,
+            strokeWidth: 2 }),
+          bars,
+          h('text', { key: 'h', x: pad, y: 44, fontFamily: KR, fontSize: 23, fill: MUT },
+            'softmax(logit / T) — 다음 토큰 후보의 확률'),
+          h('text', { key: 'h2', x: W - pad, y: 44, textAnchor: 'end', fontFamily: KR,
+            fontSize: 22, fill: '#C9C7D6' }, '회색 = top_p 로 잘린 후보'),
+          h('text', { key: 'n', x: pad, y: 496, fontFamily: KR, fontSize: 21, fill: MUT },
+            '로짓은 고정한 개념 예시 — 확률은 실제 softmax 로 계산한 값이다'),
+        ]));
+    })();
+
+    // ── 시스템 프롬프트 ─────────────────────────────────────────
+    const sysPrompt = (() => {
+      const W = 1720, H = 470;
+      const panel = (x, w, lab, lines, col, bg) => h('g', { key: lab },
+        h('rect', { x: x, y: 40, width: w, height: 340, rx: 18, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + 32, y: 92, fontFamily: EN, fontSize: 27, fontWeight: 800,
+          fill: col }, lab),
+        lines.map((t, i) => h('text', { key: i, x: x + 32, y: 148 + i * 46,
+          fontFamily: KR, fontSize: 24, fill: 'var(--fg-2)' }, t)));
+      return svg(W, H, [
+        panel(20, 540, 'system', ['“너는 도시계획 전문가다.”',
+          '“전문 용어를 그대로 쓴다.”', '“모르면 모른다고 답한다.”'], VIO, '#FAF6FF'),
+        h('text', { key: 'p1', x: 588, y: 216, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 36, fill: AX }, '+'),
+        panel(616, 540, 'user', ['“계획인구가 뭐죠?”'], ACC, '#EEF0FE'),
+        h('text', { key: 'p2', x: 1184, y: 216, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 36, fill: AX }, '→'),
+        panel(1212, 488, 'assistant', ['“목표연도에 계획으로', ' 설정한 인구를',
+          ' 말합니다. …”'], GRN, '#EDF9F4'),
+        h('text', { key: 'n', x: 20, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '역할을 부여하면 말투도 형식도 바뀐다 — RLHF 가 이 자리를 특히 강하게 학습시켰다'),
+      ]);
+    })();
+
+    // ── 컨텍스트 있고 없고 ──────────────────────────────────────
+    const withContext = (() => {
+      const W = 1720, H = 470;
+      const card = (x, w, tag, tagCol, q, a, aCol, bg) => h('g', { key: tag },
+        h('rect', { x: x, y: 30, width: w, height: 350, rx: 18, fill: bg,
+          stroke: tagCol, strokeWidth: 3 }),
+        h('text', { x: x + 32, y: 82, fontFamily: KR, fontSize: 25, fontWeight: 800,
+          fill: tagCol }, tag),
+        h('text', { x: x + 32, y: 146, fontFamily: KR, fontSize: 24, fill: MUT }, q),
+        a.map((t, i) => h('text', { key: i, x: x + 32, y: 214 + i * 44, fontFamily: KR,
+          fontSize: 25, fill: aCol, fontWeight: i === 0 ? 700 : 400 }, t)));
+      return svg(W, H, [
+        card(20, 820, '자료 없이 물으면', RED,
+          'user — 이 수업 수강생의 전공은?',
+          ['“공개된 자료가 아니라',
+           ' 정확한 정보를 드리기 어렵습니다.',
+           ' 일반적으로는 컴퓨터공학,',
+           ' 데이터사이언스 등이…”'], 'var(--fg-3)', '#FDF0F0'),
+        card(880, 820, '시스템 프롬프트에 명단을 실으면', GRN,
+          'user — 이 수업 수강생의 전공은?',
+          ['“건축공학과, 관광학과,',
+           ' 도시개발경영전공, 도시공학과,',
+           ' 스마트시티공학과 …”'], 'var(--fg-2)', '#EDF9F4'),
+        h('text', { key: 'n', x: 20, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '30 LLM RAG.ipynb — 같은 모델, 같은 질문, 같은 온도. 다른 것은 실어 준 자료뿐이다.'),
+      ]);
+    })();
+
+    // ── RAG 이름 풀이 ───────────────────────────────────────────
+    const ragName = (() => {
+      const W = 1720, H = 300;
+      const w = (x, big, ko, col) => h('g', { key: big },
+        h('text', { x: x, y: 100, fontFamily: EN, fontSize: 62, fontWeight: 800,
+          fill: col }, big),
+        h('text', { x: x, y: 158, fontFamily: KR, fontSize: 28, fill: INK }, ko));
+      return svg(W, H, [
+        w(60, 'Retrieval', '찾아서', ACC),
+        w(560, 'Augmented', '보태서', VIO),
+        w(1120, 'Generation', '만든다', GRN),
+        h('text', { key: 'a1', x: 500, y: 96, fontFamily: EN, fontSize: 44, fill: AX },
+          '→'),
+        h('text', { key: 'a2', x: 1058, y: 96, fontFamily: EN, fontSize: 44, fill: AX },
+          '→'),
+        h('text', { key: 'n', x: 60, y: 246, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-3)' },
+          '모델을 다시 학습시키지 않는다 — 입력만 바꾼다. 그래서 싸고 빠르다.'),
+      ]);
+    })();
+
+    // ── RAG 흐름 ────────────────────────────────────────────────
+    const ragFlow = (() => {
+      const W = 1720, H = 480;
+      const node = (x, y, w, hh, t, sub, col, bg) => h('g', { key: t },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 16, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + w / 2, y: y + hh / 2 - 2, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 26, fontWeight: 800, fill: col }, t),
+        h('text', { x: x + w / 2, y: y + hh / 2 + 36, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 20, fill: 'var(--neutral-medium)' }, sub));
+      const ar = (x1, y1, x2, y2, k) => h('line', { key: 'a' + k, x1: x1, y1: y1,
+        x2: x2, y2: y2, stroke: '#C9C7D6', strokeWidth: 3 });
+      return svg(W, H, [
+        node(30, 160, 260, 130, '질문', '사용자', '#fff', 'rgba(255,255,255,.10)'),
+        ar(290, 224, 350, 224, 1),
+        node(352, 160, 300, 130, '자료를 찾는다', '검색 · 벡터DB · API', '#8ED6FF',
+          'rgba(142,214,255,.14)'),
+        ar(652, 224, 712, 224, 2),
+        node(714, 160, 320, 130, '프롬프트에 싣는다', 'system + 찾은 자료', '#C4A2FF',
+          'rgba(196,162,255,.14)'),
+        ar(1034, 224, 1094, 224, 3),
+        node(1096, 160, 280, 130, 'LLM', '답을 만든다', '#00E49B',
+          'rgba(0,228,155,.14)'),
+        ar(1376, 224, 1436, 224, 4),
+        node(1438, 160, 250, 130, '답변', '근거와 함께', '#fff',
+          'rgba(255,255,255,.10)'),
+        h('text', { key: 'n1', x: 352, y: 336, fontFamily: KR, fontSize: 23,
+          fill: '#8ED6FF' }, '↑ 여기가 “Retrieval” — 오늘은 손으로 넣었다'),
+        h('text', { key: 'n2', x: 352, y: 380, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' }, '   다음 시간에 벡터로 자동화한다'),
+        h('text', { key: 'n3', x: 30, y: 116, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' }, '사용자가 보는 것은 양 끝 두 개뿐이다'),
+      ]);
+    })();
+
+    // ── 컨텍스트 한계 ───────────────────────────────────────────
+    const ctxLimit = (() => {
+      const W = 1080, H = 740;
+      const g = [];
+      // 577페이지를 칸으로, 들어가는 만큼만 색칠한다
+      const COLS = 24, ROWS = 25, cw = 38;
+      const FIT = 60;
+      for (let i = 0; i < 577; i++) {
+        const c = i % COLS, r = Math.floor(i / COLS);
+        g.push(h('rect', { key: i, x: 60 + c * cw, y: 130 + r * 20,
+          width: cw - 4, height: 16, rx: 3,
+          fill: i < FIT ? ACC : '#E4E2EC' }));
+      }
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('text', { key: 'h', x: 60, y: 62, fontFamily: KR, fontSize: 26,
+          fontWeight: 700, fill: INK }, '안동시 2040 도시군기본계획'),
+        h('text', { key: 'h2', x: 60, y: 102, fontFamily: EN, fontSize: 24, fill: MUT },
+          '577 pages'),
+        g,
+        h('rect', { key: 'k1', x: 60, y: 656, width: 26, height: 26, rx: 5, fill: ACC }),
+        h('text', { key: 'k1t', x: 100, y: 678, fontFamily: KR, fontSize: 23,
+          fill: INK }, '한 번에 넣을 수 있는 분량'),
+        h('rect', { key: 'k2', x: 520, y: 656, width: 26, height: 26, rx: 5,
+          fill: '#E4E2EC' }),
+        h('text', { key: 'k2t', x: 560, y: 678, fontFamily: KR, fontSize: 23,
+          fill: MUT }, '넣지 못하는 나머지'),
+        h('text', { key: 'n', x: 60, y: 718, fontFamily: KR, fontSize: 21, fill: MUT },
+          '비율은 개념 예시 — 문서 밀도와 모델에 따라 달라진다'),
+      ]);
+    })();
+
+    // ── 온톨로지 3계층 ─────────────────────────────────────────
+    const ontologyChain = (() => {
+      const W = 1720, H = 250;
+      const box = (x, w, t, sub, col, fill) => h('g', { key: t },
+        h('rect', { x: x, y: 62, width: w, height: 116, rx: 16, fill: fill,
+          stroke: col, strokeWidth: 3 }),
+        h('text', { x: x + w / 2, y: 112, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 30, fontWeight: 800, fill: col }, t),
+        h('text', { x: x + w / 2, y: 150, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, sub));
+      const arrow = (x) => h('g', { key: 'a' + x },
+        h('line', { x1: x, y1: 120, x2: x + 62, y2: 120, stroke: '#9C99B4',
+          strokeWidth: 3 }),
+        h('path', { d: 'M' + (x + 62) + ' 120 l-14 -8 v16 z', fill: '#9C99B4' }));
+      return svg(W, H, [
+        box(0, 372, '사람의 말', '자연어 질문', INK, '#fff'),
+        arrow(378),
+        box(452, 372, 'LLM', '질문을 구조로 바꾼다', ACC, '#EEEDFB'),
+        arrow(830),
+        box(904, 372, 'Ontology Layer', '무엇이 어디 있는지의 지도', VIO, '#F5EFFE'),
+        arrow(1282),
+        box(1348, 372, 'Data Hub', '실제 테이블', GRN, '#E8F8F1'),
+        h('text', { key: 'n', x: 0, y: 224, fontFamily: KR, fontSize: 22, fill: MUT },
+          '온톨로지가 없으면 LLM 이 아무리 좋아도 못 찾는다 — 붙이는 일의 8 할이 이 가운데 층이다'),
+      ]);
+    })();
+
+    // ── 프롬프트 → 프로토콜 4 단계 ─────────────────────────────
+    const protoTimeline = (() => {
+      const W = 1720, H = 470;
+      const STEP = [
+        { y: '2021~2022', t: 'system 이라는 role', s: '역할을 미리 정해 준다',
+          c: ACC, tag: 'System Prompt' },
+        { y: '2022~2023', t: 'RAG 와 tool', s: '자료를 싣고 도구를 쥐여 준다',
+          c: VIO, tag: 'LangChain' },
+        { y: '2023~2024', t: 'tool_calls 가 토큰으로', s: '프레임워크가 모델 안으로',
+          c: AMB, tag: 'Tool Calling' },
+        { y: '2024~2025', t: '형식이 표준이 된다', s: 'JSON-RPC · stdio · SSE',
+          c: GRN, tag: 'MCP' },
+      ];
+      const CW = 386, GAP = 59;
+      const cards = STEP.map((d, i) => {
+        const x = i * (CW + GAP);
+        return h('g', { key: i },
+          h('rect', { x: x, y: 96, width: CW, height: 236, rx: 18, fill: '#fff',
+            stroke: d.c, strokeWidth: 3 }),
+          h('rect', { x: x, y: 96, width: CW, height: 9, rx: 4.5, fill: d.c }),
+          h('text', { x: x + 28, y: 152, fontFamily: EN, fontSize: 23,
+            fontWeight: 700, fill: d.c }, d.y),
+          h('text', { x: x + 28, y: 200, fontFamily: KR, fontSize: 29,
+            fontWeight: 800, fill: INK }, d.t),
+          h('text', { x: x + 28, y: 240, fontFamily: KR, fontSize: 22, fill: MUT },
+            d.s),
+          h('rect', { x: x + 28, y: 266, width: 8, height: 8, rx: 4, fill: d.c }),
+          h('text', { x: x + 46, y: 275, fontFamily: EN, fontSize: 22,
+            fontWeight: 700, fill: d.c }, d.tag));
+      });
+      const arrows = [0, 1, 2].map(i => {
+        const x = (i + 1) * CW + i * GAP + 8;
+        return h('path', { key: 'ar' + i,
+          d: 'M' + x + ' 214 h' + (GAP - 22) + ' l-14 -9 v18 z', fill: '#B9B6CC' });
+      });
+      return svg(W, H, [
+        h('line', { key: 'base', x1: 0, y1: 60, x2: 1720, y2: 60, stroke: '#E4E2EC',
+          strokeWidth: 3 }),
+        h('text', { key: 'l', x: 0, y: 42, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: MUT }, '사람이 쓰는 말'),
+        h('text', { key: 'r', x: 1720, y: 42, textAnchor: 'end', fontFamily: KR,
+          fontSize: 24, fontWeight: 700, fill: MUT }, '기계가 파싱하는 구조체'),
+        cards, arrows,
+        h('text', { key: 'n', x: 0, y: 396, fontFamily: KR, fontSize: 23, fill: MUT },
+          '네 단계 모두 “가중치를 고친” 것이 아니다 — 전부 입력을 어떻게 넣느냐의 이야기다'),
+        h('text', { key: 'n2', x: 0, y: 434, fontFamily: KR, fontSize: 23,
+          fill: '#B9B6CC' }, '가로 간격은 단계 순서 — 연도 축척이 아니다'),
+      ]);
+    })();
+
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      cutoff, tempDemo, sysPrompt, withContext, ragName, ragFlow, ctxLimit,
+      ontologyChain, protoTimeline,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

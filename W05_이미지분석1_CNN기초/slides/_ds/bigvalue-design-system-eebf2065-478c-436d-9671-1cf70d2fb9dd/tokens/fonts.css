@@ -1,0 +1,34 @@
+/* ============================================================
+   BigValue — Fonts  (LOCAL PRESENTER BUILD)
+   Mona Sans (display/English/numerics), Pretendard (Korean/UI body).
+
+   Diverges from the uploaded design system on purpose:
+   1. Pretendard was declared against
+        cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/...
+      which 404s, so the Korean face never loaded and every slide fell back to
+      a system sans. Now self-hosted from ../fonts/.
+   2. Mona Sans shipped as six static weights + a variable woff2. The variable
+      file is >256KiB and could not be pulled intact, so a single variable
+      Latin face (@fontsource-variable/mona-sans, wght 200-900) replaces all of
+      them — same axis range the old @font-face rules spanned.
+   3. The Nanum Gothic Coding @import (Google Fonts) is dropped: --font-mono is
+      referenced 0 times in this deck, and it was the last network dependency.
+
+   Net effect: the presenter renders identically with no network at all.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Mona Sans';
+  src: url('../fonts/MonaSansVariable.woff2') format('woff2-variations');
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  src: url('../fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+}

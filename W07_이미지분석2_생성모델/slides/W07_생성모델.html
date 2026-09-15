@@ -1,0 +1,2516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W07_생성모델</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 012 Gen AI Image.pptx p.1 · 강의영상 cross entropy 00:00 · 21 GAN.ipynb — 7주차. 지금까지는 있는 이미지를 읽었다. 오늘은 없던 이미지를 만든다. 그런데 만들려면 먼저 바꿔야 할 것이 하나 있다 — 손실을 보는 방식이다. 지금까지는 예측값과 실제값을 하나씩 맞댔다. 오늘부터는 분포와 분포를 맞댄다. 그 이야기를 1부에서 먼저 하고 생성 모델 세 갈래로 간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(0,228,155,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">7주차 · 이미지 분석 2</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.12;letter-spacing:-0.03em">생성 모델</h1>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">없던 이미지를 만들어 낸다는 것은 무엇을 학습한 것인가</p>
+  <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">한양대학교 도시공학과 · 21 GAN.ipynb · 24 Autoencoder.ipynb · 25 diffusion.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 흐름" data-screen-label="02" data-speaker-notes="출처: 012 Gen AI Image.pptx p.2 — 오늘 순서. 1부가 오늘의 진짜 준비운동이다. 손실을 분포로 보는 법. 그다음 GAN, 오토인코더, 확산 순으로 간다. 셋을 다 다루는 이유는 지금 쓰는 모델이 셋의 합이기 때문이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 흐름</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">네 걸음</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="weekMap"></span></div>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="03" data-speaker-notes="출처: 신규 — 오늘의 질문. 없던 이미지를 만들어 낸다는 것은 무엇을 학습한 것인가. 학생들에게 먼저 던질 것. 흔한 오답이 이미지를 외운 것 아니냐는 것이다. 그렇다면 새 이미지가 나올 수 없다. 답은 분포다. 그 답에 도달하려면 손실을 보는 눈부터 바꿔야 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 질문</div>
+  <h2 style="margin:0;font-size:72px;font-weight:800;line-height:1.2;letter-spacing:-0.025em;max-width:1620px">없던 이미지를 만들어 낸다는 것은<br>무엇을 학습한 것인가?</h2>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1620px">이미지를 <b style="color:var(--fg-1)">외운 것</b>이라면 새 이미지가 나올 수 없다. 그럼 무엇을 배운 것인가.</p>
+</section>
+
+<section data-deck="0" data-label="지금까지의 손실" data-screen-label="04" data-speaker-notes="출처: 012 Gen AI Image.pptx p.4 · 강의영상 cross entropy 00:00–02:00 — 되짚기. 지금까지 우리가 쓴 손실은 평균제곱오차였다. 초록 선이 예측이고 점이 실제값이다. 그 차이를 모아 역전파했다. 이건 값 하나와 값 하나를 맞대는 방식이다. 그런데 통계에는 다른 방식이 있다 — 최대우도법이다. 내가 관측한 데이터를 가장 잘 설명하는 분포가 무엇이냐를 묻는다. 비슷해 보이지만 전혀 다르다. 하나는 값이 맞느냐, 하나는 분포가 맞느냐다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1부 · 손실을 보는 눈을 바꾼다</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">값을 맞댈 것인가, 분포를 맞댈 것인가</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="mseVsMle"></span></div>
+</section>
+
+<section data-deck="0" data-label="어느 분포가 맞나" data-screen-label="05" data-speaker-notes="출처: 012 Gen AI Image.pptx p.5 · 강의영상 cross entropy 04:00–06:00 — 최대우도법을 그림 하나로 본다. 1, 4, 5, 6, 9 다섯 값이 관측됐다. 분포 후보가 둘이다. 빨간 것과 파란 것. 어느 쪽이 이 데이터를 더 잘 설명하나. 눈으로 봐도 빨간 쪽이다. 계산은 이렇게 한다 — 1이 이 분포에서 나올 확률, 4가 나올 확률, 5, 6, 9까지 전부 구해 곱한다. 그 값이 가장 큰 분포를 고른다. 파란 쪽에서 1과 4를 뽑을 확률은 아주 낮으니 곱하면 작아진다. 그래서 빨간 쪽이 이긴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:700px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s05_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>관측값 1·4·5·6·9 와 두 개의 후보 정규분포</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">최대우도법</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">어느 분포가<br>이 점들을 설명하나</h2>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">1이 나올 확률 × 4가 나올 확률 × 5 × 6 × 9<br>— 이 값이 <b style="color:var(--fg-1)">가장 큰 분포</b>를 고른다.</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">파란 쪽에서 1과 4를 뽑을 확률은 아주 낮다. 곱하면 <b style="color:var(--fg-1)">작아진다.</b></p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="왜 분포인가" data-screen-label="06" data-speaker-notes="출처: 강의영상 cross entropy 02:00–03:00 — 여기가 오늘 1부의 핵심 이유다. 왜 굳이 분포를 배우려 하나. 분포를 알면 거꾸로 할 수 있기 때문이다. 값 하나를 맞히는 모델은 그 값밖에 못 낸다. 그런데 분포를 알면 그 분포에서 새로 뽑을 수 있다. 그게 곧 생성이다. 이미지도 마찬가지다 — 어떤 이미지의 픽셀값이 딱 고정된 값이라기보다 어떤 분포를 따르는 관측값으로 볼 수 있다. 그 분포를 알아내면 그 분포에서 새 이미지를 뽑는다. 오늘 배울 모든 모델이 이 한 문장 위에 서 있다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 80% 28%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">오늘 전체의 전제</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">분포를 알면<br><span style="color:var(--accent-green)">거꾸로 뽑을 수 있다</span></h2>
+  <div style="height:280px;border-radius:18px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/gn_sample_back.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>관측점에 맞춘 분포에서 새 점들이 거꾸로 뽑혀 나오는 그림</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#fff">값을 맞히는 모델</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">그 값밖에 못 낸다. <b style="color:#fff">외운 것</b>을 다시 내놓는 데 가깝다.</p>
+    </div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#00E49B">분포를 맞히는 모델</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">그 분포에서 <b style="color:#fff">새로 뽑을 수 있다.</b> 그게 곧 생성이다.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">이미지 픽셀값도 고정된 값이 아니라 <b style="color:#fff">어떤 분포를 따르는 관측값</b>으로 볼 수 있다.</p>
+</section>
+
+<section data-deck="0" data-label="코드 길이 이야기" data-screen-label="07" data-speaker-notes="출처: 012 Gen AI Image.pptx p.6–7 · 강의영상 cross entropy 06:00–09:00 — 잠깐 정보이론으로 샌다. 왜 이 이야기를 하는지 학생들이 의아해할 텐데, 듣고 나면 크로스 엔트로피가 그냥 이해된다고 미리 말해 줄 것. A부터 I까지 아홉 글자를 0과 1로 코드화한다. 순서대로 매기면 A 는 한 칸, B 도 한 칸, C 는 두 칸, 뒤로 갈수록 한 칸씩 길어진다. 칸 그림을 손으로 짚어 가며 길이가 자라는 것을 보여 줄 것. 이 규칙으로 EGG, BED, HI, HEAD 네 단어를 적어 보면 9비트, 6비트, 7비트, 9비트 — 합쳐서 31비트다. 여기서 질문을 던진다. 이 배정이 합리적인가? 세 번이나 나오는 E 가 세 칸을 쓰고, 한 번밖에 안 나오는 A 가 한 칸을 쓴다. 거꾸로다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">잠깐 — 코드 길이 이야기</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">듣고 나면 크로스 엔트로피가 그냥 이해된다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="codeLen"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">네 단어를 적는 데 <b style="color:var(--fg-1)">31비트</b>가 들었다. 길이가 길수록 비용이다 — 이 배정이 합리적인가?</p>
+</section>
+
+<section data-deck="0" data-label="빈도순으로 다시 매긴다" data-screen-label="08" data-speaker-notes="출처: 012 Gen AI Image.pptx p.7 · 강의영상 cross entropy 09:00–12:00 — 그럼 자주 나오는 글자에 짧은 코드를 주면 얼마나 이득인지 직접 세어 본다. 먼저 빈도순으로 다시 줄을 세운다. E 가 세 번으로 제일 많고, D·G·H 가 두 번, A·B·I 가 한 번, C 와 F 는 한 번도 안 나온다. 이 순서대로 짧은 코드부터 나눠 준다 — E 가 0, D 가 1, G 가 10, H 가 11, 그다음이 세 칸짜리, 마지막 F 가 네 칸이다. 규칙은 바꾸지 않았다. 짧은 코드부터 차례로 나눠 주는 것은 똑같고, 나눠 주는 순서만 바꿨다. 그리고 같은 네 단어를 다시 적어 본다. EGG 가 9비트에서 5비트로, BED 가 6에서 5로, HI 가 7에서 5로, HEAD 가 9에서 7로 줄었다. 합쳐서 31비트가 22비트가 됐다. 29퍼센트를 줄였는데 정보는 하나도 안 잃었다. 이게 압축이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">자주 나오는 것부터 <span style="color:var(--primary-main)">짧은 코드를</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">규칙은 그대로, 나눠 주는 순서만 바꾼다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="codeResort"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5"><b style="color:#00E49B">31비트가 22비트</b>가 됐다 — 29% 를 줄였는데 정보는 하나도 잃지 않았다.</div>
+</section>
+
+<section data-deck="0" data-label="어느 쪽이 효율적인가" data-screen-label="09" data-speaker-notes="출처: 012 Gen AI Image.pptx p.8 · 강의영상 cross entropy 09:00–12:00 — 이제 한 글자당 평균 몇 칸을 쓰는지로 두 방식을 맞대 본다. 표를 왼쪽부터 짚어 줄 것. 확률에 그 글자의 코드 길이를 곱하고 전부 더한다. 순서대로 매긴 코드는 2.58칸, 빈도순으로 다시 매긴 코드는 1.83칸이다. 앞 장의 31비트와 22비트를 글자 수 12로 나눈 값 그대로다 — 학생이 검산할 수 있으니 그렇게 말해 줄 것. 특히 E 를 볼 것 — 확률 25퍼센트에 길이 3이라 0.75를 혼자 먹고 있었는데, 길이 1로 바꾸니 0.25가 됐다. 반대로 한 번도 안 나오는 F 는 네 칸을 줘도 확률이 0이라 아무 비용도 안 든다. 압축이 하는 일이 정확히 이것이다. BMP 는 모든 픽셀에 같은 칸을 주고, GIF 는 쓰는 색이 20개뿐이면 그 번호만 쓴다. zip 도 같은 원리다. 이 가장 효율적인 평균 길이가 엔트로피다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 글자에 <span style="color:var(--primary-main)">평균 몇 칸</span>을 쓰는가</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">확률 × 길이를 전부 더한 값</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="entropyGain"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">확률이 큰 글자에 <b style="color:#00E49B">짧은 칸</b>을 줬더니 평균이 내려갔다. 이 <b style="color:#00E49B">가장 효율적인 평균 길이</b>가 엔트로피다.</div>
+</section>
+
+<section data-deck="0" data-label="정보량은 어떤 모양이어야 하나" data-screen-label="10" data-speaker-notes="출처: 012 Gen AI Image.pptx p.8 · 강의영상 cross entropy 12:00 — 여기서 한 단계 올라간다. 지금까지는 코드 길이를 손으로 정했다. 이제 그걸 함수로 만들어 보자. 가로축을 그 글자가 나올 확률, 세로축을 그 글자에 줄 정보량, 즉 길이라고 하자. 어떤 모양이어야 하나. 학생들에게 먼저 생각하게 할 것. 네 후보를 본다. 첫째, 상수. 다 같은 길이를 주는 것 — 우리가 처음에 한 짓이고, 자주 나오는 것에 아무 이득이 없다. 둘째, 선형으로 깎는 것. 방향은 맞는데 확률이 0에 가까운 것에도 길이가 1밖에 안 늘어난다. 거의 안 나오는 것에는 아주 긴 코드를 줘도 손해가 없으니 아까운 것이다. 셋째, 반비례. 0 근처에서 무한히 커지는 것은 좋은데 너무 급하다. 그리고 결정적인 이유가 하나 더 있다 — 독립된 두 사건이 같이 일어날 확률은 곱해진다. 그런데 그 둘을 적는 데 드는 길이는 더해져야 한다. 곱을 합으로 바꾸는 함수는 로그뿐이다. 그래서 네 번째, 마이너스 로그가 답이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그럼 <span style="color:var(--primary-main)">어떤 모양</span>이어야 하나</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">가로축 P(x) · 세로축 그 글자에 줄 길이</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="idealShape"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">두 사건이 같이 일어날 확률은 <b style="color:#FF7AA2">곱해진다.</b> 그런데 적는 길이는 <b style="color:#00E49B">더해져야</b> 한다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">곱을 합으로 바꾸는 함수는 로그뿐이다 — 그래서 −log 다.</span></div>
+</section>
+
+<section data-deck="0" data-label="이것을 엔트로피라 부른다" data-screen-label="11" data-speaker-notes="출처: 012 Gen AI Image.pptx p.8 · 강의영상 cross entropy 12:00–13:00 — 앞 장에서 고른 그 함수에 이름을 붙인다 — 엔트로피다. 마이너스 로그 x 를 그려 보면 0과 1 사이에서 양수이고, 1에 가까울수록 값이 작아지고 0에 가까울수록 무한히 커진다. 정확히 우리가 원하던 길이의 성질이다. 자주 나오면 짧게, 드물면 길게. 그래서 확률에 마이너스 로그를 곱해 전부 더한 것이 엔트로피다. 데이터가 효율적으로 잡혀 있을수록 이 값이 작아진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">이름을 붙인다</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이것을<br><span style="color:var(--primary-main)">엔트로피</span>라 부른다</h2>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">확률이 <b style="color:var(--fg-1)">1에 가까우면</b> 값이 거의 0 — 짧은 코드.<br>확률이 <b style="color:var(--fg-1)">0에 가까우면</b> 값이 무한대 — 긴 코드.</div>
+    <div style="padding:26px 30px;background:var(--primary-pale);border-radius:14px;font-family:var(--font-display);font-size:30px;font-weight:700;color:var(--primary-dark);text-align:center">H(P) = − Σ P(x) · log P(x)</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">확률 × 길이를 <b style="color:var(--fg-1)">전부 더한 것</b>. 효율적일수록 작아진다.</p>
+  </div>
+  <div style="height:700px;background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--primary-main);padding-left:26px">entropy</div>
+    <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/gn_s08_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>y = −log x — 0 에 가까울수록 무한히 커지고 1 에서 0 을 지나 아래로 내려간다</span></div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 26px">
+      <span style="font-family:var(--font-display);font-size:28px;font-weight:800;color:#D93636">y = − log x</span>
+      <span style="font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--primary-main)">p(x)</span>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="분포가 다르면 엔트로피가 다르다" data-screen-label="12" data-speaker-notes="출처: 신규 · 012 Gen AI Image.pptx p.8 확장 — 엔트로피가 무엇을 재는 값인지 직접 움직여 보며 확인한다. 마우스를 화면 위에서 왼쪽으로 끌면 여덟 글자가 고르게 나오는 데이터셋이 되고, 오른쪽으로 끌면 한 글자에 몰린 데이터셋이 된다. 학생들에게 먼저 예측하게 할 것 — 어느 쪽이 엔트로피가 클까. 왼쪽 끝, 완전히 균등할 때가 가장 크다. 여덟 글자면 3비트다. 다음에 뭐가 나올지 전혀 모르니 그만큼 적어 둘 것이 많다는 뜻이다. 오른쪽으로 갈수록 값이 내려간다. 거의 항상 A 만 나오는 데이터셋은 한 글자당 0비트에 가까워진다. 이미 답을 아니까 적을 것이 없다. 여기서 엔트로피의 뜻을 두 가지로 정리해 줄 것. 첫째, 압축했을 때 한 글자당 필요한 최소 비트 수다. 둘째, 그 분포가 얼마나 예측하기 어려운지다. 둘은 같은 말이다. 그리고 한마디 더 — 앞 장의 A~I 예시에서 우리가 매긴 코드는 서로의 접두어가 되는 문제가 있었다. 그 제약까지 넣으면 최소 길이는 조금 더 커지고, 그 최소값이 바로 엔트로피다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">분포가 <span style="color:var(--primary-main)">뾰족할수록</span> 엔트로피가 작다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">마우스를 좌우로 움직여 보자</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="entropyPlay"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">엔트로피는 두 가지를 동시에 재는 값이다 — <b style="color:#00E49B">한 글자당 필요한 최소 비트 수</b>, 그리고 <b style="color:#00E49B">그 분포가 얼마나 예측하기 어려운지</b>.</div>
+</section>
+
+<section data-deck="0" data-label="크로스 엔트로피" data-screen-label="13" data-speaker-notes="출처: 012 Gen AI Image.pptx p.9 · 강의영상 cross entropy 13:00–17:00 — 여기가 1부의 결론이다. 크로스 엔트로피는 두 분포가 얼마나 비슷한지를 재는 것이다. 공식을 천천히 짚을 것. 앞의 확률은 실제 분포에서 가져오고, 뒤의 마이너스 로그, 즉 길이는 예측 분포에서 가져온다. 여기가 전부다. 확률은 실제에서, 길이는 예측에서." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">확률은 실제에서, 길이는 예측에서</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Cross Entropy</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s09_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>크로스 엔트로피 공식 — 앞은 실제 분포 확률, 뒤는 예측 분포의 −log</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">이 한 줄이 전부다. <b style="color:var(--fg-1)">앞은 실제 분포</b>에서, <b style="color:var(--fg-1)">뒤는 예측 분포</b>에서 가져온다.</p>
+</section>
+
+<section data-deck="0" data-label="예측이 빗나가면 폭발한다" data-screen-label="14" data-speaker-notes="출처: 신규 · 012 Gen AI Image.pptx p.9 확장 — 앞 장의 공식을 직접 움직여 본다. 왼쪽 회색 테두리가 실제 분포다. 고정이다. 색이 채워진 쪽이 모델이 내놓은 예측 분포다. 마우스를 왼쪽 끝에 두면 예측이 실제와 정확히 같다. 이때 크로스 엔트로피가 엔트로피와 같은 값이 된다. 이게 최소값이고, 더 내려갈 수 없다. 반드시 짚을 것 — 아무리 잘 맞혀도 엔트로피 아래로는 못 내려간다. 데이터 자체가 가진 불확실성은 없앨 수 없기 때문이다. 이제 마우스를 오른쪽으로 옮긴다. 예측이 실제와 어긋나기 시작하면 값이 올라간다. 오른쪽 표를 같이 볼 것. A 는 실제로 40퍼센트나 나오는데 모델이 1퍼센트라고 봤다. 마이너스 로그가 크게 튀고, 거기에 큰 실제 확률 0.4 가 곱해지니 A 하나가 전체의 절반을 넘게 먹는다. 이게 폭발이다. 자주 나오는 것을 낮게 본 죄가 제일 비싸다. 마지막으로 초록과 빨강으로 나뉜 막대를 가리킬 것 — 초록이 엔트로피, 빨강이 어긋나서 더 쓴 양이다. 그 빨간 부분이 다음 장의 KL 다이버전스다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:20px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">예측을 <span style="color:#D93636">틀어 보자</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">실제 분포는 고정 · 예측 분포만 마우스로 움직인다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="xentPlay"></span></div>
+  <div style="padding:24px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">아무리 잘 맞혀도 <b style="color:#00E49B">엔트로피 아래로는 못 내려간다.</b> 그 위에 얹히는 빨간 부분이 <b style="color:#FF7AA2">어긋나서 더 쓴 양</b>이다.</div>
+</section>
+
+<section data-deck="0" data-label="세 가지 경우로 정리하면" data-screen-label="15" data-speaker-notes="출처: 강의영상 cross entropy 15:00–17:00 — 왜 이게 손실로 쓸 만한지. 두 분포가 어긋나면 어떤 일이 생기나. 실제로는 아주 자주 나오는 것인데 예측이 낮게 봤다면, 마이너스 로그가 크게 튄다. 거기에 큰 실제 확률이 곱해지니 합이 폭발한다. 반대로 실제로는 거의 안 나오는데 예측이 높게 봤다면, 짧은 길이를 받는다. 조금밖에 안 나오는 것에 짧은 코드를 주는 것 — 정확히 비효율적인 코드 체계다. 즉 두 분포가 어긋난 만큼 전체 길이가 비효율적으로 늘어난다. 그 늘어난 양이 곧 손실이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">세 가지 경우로 <span style="color:#D93636">정리하면</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">그래서 손실로 쓸 만하다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="xentBlow"></span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">두 분포가 어긋난 만큼 <b style="color:#FF7AA2">전체 길이가 비효율적으로 늘어난다.</b> 그 늘어난 양이 곧 손실이다.</div>
+</section>
+
+<section data-deck="0" data-label="KL 다이버전스" data-screen-label="16" data-speaker-notes="출처: 012 Gen AI Image.pptx p.10 · 강의영상 cross entropy 18:00–19:00 — KL 다이버전스는 크로스 엔트로피에서 엔트로피를 뺀 것이다. 실제 분포 자체가 원래 가지고 있던 길이를 빼고 나면, 두 분포가 어긋나서 더 쓴 만큼만 남는다. 그림의 보라색 면적이 그것이다. KL 이 크면 두 분포가 멀리 떨어져 있다는 뜻이다. 한 가지 주의를 줄 것 — KL 은 방향성이 있어서 P 에서 Q 로 잰 값과 반대가 다르다. 그래서 대칭으로 만든 JSD 를 쓰기도 한다. GAN 의 손실이 바로 그 JSD 다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:740px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s10_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>두 정규분포와 그 사이의 KL 면적</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">KL Divergence</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">더 쓴 만큼만<br>남긴다</h2>
+    <div style="padding:26px 30px;background:var(--primary-pale);border-radius:14px;font-family:var(--font-display);font-size:27px;font-weight:700;color:var(--primary-dark);text-align:center">KL = 크로스 엔트로피 − 엔트로피</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">KL 이 크면 두 분포가 <b style="color:var(--fg-1)">멀리 떨어져 있다.</b></p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">KL 은 <b style="color:var(--fg-1)">방향이 있다</b> — P→Q 와 Q→P 가 다르다. 대칭으로 만든 것이 JSD 이고, <b style="color:var(--fg-1)">GAN 의 손실</b>이 그것이다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="지금부터는 분포 대 분포" data-screen-label="17" data-speaker-notes="출처: 강의영상 cross entropy 17:00 — 1부를 닫는다. 지금까지는 예측값과 실제값 둘을 비교했다. 지금부터는 다 뽑아 놓고 분포와 분포를 비교한다. 뒤에 나올 모든 이론이 이 가정 위에 있다. 학생들이 이 전환을 놓치면 오늘 나머지가 전부 흐릿해진다. 한 번 더 확인하고 넘어갈 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">1부 정리</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">지금부터는 <span style="color:var(--accent-green)">분포 대 분포</span>다</h2>
+  <div style="flex:1;min-height:0;max-height:280px"><span data-dc-slot="shiftView"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">뒤에 나올 모든 이론이 이 가정 위에 있다. <b style="color:#fff">여기서 놓치면 나머지가 흐려진다.</b></p>
+</section>
+
+<section data-deck="0" data-label="이미지에서는 무엇을 맞대는가" data-screen-label="18" data-speaker-notes="출처: 신규 — 여기서 반드시 짚고 넘어가야 할 구분이 하나 있다. 이미지 학습이 분포 차이로 역전파된다는 말은 맞다. 다만 그 분포가 무엇의 분포인지가 중요하다. 픽셀 하나하나의 값 분포, 즉 히스토그램이 아니다. 왼쪽 그림을 보여 줄 것 — 두 그림은 픽셀 값 히스토그램이 완전히 똑같다. 같은 값들을 자리만 바꿔 놓았기 때문이다. 그런데 하나는 모양이 있고 하나는 잡음이다. 히스토그램만 맞추면 오른쪽 같은 것이 나온다. 그러니까 맞대는 것은 이미지 한 장 전체가 나올 확률의 분포다. 500 곱하기 500 곱하기 4 짜리 이미지 한 장을 100만 차원 공간의 점 하나라고 보면, 실제 사진들이 만드는 점 구름과 모델이 만든 점 구름을 맞대는 것이다. 그런데 그 확률을 직접 계산할 수가 없다. 100만 차원에서 적분이 안 된다. 그래서 세 갈래가 생겼다. 각자 다른 방법으로 그 분포 차이를 숫자 하나로 바꾼다. GAN 은 판별자를 세워서 재고, 오토인코더는 복원 오차와 잠재분포의 KL 로 재고, 확산은 잡음을 얼마나 잘 맞혔는지로 잰다. 그 숫자 하나가 역전파로 흘러간다. 오늘 2부·3부·4부가 정확히 이 세 갈래다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:20px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이미지에서는 <span style="color:var(--primary-main)">무엇과 무엇</span>을 맞대는가</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">픽셀 히스토그램이 아니다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="pixelVsImage"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#9E5DF9">2부 GAN</b> — 판별자를 세워서 잰다</div>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#00B37A">3부 오토인코더</b> — 복원 오차와 잠재분포의 KL 로 잰다</div>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#E8873A">4부 확산</b> — 잡음을 얼마나 잘 맞혔는지로 잰다</div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">셋 다 분포 차이를 <b style="color:var(--fg-1)">숫자 하나</b>로 바꿔 역전파한다. 재는 방법이 다를 뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="GAN — 위조범과 감별사" data-screen-label="19" data-speaker-notes="출처: 012 Gen AI Image.pptx p.11 · 강의영상 GAN 00:00–02:00 · 21 GAN.ipynb — 2부다. GAN 은 2014년 논문이고 2018년쯤 폭발적으로 유행했다. 중고등학생들까지 커뮤니티에서 돌려 볼 정도였다. 이미지 생성을 대유행하게 만든 사실상의 태초 모델이다. 구조는 놀랄 만큼 간단하다. 두 모델이 있다. 하나는 가짜 이미지를 만드는 생성자, 하나는 진짜와 가짜를 구별하는 판별자다. 위조범과 감별사라고 생각하면 된다. 둘이 서로 속고 속이면서 같이 좋아진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2부 · GAN</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">위조범과 감별사</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="ganLoop"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">2014년 논문, 2018년쯤 대유행. <b style="color:var(--fg-1)">이미지 생성을 유행시킨 사실상의 태초 모델</b>이다.</p>
+</section>
+
+<section data-deck="0" data-label="둘 다 우리가 아는 모델이다" data-screen-label="20" data-speaker-notes="출처: 012 Gen AI Image.pptx p.12–13 · 강의영상 GAN 01:00–03:00 · 21 GAN.ipynb — 여기서 학생들이 안심해야 한다. 둘 다 이미 배운 것이다. 판별자는 5주차 외벽 모델과 똑같다. 이미지를 넣어 합성곱을 몇 번 지나 시그모이드로 0이냐 1이냐를 낸다. 진짜 이미지에 1, 가짜 이미지에 0을 붙여 학습시킨다. 생성자는 6주차 U-Net 의 올라오는 길이다. 100개짜리 난수 벡터 z 를 넣어 전치 합성곱으로 키워 이미지를 뱉는다. 진짜 이미지는 시장에서 긁어 오면 되는데 가짜 이미지가 없으니, 그걸 만들려고 생성자가 필요한 것이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">둘 다 이미<br>배운 것이다</h2>
+    <div style="padding:26px 30px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">판별자</b> — 5주차 외벽 모델 그대로. 합성곱 몇 번, 시그모이드로 0/1.</div>
+    <div style="padding:26px 30px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">생성자</b> — 6주차 U-Net 의 <b style="color:var(--fg-1)">올라오는 길</b>. 난수 100개를 전치 합성곱으로 키운다.</div>
+    <div style="padding:26px 30px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">진짜 이미지는 시장에서 긁어 오면 된다. <b style="color:var(--primary-dark)">가짜 이미지가 없어서</b> 생성자가 필요한 것이다.</div>
+  </div>
+  <div style="height:720px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s12_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>DCGAN 생성자 — 난수 100개에서 이미지까지 전치 합성곱으로 키운다</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="① 생성자를 잠그고 판별자를 가르친다" data-screen-label="21" data-speaker-notes="출처: 강의영상 GAN 02:00–04:00 · 21 GAN.ipynb — 학습 절차를 두 장으로 나눠서 본다. 첫 번째 차례다. 생성자에 자물쇠를 건다. 가중치를 아예 고정해서 이번 차례에는 한 글자도 안 바뀌게 한다. 그 잠근 생성자로 가짜 이미지 만 장을 찍어 둔다. 여기에 진짜 이미지 만 장을 가져온다. 이 이만 장으로 판별자를 학습시킨다. 진짜에는 1, 가짜에는 0을 붙여 주면 된다. 5주차에 벽돌과 대리석을 맞혔던 그 문제와 똑같다. 그래서 아주 잘 맞힌다. 그림에서 보라색 점선을 짚어 줄 것 — 손실에서 되돌아오는 기울기가 판별자에서 멈춘다. 자물쇠가 걸린 생성자까지는 가지 않는다. 이 차례가 끝나면 판별자는 지금의 가짜를 꽤 잘 골라낸다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">첫 번째 차례</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">생성자를 잠그고 <span style="color:var(--primary-main)">판별자</span>를 가르친다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="freezeG"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px">
+    <div style="padding:22px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">잠근 생성자로 <b style="color:var(--fg-1)">가짜 만 장</b>을 찍어 두고, <b style="color:var(--fg-1)">진짜 만 장</b>을 가져온다.</div>
+    <div style="padding:22px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">진짜에 <b style="color:var(--primary-dark)">1</b>, 가짜에 <b style="color:var(--primary-dark)">0</b> — 5주차 벽돌·대리석과 똑같은 문제다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="② 판별자를 잠그고 생성자를 가르친다" data-screen-label="22" data-speaker-notes="출처: 강의영상 GAN 02:00–04:00 · 21 GAN.ipynb — 두 번째 차례다. 이번에는 자물쇠를 반대쪽에 건다. 판별자를 고정한다. 여기가 GAN 에서 학생들이 제일 많이 헷갈리는 대목이니 천천히 갈 것. 생성자가 만든 가짜 이미지를 판별자에 넣는다. 그런데 정답을 0이 아니라 1로 준다. 즉 판별자가 이걸 진짜라고 답하게 만드는 방향으로 손실을 잡는다. 그 손실을 역전파한다. 보라색 점선을 손으로 따라가며 말해 줄 것 — 기울기가 판별자를 그대로 통과해서 생성자까지 흘러간다. 판별자는 잠겨 있으니 안 바뀌고, 생성자만 바뀐다. 판별자가 통로 역할만 하는 것이다. 진짜 이미지는 이 차례에 쓰지 않으니 그림에서도 흐리게 해 뒀다. 이 두 차례를 수십 수백 번 번갈아 돌리면, 어떤 난수를 줘도 사람이 가짜라고 알아채기 어려운 이미지가 나온다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#9E5DF9;font-weight:700">두 번째 차례 · 여기가 제일 헷갈린다</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">판별자를 잠그고 <span style="color:#9E5DF9">생성자</span>를 가르친다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="freezeD"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px">
+    <div style="padding:22px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">가짜 이미지에 정답을 <b style="color:var(--fg-1)">0 이 아니라 1</b> 로 준다 — 판별자가 속게 만드는 방향.</div>
+    <div style="padding:22px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">판별자는 <b style="color:#9E5DF9">통로</b>일 뿐이다. 기울기만 지나가고 가중치는 그대로다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="번갈아 잠근다" data-screen-label="23" data-speaker-notes="출처: 강의영상 GAN 04:00 · 21 GAN.ipynb — 두 차례를 한 장으로 모은다. ①과 ②를 수십 수백 번 번갈아 돈다. 판별자가 좋아지면 생성자가 더 어려운 문제를 풀게 되고, 생성자가 좋아지면 판별자가 더 어려운 문제를 풀게 된다. 서로를 밀어 올린다. 여기서 한마디 덧붙일 것 — 이 잠갔다 풀었다 하는 구조 때문에 학습이 느리고 불안정하다. 그 이야기가 뒤의 한계 장에서 다시 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">둘을 <span style="color:var(--primary-main)">번갈아</span> 돈다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">수십 수백 번</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="ganSteps"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">서로를 밀어 올린다. 대신 <b style="color:var(--fg-1)">잠갔다 풀었다</b> 하느라 느리고 불안정하다 — 뒤의 한계에서 다시 나온다.</p>
+</section>
+
+<section data-deck="0" data-label="minmax 한 줄" data-screen-label="24" data-speaker-notes="출처: 012 Gen AI Image.pptx p.11 · 강의영상 GAN 04:00–07:00 — 논문의 그 한 줄이다. min G, max D. 둘이 경합한다는 뜻이다. 뒷부분은 앞에서 말로 한 것과 똑같다. 판별자는 진짜에 1, 가짜에 0을 주도록 이 식을 최대로 만들고, 생성자는 그 반대로 최소로 만든다. 손실 자체는 KL 을 대칭으로 만든 JSD 를 쓴다. 여기서 중요한 것은 공식이 아니라, 경합 구조가 나중에 문제가 된다는 점이다. 다음 장에서 그 이야기를 한다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">논문의 그 한 줄</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">min G, max D — 둘이 경합한다</h2>
+  <div style="height:180px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s11_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GAN 의 minmax 목적함수</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:28px;font-weight:800;color:#fff">D 는 최대로</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">진짜에 <b style="color:#fff">1</b>, 가짜에 <b style="color:#fff">0</b> 을 주도록.</p></div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:28px;font-weight:800;color:#00E49B">G 는 최소로</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">판별자가 <b style="color:#fff">속도록</b>. 손실은 JSD 를 쓴다.</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="실습 — MNIST 로" data-screen-label="25" data-speaker-notes="출처: 012 Gen AI Image.pptx p.13 · 강의영상 GAN 08:00–11:00 · 21 GAN.ipynb — 실습이다. 텐서플로가 제공하는 코드를 그대로 돌린다. MNIST 필기체를 쓴다. 생성자는 난수 100개를 받아 덴스를 지나 전치 합성곱으로 28 곱하기 28 한 채널까지 키운다. 처음 생성자가 만든 이미지는 아무 의미 없는 잡음이다. 입력도 난수고 가중치도 난수니 당연하다. 학습을 30바퀴 돌리면 점점 필기체에 가까워진다. 오른쪽 그림은 정지 화면이 아니라 움직이는 그림이다 — 에폭이 지나며 잡음이 필기체로 잡혀 가는 과정이 그대로 돈다. 말로 설명하지 말고 잠깐 그냥 보게 둘 것. 손실은 binary cross entropy 다 — 1부에서 배운 그것이다. GPU 런타임으로 바꾸게 할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실습</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">난수 100개에서<br>필기체까지</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">처음 나오는 이미지는 <b style="color:var(--fg-1)">아무 의미 없는 잡음</b>이다. 입력도 난수, 가중치도 난수니 당연하다.</p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">오른쪽 그림은 <b style="color:var(--fg-1)">움직인다</b> — 30바퀴를 도는 동안 잡음이 필기체로 잡혀 간다. 손실은 <b style="color:var(--fg-1)">binary cross entropy</b>.</div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">런타임을 GPU 로 바꿀 것 — 21 GAN.ipynb</p>
+  </div>
+  <div style="height:740px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_dcgan.gif" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>에폭이 지나며 잡음이 필기체로 잡혀 가는 GAN 학습 과정</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="조건을 붙이면" data-screen-label="26" data-speaker-notes="출처: 012 Gen AI Image.pptx p.18–19 · Pix2Pix 논문 arXiv 1611.07004 — GAN 의 계보 중 도시 분야에서 제일 쓸모 있는 갈래다. 조건부 GAN 은 난수만 주는 게 아니라 조건을 같이 준다. Pix2Pix 는 그 조건이 이미지다. 스케치를 주면 진짜 같은 신발을 그려 낸다. 여기서 도시 데이터로 바로 이어 줄 것 — 6주차에 본 항공영상과 토지피복 라벨 쌍이 정확히 이 구조에 맞는다. 라벨에서 항공영상을 그리거나 그 반대가 된다. 실습 23 GAN_Pix2Pix.ipynb 가 이것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">조건을 붙이면 — Pix2Pix</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">23 GAN_Pix2Pix.ipynb</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s19_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Pix2Pix — 스케치를 주면 진짜 같은 신발을 그린다</span></div></div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">6주차의 <b style="color:#00E49B">항공영상 ↔ 토지피복 라벨</b> 쌍이 정확히 이 구조에 맞는다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">라벨에서 항공영상을 그리거나, 그 반대로.</span></div>
+</section>
+
+<section data-deck="0" data-label="GAN 은 왜 밀려났나" data-screen-label="27" data-speaker-notes="출처: 강의영상 GAN 05:00 · diffusion 03:00–04:00 — 한계를 말하는 슬라이드다. 지금 이 알고리즘은 사실상 밀려났다. 이유가 둘이다. 첫째, 경합 구조라 학습이 엄청 오래 걸린다. 판별자 학습했다 멈추고 생성자 학습했다 멈추고를 반복하니 느리고 불안정하다. 둘째가 더 본질적이다 — 판별자가 학습 이미지를 기준으로 진짜를 판단하기 때문에, 학습에 없던 새로운 것을 만들어 내지 못한다. 고해상도 이미지를 빠르게 만드는 건 잘하는데 다양성이 없다. 이 한계가 다음 두 모델의 출발점이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">잘 만들지만, <span style="color:#D93636">배운 것만</span> 만든다</h2>
+  <div style="height:360px;background:#fff;border-radius:18px;padding:20px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/gn_gan_limit.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>똑같은 도자기만 완벽하게 찍어 내는 공방과, 닫힌 문 너머의 낯선 형상들</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:38px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#D93636">학습이 오래 걸린다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">경합 구조라 <b style="color:var(--fg-1)">잠갔다 풀었다</b>를 반복한다. 느리고 불안정하다.</p>
+    </div>
+    <div style="background:#FDF0F0;border:2px solid #D93636;border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#D93636">다양성이 없다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">판별자가 <b style="color:var(--fg-1)">학습 이미지 기준</b>으로 진짜를 판단한다 — 배운 것 밖을 못 만든다.</p>
+    </div>
+  </div>
+  <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">이 한계가 <b style="color:#00E49B">다음 두 모델의 출발점</b>이다.</div>
+</section>
+
+<section data-deck="0" data-label="오토인코더" data-screen-label="28" data-speaker-notes="출처: 012 Gen AI Image.pptx p.27 · 강의영상 AutoEncoder 00:00–03:00 · 24 Autoencoder.ipynb — 3부다. 오토인코더는 사실 아주 단순하다. 데이터를 아주 작은 차원으로 줄였다가 다시 키워 원래와 같게 만든다. 줄이는 쪽이 인코더, 키우는 쪽이 디코더다. 여기서 5주차와 이어 줄 것 — 외벽 모델에서 25개 피처 벡터를 뽑았던 그것과 같은 자리다. 가운데 그 작은 벡터를 잠재변수, latent variable 이라고 부른다. GAN 의 z 와 같은 이름이다. 핵심 질문은 이것이다 — 몇 차원까지 줄여도 원래 데이터를 되살릴 수 있는가. 얼굴 사진을 100개 실수로 줄였다 되살렸더니 특징이 살아 있으면 괜찮다. 50개로 줄였더니 눈코입은 있는데 누구인지 모르겠으면 너무 줄인 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3부 · 오토인코더</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">줄였다가 되살린다</h2>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s27_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>오토인코더 — 이미지에서 잠재변수로, 다시 복원 벡터로</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">가운데 그 작은 벡터가 <b style="color:var(--fg-1)">잠재변수</b>다 — GAN 의 z 와 같은 이름이고, 5주차 피처 벡터와 같은 자리다.</p>
+</section>
+
+<section data-deck="0" data-label="한 층씩 쌓아 올린다" data-screen-label="29" data-speaker-notes="출처: 012 Gen AI Image.pptx p.29 · Hung-yi Lee, ML 2017 Autoencoder 강의자료 — 지금은 이렇게 안 하지만, 오토인코더가 왜 중요했는지 알려면 이 그림을 봐야 한다. 왼쪽 끝이 만들고 싶은 최종 모양이다. 784에서 1000, 1000, 500을 거쳐 10으로 가는 깊은 망이다. 그런데 당시에는 이걸 한 번에 학습시키면 기울기가 사라져서 앞쪽 층이 배우질 못했다. 그래서 한 층씩 쌓았다. 왼쪽에서 두 번째 칸을 볼 것. 먼저 784에서 1000으로 올렸다가 다시 784로 복원하는 작은 오토인코더 하나만 학습시켜 W1 을 얻는다. 다음 칸에서 그 W1 을 fix 로 고정한다. 방금 GAN 에서 본 그 잠금과 같은 말이다. 고정한 채로 그 위에 1000에서 1000을 올려 W2 를 얻고, 또 고정하고 그 위에 500을 올려 W3 를 얻는다. 이렇게 한 칸씩 쌓아 올린다. 마지막 칸에서 전부 이어 붙이고 라벨을 달아 전체를 한 번 미세조정한다. 빨간 화살표가 그 미세조정이다. 여기서 줄 메시지 — 층마다 표현을 따로 배운다는 이 발상이 나중의 사전학습과 전이학습으로 이어진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 층씩 <span style="color:var(--primary-main)">쌓아 올린다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">깊은 망을 한 번에 학습시킬 수 없던 시절의 방법</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s29_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>784→1000→1000→500→10 을 한 층씩 따로 학습해 쌓아 올리는 과정</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">한 칸만 먼저</b> — 784→1000→784 로 복원해 W¹ 을 얻는다</div>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">fix</b> 로 잠그고 그 위에 다음 칸을 올린다 — 조금 전 GAN 의 그 잠금이다</div>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">마지막에 전부 이어</b> 붉은 화살표로 한 번 미세조정한다</div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">층마다 표현을 따로 배운다는 이 발상이 <b style="color:var(--fg-1)">사전학습과 전이학습</b>으로 이어진다.</p>
+</section>
+
+<section data-deck="0" data-label="PCA 와 무엇이 다른가" data-screen-label="30" data-speaker-notes="출처: 012 Gen AI Image.pptx p.22 · 강의영상 AutoEncoder 04:00–05:00 · 24 Autoencoder.ipynb — 2주차에 배운 PCA 와 무엇이 다른지. PCA 는 선형이다. 2차원에 뿌려진 점들을 가장 잘 설명하는 직선 하나를 찾는 것이었다. 그 직선에 다 눌러 붙이니 점들 사이의 간극은 날아가지만 큰 분포는 살아난다. 오토인코더는 같은 일을 비선형으로 한다. 표에서 확인할 것 — 같은 랜덤 데이터를 복원했을 때 PCA 는 오차 0.024, 오토인코더는 0.010 이다. 절반 이하다. 차원 축소 기법의 계보에서 오토인코더가 비선형 쪽에 있다는 것도 짚어 줄 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:560px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s22_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>같은 데이터를 PCA 와 오토인코더로 복원했을 때의 오차 비교</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">2주차 PCA 와</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">선형이냐<br>비선형이냐</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">PCA 는 <b style="color:var(--fg-1)">직선 하나</b>로 줄인다. 오토인코더는 같은 일을 <b style="color:var(--fg-1)">휘어진 면</b>으로 한다.</p>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">같은 데이터 복원 오차 — PCA <b style="color:var(--fg-1)">0.024</b>, 오토인코더 <b style="color:var(--primary-main)">0.010</b>. 절반 이하다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="매니폴드" data-screen-label="31" data-speaker-notes="출처: 012 Gen AI Image.pptx p.23 · 강의영상 AutoEncoder 06:00–08:00 — 오늘 3부에서 제일 중요한 개념이다. 왜 이렇게 크게 줄여도 되는가. 실제 데이터가 고차원 공간 전체에 퍼져 있지 않기 때문이다. MNIST 를 열어 보면 가장자리는 거의 다 검고 데이터는 가운데 몰려 있다. 그 가장자리 차원은 의미가 없다. 더 일반적으로 말하면 — 키 180에 몸무게 2킬로그램인 사람은 존재하지 않는다. 그런 조합은 데이터가 아예 없다. 그래서 실제 데이터가 놓인 영역은 전체 공간에 비해 아주 좁다. 그 좁고 휘어진 면을 매니폴드라고 부른다. 오토인코더가 찾는 것이 바로 이 면이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.05fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s23_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>원본 공간과 그 안에 휘어져 놓인 매니폴드</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">왜 이렇게 줄여도 되나</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">실제 데이터는<br>좁은 면에만 있다</h2>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">키 180에 <b style="color:var(--fg-1)">몸무게 2킬로그램</b>인 사람은 없다. 그런 조합에는 데이터가 아예 없다.</div>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">MNIST 도 가장자리는 거의 다 검다. <b style="color:var(--fg-1)">그 차원은 의미가 없다.</b></div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">그 좁고 휘어진 면이 <b style="color:var(--primary-main)">매니폴드</b>다. 오토인코더가 찾는 것이 이 면이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="거리가 다르다" data-screen-label="32" data-speaker-notes="출처: 012 Gen AI Image.pptx p.24 · 강의영상 AutoEncoder 09:00 — 매니폴드가 왜 중요한지 거리로 보여 준다. 왼쪽은 고차원 공간에서 잰 직선 거리다. A1 과 B 가 가까워 보인다. 오른쪽은 매니폴드를 따라 잰 거리다. A1 과 A2 가 가깝고 B 는 멀다. 같은 점들인데 어느 자로 재느냐에 따라 답이 뒤집힌다. 생성에서 이게 왜 문제가 되는지는 다음 장에서 눈으로 본다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">어느 자로 재느냐에 따라 답이 뒤집힌다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">직선 거리 vs 매니폴드 거리</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s24_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>고차원에서의 거리와 매니폴드에서의 거리 비교</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">같은 점들인데 왼쪽에서는 <b style="color:var(--fg-1)">A1 과 B</b> 가 가깝고, 오른쪽에서는 <b style="color:var(--fg-1)">A1 과 A2</b> 가 가깝다.</p>
+</section>
+
+<section data-deck="0" data-label="중간을 잘못 고르면" data-screen-label="33" data-speaker-notes="출처: 012 Gen AI Image.pptx p.25 · 강의영상 AutoEncoder 09:00 — 이 한 장이 매니폴드를 완전히 설명한다. 골프 스윙 사진이다. A1 과 A2 사이의 중간 자세를 만들고 싶다. 매니폴드를 모르면 직선 거리로 중간을 잡아 B 를 고른다. 그런데 B 는 자세로서 말이 안 되는 흐릿한 그림이다. 매니폴드를 따라 중간을 잡으면 C 가 나온다 — 실제로 있을 법한 자세다. 생성 모델이 매니폴드를 배워야 하는 이유가 여기 있다. 학생들에게 물어볼 것 — 우리 도시 데이터에서 이런 일이 언제 생기겠는가." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">중간을 잘못 고르면 <span style="color:#D93636">사람이 아니게 된다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">매니폴드를 벗어난 이미지</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s25_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>A1 과 A2 의 중간 — 직선으로 잡은 B 와 매니폴드를 따라 잡은 C</span></div></div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">직선으로 잡은 중간은 <b style="color:#FF7AA2">있을 수 없는 자세</b>다. 매니폴드를 따라 잡아야 <b style="color:#00E49B">실제로 있을 법한 자세</b>가 나온다.</div>
+</section>
+
+<section data-deck="0" data-label="오토인코더는 생성 모델이 아니다" data-screen-label="34" data-speaker-notes="출처: 신규 · Auto-Encoding Variational Bayes (arXiv 1312.6114) — 여기가 오늘 3부에서 제일 자주 뭉개지는 자리다. 반드시 한 번 멈추고 갈 것. 지금까지 오토인코더가 한 일은 이미지를 넣어 같은 이미지를 되살린 것이다. 그건 압축기다. 생성기가 아니다. 생성을 하려면 입력 이미지 없이, 잠재공간에서 아무 점이나 하나 뽑아 디코더에 넣어야 한다. 그런데 두 가지가 막는다. 첫째, 어디서 뽑아야 할지 모른다. 그냥 오토인코더는 잠재공간이 어떤 모양인지 아무 제약을 걸지 않아서, 학습 이미지가 찍힌 자리가 어디인지 우리가 알 길이 없다. 둘째, 학습 이미지들 사이가 비어 있다. 그 빈 곳을 찍으면 깨진 그림이 나온다. 앞에서 본 골프 스윙의 B 가 바로 그것이다. 그러니까 생성을 하려면 잠재공간에 미리 정해 둔 분포가 있어야 한다. 표준정규분포라고 못 박아 두면, 그냥 거기서 뽑으면 된다. 그 못 박는 방법이 다음 장의 VAE 다. 여기서 분명히 말해 줄 것 — 오토인코더와 VAE 는 그림이 비슷하게 생겼을 뿐, 하는 일이 다르다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">오토인코더는 <span style="color:#D93636">생성 모델이 아니다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">그림은 비슷한데 하는 일이 다르다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="aeGap"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">뽑으려면 잠재공간에 <b style="color:#00E49B">미리 정해 둔 분포</b>가 있어야 한다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">표준정규분포라고 못 박아 두면 그냥 거기서 뽑으면 된다 — 그 못 박는 방법이 VAE 다.</span></div>
+</section>
+
+<section data-deck="0" data-label="VAE — 점 대신 분포를 낸다" data-screen-label="35" data-speaker-notes="출처: 신규 · Auto-Encoding Variational Bayes (arXiv 1312.6114) · 012 Gen AI Image.pptx p.30–32 — VAE 가 오토인코더와 다른 점 세 가지를 순서대로 짚는다. 첫째, 인코더가 잠재변수 z 하나를 내놓지 않는다. 평균 뮤와 표준편차 시그마, 두 개를 내놓는다. 즉 그 이미지가 잠재공간의 어느 한 점이 아니라 어느 동네에 있다고 말하는 것이다. 둘째, 그 동네에서 z 를 무작위로 하나 뽑아 디코더에 넣는다. 그런데 여기서 문제가 생긴다 — 무작위로 뽑는 연산은 미분이 안 된다. 역전파가 거기서 끊긴다. 그래서 식을 바꾼다. 입실론을 표준정규분포에서 하나 뽑아 두고, z 를 뮤 더하기 시그마 곱하기 입실론으로 쓴다. 무작위성을 입실론 쪽으로 밀어냈으니 뮤와 시그마로 가는 길은 그냥 곱셈과 덧셈이라 미분이 된다. 이걸 재매개변수화라고 부른다. 셋째, 손실이 두 개가 된다. 하나는 오토인코더와 같은 복원 오차다. 다른 하나가 KL 이다. 인코더가 내놓은 분포를 표준정규분포 쪽으로 끌어당긴다. 1부에서 배운 그 KL 이 여기서 그대로 다시 나온다고 반드시 말해 줄 것. 이 두 번째 손실이 있어서 잠재공간이 빈틈없이 채워지고, 그래서 아무 데나 뽑아도 말이 되는 그림이 나온다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">VAE — 점 대신 <span style="color:var(--primary-main)">분포</span>를 낸다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Auto-Encoding Variational Bayes · 2013</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="vaeFlow"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="padding:22px 26px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">① 점이 아니라 동네</b> — 인코더가 μ 와 σ 를 낸다</div>
+    <div style="padding:22px 26px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">② 뽑기는 미분이 안 된다</b> — z = μ + σ·ε 로 바꿔 길을 튼다</div>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">③ 손실이 둘</b> — 복원 오차 + KL. 1부의 그 KL 이다</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="VAE 와 AAE" data-screen-label="36" data-speaker-notes="출처: 012 Gen AI Image.pptx p.30–34 · 강의영상 diffusion 01:00–02:00 — 오토인코더를 생성에 쓰려면 한 가지가 더 필요하다. 잠재공간이 잘 정돈되어 있어야 아무 데나 찍어도 말이 되는 이미지가 나온다. 그냥 오토인코더는 그 공간이 들쭉날쭉해서 빈 곳을 찍으면 엉뚱한 게 나온다. VAE 는 잠재변수를 점이 아니라 분포로 배우게 만들어 공간을 채운다. AAE 는 판별자를 붙여 잠재공간이 원하는 모양이 되도록 밀어붙인다. 오른쪽 그림에서 잠재공간의 모양 차이를 볼 것. 그리고 다음 부로 넘기는 문장 — VAE 는 다양하지만 화질이 낮다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.2fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">결과</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그래서 잠재공간이<br>이렇게 채워진다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">KL 이 잡아당긴 덕에 <b style="color:var(--fg-1)">빈 곳이 거의 없다.</b> 아무 데나 뽑아도 된다.</p>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">VAE</b> — KL 로 표준정규분포 쪽으로 <b style="color:var(--fg-1)">끌어당겨</b> 채웠다.</div>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">AAE</b> — KL 대신 <b style="color:var(--fg-1)">판별자</b>를 붙여 원하는 모양으로 밀어붙인다. 2부의 그 판별자다.</div>
+  </div>
+  <div style="height:740px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s34_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Adversarial Autoencoder 와 Variational Autoencoder 의 잠재공간 분포</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="4부 — 확산 모델" data-screen-label="37" data-speaker-notes="출처: 신규 — 4부 표지다. 여기까지 두 갈래를 봤다. GAN 은 감별사를 세워 분포 차이를 쟀고, 오토인코더 계열은 눌러 담았다 되살리며 잠재공간을 정돈했다. 이제 세 번째 방법이다. 발상이 완전히 다르다. 잘 만드는 법을 배우는 게 아니라, 망가뜨리는 법을 먼저 배운 다음 그걸 거꾸로 돌린다. 학생들에게 먼저 던져 볼 것 — 이미지를 만드는 게 어렵다면, 이미지를 망가뜨리는 건 쉬울까 어려울까. 아주 쉽다. 잡음만 조금 얹으면 된다. 그 쉬운 쪽을 배워서 거꾸로 쓰자는 것이 오늘 4부다. 그리고 이 4부가 지금 우리가 실제로 쓰는 그림 생성기의 뼈대다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 26%,rgba(232,135,58,.28),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FFB86B;font-weight:700">4부 · 확산 모델</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">만드는 법 대신<br><span style="color:#FFB86B">망가뜨리는 법</span>을 배운다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px;max-width:1700px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:32px 36px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#fff">이미지를 만드는 일</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">아주 어렵다 — 2부와 3부가 이걸 붙들고 씨름했다.</p>
+    </div>
+    <div style="background:rgba(255,184,107,.14);border:2px solid rgba(255,184,107,.45);border-radius:18px;padding:32px 36px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#FFB86B">이미지를 망가뜨리는 일</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">아주 쉽다 — <b style="color:#fff">잡음만 조금 얹으면</b> 된다.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">쉬운 쪽을 배워서 <b style="color:#fff">거꾸로 돌린다.</b> 지금 우리가 쓰는 그림 생성기가 전부 이 뼈대다.</p>
+</section>
+
+<section data-deck="0" data-label="연기는 퍼진다" data-screen-label="38" data-speaker-notes="출처: 강의영상 diffusion 02:00–03:00 — 확산 모델의 발상은 물리에서 왔다. 닫힌 공간에 담배 연기를 뿜으면 처음에는 하얀 줄이 어떤 모양을 그린다. 그런데 점점 퍼져서 결국 공간 전체에 균질하게 흩어지고 눈에 보이지 않게 된다. 물리학에서는 이 과정을 거꾸로 돌려 처음 모양을 복원하는 알고리즘을 쓴다고 한다. 그걸 이미지에 그대로 가져온 것이다. 완전히 잡음인 상태에서 점점 현실에 있는 이미지에 가깝게 만든다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(158,93,249,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">발상은 물리에서 왔다</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">연기는 퍼진다.<br>그럼 <span style="color:var(--accent-green)">거꾸로 돌리면</span> 되지 않나</h2>
+  <div style="flex:1;min-height:0;max-height:320px"><span data-dc-slot="smoke"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">완전히 잡음인 상태에서 <b style="color:#fff">점점 현실에 있는 이미지에 가깝게</b> 만든다.</p>
+</section>
+
+<section data-deck="0" data-label="한 칸만 되돌린다" data-screen-label="39" data-speaker-notes="출처: 012 Gen AI Image.pptx p.40 · 강의영상 diffusion 05:00–08:00 · 25 diffusion.ipynb — 구조를 정확히 짚어야 한다. 학생들이 어렵게 느끼는 대목이니 천천히. 이미지 하나를 놓고 아주 작은 잡음을 섞는다. 픽셀값에 0.1쯤을 더하거나 빼는 식이다. 그걸 천 번쯤 반복하면 완전한 잡음이 된다. 이제 거꾸로 가는 것을 학습하는데, 한 번에 다 되돌리는 게 아니라 딱 한 칸만 되돌리는 것을 학습한다. 그리고 여기가 핵심인데 — 천 단계라고 해서 천 개의 모델이 있는 게 아니다. 하나의 모델이 천 단계를 전부 담당한다. 그 하나의 모델이 무엇이냐 하면, 6주차에 배운 U-Net 이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">잡음을 걸고, <span style="color:var(--primary-main)">한 칸만</span> 되돌린다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">약 1,000 단계</span>
+  </div>
+  <div style="height:400px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s40_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>원본 이미지에서 완전한 잡음까지, 그리고 그 반대 방향</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="diffSteps"></span></div>
+</section>
+
+<section data-deck="0" data-label="그 한 칸이 U-Net 이다" data-screen-label="40" data-speaker-notes="출처: 강의영상 diffusion 06:00–08:00 · 25 diffusion.ipynb — 오늘 전체를 묶는 장이다. 한 칸 되돌리는 그 모델이 U-Net 이다. 6주차에 토지피복을 분할할 때 쓴 그것과 같은 구조다. 왜 U-Net 이냐 — 이미지를 넣어 이미지를 내놓아야 하기 때문이다. 그리고 U-Net 을 이렇게 이해하면 쉽다고 말해 줄 것 — 대충 뭉개진 이미지를 그럴듯한 이미지로 바꿔 주는 모델이다. 내려가면서 맥락을 잡고 올라오면서 그럴듯하게 그린다. 학습 데이터는 실시간으로 만든다. 배치로 128장을 가져와서 각각 무작위 단계를 뽑아, 그 자리에서 잡음을 입혀 입력과 정답 쌍을 만든다. 그래서 학습 데이터가 사실상 무한하다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">그 한 칸을 맡은 것이 <span style="color:var(--accent-green)">U-Net</span> 이다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">6주차에 배운 그 구조</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.15fr 1fr;gap:34px;align-items:center">
+    <div style="min-height:0"><span data-dc-slot="unetInDiff"></span></div>
+    <div style="height:100%;min-height:0;background:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:var(--font-display);font-size:21px;font-weight:800;color:var(--primary-main);padding-left:10px">U-Net · 2015 — 6주차에 쓴 그 그림</div>
+      <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">
+        <div class="imgslot fit-contain" style=""><img src="uploads/gn_unet.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>U-Net 원논문 도해 — 내려가는 길과 올라오는 길, 그리고 가로로 건너뛰는 선</span></div></div>
+      </div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">학습 데이터는 <b style="color:#fff">실시간으로 만든다</b> — 128장을 가져와 무작위 단계의 잡음을 그 자리에서 입힌다. 그래서 사실상 무한하다.</p>
+</section>
+
+<section data-deck="0" data-label="셋을 나란히 놓으면" data-screen-label="41" data-speaker-notes="출처: 012 Gen AI Image.pptx p.37–38 · Generative learning trilemma (arXiv 2112.07804) — 이제 셋을 다 봤으니 나란히 놓고 비교한다. 생성 모델은 세 가지를 동시에 갖기 어렵다 — 화질, 다양성, 속도다. 삼각형 그림을 손으로 짚으며 갈 것. GAN 은 화질이 높고 빠른데 다양성이 없다. 배운 것 밖을 못 만들기 때문이다. VAE 는 다양한데 화질이 낮다. 잠재공간을 정규분포로 눌러 담느라 뭉개진다. 확산 모델이 화질과 다양성을 동시에 잡았다. 대신 느리다. 천 번을 돌려야 하니까. 그래서 지금 연구의 큰 줄기 하나가 이 스텝 수를 줄이는 것이라고 말해 줄 것. 그리고 다음 장으로 넘기는 문장 — 느리다는 문제를 정면으로 푼 것이 Stable Diffusion 이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">셋을 다 <span style="color:var(--primary-main)">갖기 어렵다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Generative learning trilemma · 2021</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.15fr;gap:44px">
+    <div style="background:#fff;border-radius:16px;padding:18px;display:flex;align-items:center;justify-content:center;min-height:0">
+      <div class="imgslot fit-contain" style=""><img src="uploads/gn_s38_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>화질·다양성·속도 세 꼭짓점과 그중 둘씩만 잡는 세 계열</span></div></div>
+    </div>
+    <div style="min-height:0"><span data-dc-slot="trilemma"></span></div>
+  </div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">확산은 화질과 다양성을 같이 잡았다. 남은 문제는 <b style="color:#FFB86B">느리다</b>는 것 — 천 번을 돌려야 한다.</div>
+</section>
+
+<section data-deck="0" data-label="천 번을 어디서 돌릴 것인가" data-screen-label="42" data-speaker-notes="출처: High-Resolution Image Synthesis with Latent Diffusion Models (arXiv 2112.10752) — 느리다는 문제를 어떻게 풀었는지. 숫자부터 세어 보게 할 것. 512 곱하기 512 컬러 이미지 한 장은 값이 78만 6천 개다. 확산은 이걸 천 번 돌린다. 한 장 만드는 데 78만 개짜리 배열을 천 번 주무르는 것이다. 감당이 안 된다. 그래서 발상을 바꿨다. 3부에서 배운 오토인코더를 기억할 것. 이미지를 잠재공간으로 눌러 담을 수 있었다. 그럼 확산을 픽셀 위에서 하지 말고 그 눌러 담은 잠재공간 위에서 하면 어떨까. 512를 8분의 1로 줄이면 64 곱하기 64 에 채널 4, 값이 1만 6천 개다. 48분의 1이다. 여기서 천 번을 돌리고, 다 끝난 다음에 디코더로 한 번만 키워 이미지로 되돌린다. 이게 잠재 확산이고, 그 구현이 Stable Diffusion 이다. 3부와 4부가 여기서 합쳐진다는 것을 반드시 짚어 줄 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">천 번을 <span style="color:var(--primary-main)">어디서</span> 돌릴 것인가</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Latent Diffusion · 2021</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="latentIdea"></span></div>
+  <div style="padding:26px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">픽셀 위가 아니라 <b style="color:#00E49B">3부에서 배운 그 잠재공간</b> 위에서 돌린다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">다 끝난 다음에 디코더로 한 번만 키워 이미지로 되돌린다 — 3부와 4부가 여기서 합쳐진다.</span></div>
+</section>
+
+<section data-deck="0" data-label="Stable Diffusion 의 구조" data-screen-label="43" data-speaker-notes="출처: arXiv 2112.10752 · CompVis/stable-diffusion — 구조를 왼쪽부터 끝까지 한 번 훑는다. 학습할 때는 이렇다. 원본 이미지를 VAE 인코더로 눌러 64 곱하기 64 곱하기 4 잠재로 만든다. 거기에 잡음을 얹고, U-Net 이 그 잡음을 맞히도록 학습한다. 4부에서 배운 그대로인데 무대만 잠재공간으로 옮긴 것이다. 생성할 때는 이렇다. 잠재공간에 그냥 잡음을 하나 뿌리고, U-Net 으로 한 칸씩 걷어 낸다. 다 걷어 내면 VAE 디코더가 512 이미지로 키운다. 그리고 아래쪽을 볼 것. 사용자가 쓴 문장이 CLIP 텍스트 인코더를 지나 벡터가 되고, 그게 U-Net 안으로 들어간다. 이게 조건이다. 이 조건이 없으면 아무 그림이나 나오고, 있으면 그 문장에 맞는 그림이 나온다. 수치 세 개를 못 박아 줄 것 — 다운샘플 8배, 잠재 64 곱하기 64 곱하기 4, 텍스트 인코더는 CLIP ViT-L/14 다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">Stable Diffusion 의 구조</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">오토인코더 + 확산 + CLIP — 배운 것이 전부 모인다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="sdArch"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">VAE</b> — 3부에서 배운 것. 8배로 눌렀다가 마지막에 한 번 키운다</div>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">U-Net</b> — 4부에서 배운 것. 잠재공간에서 한 칸씩 잡음을 걷는다</div>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">CLIP</b> — 문장을 벡터로. 그 벡터가 U-Net 안으로 들어가 방향을 잡는다</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="문장은 어디로 들어가나" data-screen-label="44" data-speaker-notes="출처: arXiv 2112.10752 — 조건이 들어가는 방식을 한 걸음 더 들어간다. 문장 벡터를 U-Net 의 입력에 그냥 더하는 게 아니다. 크로스 어텐션으로 들어간다. 9주차에 배운 어텐션을 여기서 다시 꺼내 쓸 것. 그림의 각 자리가 질문을 던지고, 문장의 각 단어가 답한다. 말을 그리고 있는 자리는 말이라는 단어에 크게 반응하고, 우주복을 그리고 있는 자리는 우주복이라는 단어에 크게 반응한다. 그래서 한 문장 안의 여러 단어가 그림의 서로 다른 자리로 흩어져 들어간다. 이게 프롬프트를 길게 쓰면 디테일이 살아나는 이유다. 학생들에게 실무 감각을 하나 줄 것 — 프롬프트에 쓴 단어 하나하나가 그림의 어느 자리에 얼마나 붙을지를 모델이 정한다. 그래서 순서와 강조가 결과를 바꾼다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:22px;min-height:0">
+    <div style="display:flex;align-items:baseline;gap:20px">
+      <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">문장은 <span style="color:var(--primary-main)">크로스 어텐션</span>으로</h2>
+    </div>
+    <div style="height:420px"><span data-dc-slot="crossAttn"></span></div>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">그림의 <b style="color:var(--fg-1)">각 자리가 묻고</b> 문장의 <b style="color:var(--fg-1)">각 단어가 답한다.</b> 9주차 어텐션이 여기서 그대로 쓰인다.</div>
+  </div>
+  <div style="height:760px;background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+    <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/gn_s44_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Stable Diffusion 이 문장 하나로 그려 낸 인물 사진 두 장</span></div></div>
+    </div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5;padding-left:8px">프롬프트를 길게 쓰면 디테일이 살아나는 이유가 여기 있다 — 단어마다 붙는 자리가 다르다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="그냥 공개해 버렸다" data-screen-label="45" data-speaker-notes="출처: stability.ai 공개 발표 (2022-08-22) · CompVis/stable-diffusion · huggingface.co — 여기가 판을 바꾼 대목이다. 2022년 8월 22일, CompVis 와 Stability AI 와 LAION 이 Stable Diffusion 을 그냥 공개해 버렸다. 논문만 낸 게 아니라 학습된 가중치 파일을 통째로 풀었다. 그때까지 DALL·E 2 같은 모델은 회사 서버 안에만 있었고 우리는 웹으로 부탁만 할 수 있었다. 그런데 이건 내려받아서 내 노트북에서 돌릴 수 있다. 파일 하나가 몇 기가바이트다. 그 결과가 무엇이었는지 말해 줄 것. 며칠 만에 수천 개의 파생 모델과 도구가 나왔다. 허깅페이스가 그 유통 창구가 됐다. 지금 여러분이 쓰는 그림 생성 도구의 상당수가 이 가중치에서 갈라져 나온 것이다. 그리고 도시 분야로 돌려 줄 것 — 우리가 쓸 수 있는 이유도 이것 때문이다. 오픈 가중치가 아니었으면 연구실에서 만질 수가 없다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 22% 76%,rgba(0,228,155,.20),transparent 60%)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">2022년 8월 22일</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">논문이 아니라<br><span style="color:var(--accent-green)">가중치를 풀었다</span></h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">그때까지 이런 모델은 <b style="color:#fff">회사 서버 안</b>에 있었다. 우리는 웹으로 부탁만 할 수 있었다.</p>
+    <div style="padding:24px 28px;background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:14px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.6">이건 <b style="color:#00E49B">내려받아서 내 노트북에서 돌린다.</b> 며칠 만에 파생 모델과 도구가 쏟아졌고, 허깅페이스가 그 유통 창구가 됐다.</div>
+    <div style="padding:24px 28px;background:rgba(255,255,255,.07);border-radius:14px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.6">우리가 연구실에서 이걸 만질 수 있는 이유도 <b style="color:#fff">오픈 가중치</b>이기 때문이다.</div>
+  </div>
+  <div style="height:780px;display:flex;flex-direction:column;gap:20px">
+    <div style="height:190px;background:#fff;border-radius:16px;padding:18px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/gn_s42_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>허깅페이스 — 오픈소스 모델 유통 창구</span></div></div>
+    </div>
+    <div style="flex:1;min-height:0;border-radius:16px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/gn_s44_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Stable Diffusion 이 만들어 낸 이미지</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="시장이 바뀌었다" data-screen-label="46" data-speaker-notes="출처: 012 Gen AI Image.pptx p.42–44 · 강의영상 diffusion 00:00–01:00 — 이 기술이 현장에서 무엇을 바꿨는지 구체적으로 말해 줄 것. 화장품 회사는 시즌마다 나라마다 포스터를 만든다. 모델, 디자이너, 사진사가 붙어 한 번 나갈 때 3천만 원쯤 들었다. 지금은 버튼 한 번에 GPU 비용 500원으로 원하는 분위기의 이미지를 다 만든다. 로레알 같은 회사가 생성 알고리즘 회사들을 전 세계에서 인수하고 있다. 광고업계에서 디자이너와 사진사, 애니메이터의 일자리를 빠르게 가져가고 있다. 위험한 이야기지만 사실이고, 학생들이 알아야 하는 현실이다. 이 자리에서 도시 분야의 질문으로 돌려 줄 것 — 그럼 우리 분야에서는 무엇이 대체되고 무엇이 남는가." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">현장에서는</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">3천만 원이<br>500원이 됐다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">화장품 포스터 한 번 — 모델, 디자이너, 사진사가 붙어 <b style="color:var(--fg-1)">3천만 원</b>.</p>
+    <div style="padding:24px 28px;background:#FDF0F0;border:2px solid #D93636;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">지금은 버튼 한 번, GPU 비용 <b style="color:#D93636">500원</b>. 글로벌 화장품 회사들이 생성 알고리즘 회사를 <b style="color:var(--fg-1)">전 세계에서 인수</b>하고 있다.</div>
+    <div style="padding:24px 28px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.6">그럼 <b style="color:#00E49B">우리 분야</b>에서는 무엇이 대체되고 무엇이 남는가.</div>
+  </div>
+  <div style="height:740px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/gn_s44_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Stable Diffusion 이 생성한 이미지</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="47" data-speaker-notes="출처: 신규 — 학습참여도 평가용 토론. 3분. Q1 이 오늘 1부와 이어지고, Q2 가 매니폴드와 이어지고, Q3 이 기말 발표로 이어진다. Q3 은 특히 도시 분야에서 생성 모델을 쓸 자리를 학생들이 스스로 찾게 하는 질문이다. 나온 답을 반드시 적어 둘 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3분 · 옆 사람과</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">하나만 골라 이야기해 보자</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q1</b> &nbsp; 생성 모델이 학습한 것이 <b style="color:var(--fg-1)">분포</b>라면, 그 분포가 <b style="color:var(--fg-1)">편향</b>돼 있으면 무슨 일이 생기는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q2</b> &nbsp; 우리 도시 데이터에서 <b style="color:var(--fg-1)">“있을 수 없는 중간값”</b> 이 만들어지는 경우는 언제인가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q3</b> &nbsp; 6주차 항공영상–라벨 쌍으로 Pix2Pix 를 돌린다면, <b style="color:var(--fg-1)">어느 방향</b>으로 만드는 것이 쓸모 있겠는가?</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="48" data-speaker-notes="출처: 신규 — 오늘의 질문에 답한다. 없던 이미지를 만들어 낸다는 것은 무엇을 학습한 것인가. 답은 분포다. 더 정확히는 실제 데이터가 놓여 있는 좁은 면, 매니폴드다. 그래서 오늘 셋이 전부 같은 일을 다르게 한 것이다. GAN 은 감별사를 세워 그 면에 다가갔고, 오토인코더는 그 면을 직접 눌러 담았고, 확산은 잡음에서 그 면으로 한 걸음씩 걸어 돌아왔다. 그리고 셋을 관통하는 것이 1부의 전환이다 — 값이 아니라 분포를 맞대는 것. 다음은 중간고사이고, 그다음 9주차부터 순서가 있는 데이터로 간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 24% 78%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">오늘의 질문에 답한다</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">외운 것이 아니라 <span style="color:var(--accent-green)">분포</span>를 배웠다</h2>
+  <div style="flex:1;min-height:0;max-height:300px"><span data-dc-slot="wrapUp"></span></div>
+  <div style="padding:28px 34px;background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:16px;font-size:var(--type-body);line-height:1.5">셋을 관통하는 것은 1부의 전환이다 — <b style="color:#00E49B">값이 아니라 분포를 맞댄다.</b></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">다음은 <b style="color:#fff">중간고사</b>. 그다음 9주차부터는 <b style="color:#fff">순서가 있는 데이터</b>로 간다. &nbsp;<span style="color:var(--neutral-medium);font-size:var(--type-small)">예습: 22 timeseries.ipynb</span></p>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W07_생성모델</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">48</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">오늘의 흐름</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">지금까지의 손실</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">어느 분포가 맞나</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">왜 분포인가</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">코드 길이 이야기</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">빈도순으로 다시 매긴다</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">어느 쪽이 효율적인가</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">정보량은 어떤 모양이어야 하나</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">이것을 엔트로피라 부른다</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">분포가 다르면 엔트로피가 다르다</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">크로스 엔트로피</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">예측이 빗나가면 폭발한다</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">세 가지 경우로 정리하면</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">KL 다이버전스</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">지금부터는 분포 대 분포</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">이미지에서는 무엇을 맞대는가</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">GAN — 위조범과 감별사</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">둘 다 우리가 아는 모델이다</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">① 생성자를 잠그고 판별자를 가르친다</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">② 판별자를 잠그고 생성자를 가르친다</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">번갈아 잠근다</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">minmax 한 줄</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">실습 — MNIST 로</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">조건을 붙이면</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">GAN 은 왜 밀려났나</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">오토인코더</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">한 층씩 쌓아 올린다</div></button>
+<button class="ov-card" data-go="29"><div class="ov-thumb"><div class="ov-num">30</div></div><div class="ov-label">PCA 와 무엇이 다른가</div></button>
+<button class="ov-card" data-go="30"><div class="ov-thumb"><div class="ov-num">31</div></div><div class="ov-label">매니폴드</div></button>
+<button class="ov-card" data-go="31"><div class="ov-thumb"><div class="ov-num">32</div></div><div class="ov-label">거리가 다르다</div></button>
+<button class="ov-card" data-go="32"><div class="ov-thumb"><div class="ov-num">33</div></div><div class="ov-label">중간을 잘못 고르면</div></button>
+<button class="ov-card" data-go="33"><div class="ov-thumb"><div class="ov-num">34</div></div><div class="ov-label">오토인코더는 생성 모델이 아니다</div></button>
+<button class="ov-card" data-go="34"><div class="ov-thumb"><div class="ov-num">35</div></div><div class="ov-label">VAE — 점 대신 분포를 낸다</div></button>
+<button class="ov-card" data-go="35"><div class="ov-thumb"><div class="ov-num">36</div></div><div class="ov-label">VAE 와 AAE</div></button>
+<button class="ov-card" data-go="36"><div class="ov-thumb"><div class="ov-num">37</div></div><div class="ov-label">4부 — 확산 모델</div></button>
+<button class="ov-card" data-go="37"><div class="ov-thumb"><div class="ov-num">38</div></div><div class="ov-label">연기는 퍼진다</div></button>
+<button class="ov-card" data-go="38"><div class="ov-thumb"><div class="ov-num">39</div></div><div class="ov-label">한 칸만 되돌린다</div></button>
+<button class="ov-card" data-go="39"><div class="ov-thumb"><div class="ov-num">40</div></div><div class="ov-label">그 한 칸이 U-Net 이다</div></button>
+<button class="ov-card" data-go="40"><div class="ov-thumb"><div class="ov-num">41</div></div><div class="ov-label">셋을 나란히 놓으면</div></button>
+<button class="ov-card" data-go="41"><div class="ov-thumb"><div class="ov-num">42</div></div><div class="ov-label">천 번을 어디서 돌릴 것인가</div></button>
+<button class="ov-card" data-go="42"><div class="ov-thumb"><div class="ov-num">43</div></div><div class="ov-label">Stable Diffusion 의 구조</div></button>
+<button class="ov-card" data-go="43"><div class="ov-thumb"><div class="ov-num">44</div></div><div class="ov-label">문장은 어디로 들어가나</div></button>
+<button class="ov-card" data-go="44"><div class="ov-thumb"><div class="ov-num">45</div></div><div class="ov-label">그냥 공개해 버렸다</div></button>
+<button class="ov-card" data-go="45"><div class="ov-thumb"><div class="ov-num">46</div></div><div class="ov-label">시장이 바뀌었다</div></button>
+<button class="ov-card" data-go="46"><div class="ov-thumb"><div class="ov-num">47</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
+<button class="ov-card" data-go="47"><div class="ov-thumb"><div class="ov-num">48</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  state = { ent: 0, xe: 0 };
+
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const rng = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+
+    // ── 7주차 지도 ──────────────────────────────────────────────
+    const weekMap = (() => {
+      const W = 1720, H = 400;
+      const C = [
+        ['1', '분포를 맞댄다', ['최대우도 · 엔트로피', '크로스 엔트로피 · KL'], ACC],
+        ['2', 'GAN', ['위조범과 감별사', '배운 것만 만든다'], VIO],
+        ['3', '오토인코더', ['줄였다 되살린다', '매니폴드'], GRN],
+        ['4', '확산 모델', ['잡음에서 되돌린다', '지금 시장을 바꾼 것'], '#E8873A'],
+      ];
+      const g = [];
+      const CW = 390, GAP = 30, X0 = 40;
+      C.forEach((c, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 40, width: CW, height: 280, rx: 20,
+          fill: '#fff', stroke: c[3], strokeWidth: i === 0 ? 4 : 2.5 }));
+        g.push(h('circle', { key: 'c' + i, cx: x + 50, cy: 104, r: 28, fill: c[3] }));
+        g.push(h('text', { key: 'n' + i, x: x + 50, y: 114, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 26, fontWeight: 800, fill: '#fff' }, c[0]));
+        g.push(h('text', { key: 't' + i, x: x + 94, y: 114, fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: c[3] }, c[1]));
+        c[2].forEach((s, j) => g.push(h('text', { key: 's' + i + j, x: x + 32,
+          y: 188 + j * 44, fontFamily: KR, fontSize: 22, fill: 'var(--fg-3)' }, s)));
+        if (i < 3) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 190,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 32, fill: AX }, '→'));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 376, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '실습 — 21 GAN · 23 GAN_Pix2Pix · 24 Autoencoder · 25 diffusion'));
+      return svg(W, H, g);
+    })();
+
+    // ── MSE vs MLE ──────────────────────────────────────────────
+    const mseVsMle = (() => {
+      const W = 1720, H = 460;
+      const g = [];
+      const r = rng(11);
+      // 왼쪽 — MSE
+      g.push(h('rect', { key: 'lb', x: 40, y: 30, width: 780, height: 380, rx: 20,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'lt', x: 72, y: 86, fontFamily: KR, fontSize: 28,
+        fontWeight: 800, fill: MUT }, '지금까지 — 값 대 값'));
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const x = 110 + i * 58, y = 330 - i * 15 + (r() - 0.5) * 70;
+        pts.push([x, y]);
+      }
+      g.push(h('line', { key: 'ln', x1: 100, y1: 340, x2: 750, y2: 168, stroke: GRN,
+        strokeWidth: 4 }));
+      pts.forEach((p, i) => {
+        const ly = 340 - (p[0] - 100) / 650 * 172;
+        g.push(h('line', { key: 'e' + i, x1: p[0], y1: p[1], x2: p[0], y2: ly,
+          stroke: RED, strokeWidth: 2.5, strokeDasharray: '5 4' }));
+        g.push(h('circle', { key: 'p' + i, cx: p[0], cy: p[1], r: 7, fill: ACC }));
+      });
+      g.push(h('text', { key: 'ln2', x: 72, y: 390, fontFamily: KR, fontSize: 22,
+        fill: 'var(--fg-3)' }, '빨간 선 하나하나를 모아 역전파했다'));
+      // 오른쪽 — MLE
+      g.push(h('rect', { key: 'rb', x: 890, y: 30, width: 790, height: 380, rx: 20,
+        fill: '#EEF0FE' }));
+      g.push(h('text', { key: 'rt', x: 922, y: 86, fontFamily: KR, fontSize: 28,
+        fontWeight: 800, fill: ACC }, '지금부터 — 분포 대 분포'));
+      const curve = (mu, sd, col, op) => {
+        const d = [];
+        for (let i = 0; i <= 120; i++) {
+          const x = 930 + i * 6.1;
+          const t = (x - mu) / sd;
+          const y = 350 - Math.exp(-t * t / 2) * 150;
+          d.push((i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1));
+        }
+        g.push(h('path', { key: col + mu, d: d.join(' '), fill: 'none', stroke: col,
+          strokeWidth: 4, opacity: op }));
+      };
+      curve(1200, 110, ACC, 1);
+      curve(1420, 150, VIO, 0.8);
+      [1150, 1240, 1310, 1380, 1470].forEach((x, i) => {
+        g.push(h('circle', { key: 'o' + i, cx: x, cy: 350, r: 8, fill: RED }));
+      });
+      g.push(h('text', { key: 'rn', x: 922, y: 390, fontFamily: KR, fontSize: 22,
+        fill: 'var(--fg-3)' }, '점들을 가장 잘 설명하는 분포를 고른다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 코드 길이 ───────────────────────────────────────────────
+    const codeLen = (() => {
+      const W = 1720, H = 500;
+      const g = [];
+      // 012 Gen AI Image.pptx p.6-7 의 표 그대로 — 빈도 합 12
+      const LT = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+      const CODE = ['0', '1', '10', '11', '100', '101', '110', '111', '1000'];
+      const FRQ = [1, 1, 0, 2, 3, 0, 2, 2, 1];
+      const PCT = [8, 8, 0, 17, 25, 0, 17, 17, 8];
+      const NEW = ['100', '101', '111', '1', '0', '1000', '10', '11', '110'];
+      const bits = (key, x, y, str, cw, col, fs) => {
+        for (let i = 0; i < str.length; i++) {
+          g.push(h('rect', { key: key + i, x: x + i * (cw + 3), y: y, width: cw,
+            height: cw + 4, rx: 5, fill: '#fff', stroke: col, strokeWidth: 2.5 }));
+          g.push(h('text', { key: key + 't' + i, x: x + i * (cw + 3) + cw / 2,
+            y: y + cw / 2 + fs / 2 + 2, textAnchor: 'middle', fontFamily: EN,
+            fontSize: fs, fontWeight: 800, fill: INK }, str[i]));
+        }
+        return x + str.length * (cw + 3);
+      };
+      // 코드표 — 칸이 하나씩 늘어난다
+      g.push(h('text', { key: 'ct', x: 36, y: 76, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: MUT }, '코드'));
+      let x = 150;
+      LT.forEach((L, i) => {
+        g.push(h('text', { key: 'cl' + i, x: x + 2, y: 44, fontFamily: EN,
+          fontSize: 26, fontWeight: 800, fill: ACC }, L));
+        const nx = bits('cb' + i, x, 56, CODE[i], 34, ACC, 22);
+        g.push(h('text', { key: 'cn' + i, x: x + 2, y: 130, fontFamily: KR,
+          fontSize: 21, fill: MUT }, CODE[i].length + '칸'));
+        x = nx + 22;
+      });
+      g.push(h('text', { key: 'cc', x: 36, y: 130, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '뒤로 갈수록'));
+      g.push(h('text', { key: 'cc2', x: 36, y: 158, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '한 칸씩 길어진다'));
+      // 데이터 — 네 단어를 실제로 적어 본다
+      const WORD = [['EGG', 'E,G,G'], ['BED', 'B,E,D'], ['HI', 'H,I'],
+                    ['HEAD', 'H,E,A,D']];
+      g.push(h('text', { key: 'dt', x: 36, y: 240, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: MUT }, '데이터'));
+      let total = 0;
+      WORD.forEach((w, i) => {
+        const col = i % 2, row = Math.floor(i / 2);
+        const bx = 150 + col * 820, by = 212 + row * 116;
+        const str = w[1].split(',').map((c) => CODE[LT.indexOf(c)]).join('');
+        total += str.length;
+        g.push(h('text', { key: 'wl' + i, x: bx, y: by + 34, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: INK }, w[0]));
+        bits('wb' + i, bx + 130, by, str, 32, VIO, 21);
+        g.push(h('rect', { key: 'wc' + i, x: bx + 130 + 9 * 35 + 16, y: by,
+          width: 116, height: 36, rx: 9, fill: VIO }));
+        g.push(h('text', { key: 'wt' + i, x: bx + 130 + 9 * 35 + 74, y: by + 27,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 22, fontWeight: 800,
+          fill: '#fff' }, str.length + ' 비트'));
+      });
+      g.push(h('rect', { key: 'tb', x: 150, y: 444, width: 470, height: 48, rx: 12,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'tt', x: 180, y: 477, fontFamily: KR, fontSize: 24,
+        fill: 'var(--fg-3)' }, '네 단어를 적는 데'));
+      g.push(h('text', { key: 'tv', x: 590, y: 478, textAnchor: 'end',
+        fontFamily: EN, fontSize: 30, fontWeight: 800, fill: ACC },
+        total + ' 비트'));
+      return svg(W, H, g);
+    })();
+
+    // ── 엔트로피 개선 ───────────────────────────────────────────
+    const entropyGain = (() => {
+      const W = 1720, H = 480;
+      const g = [];
+      // 012 Gen AI Image.pptx p.6-7 의 표 그대로 — 빈도 합 12
+      const LT = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+      const CODE = ['0', '1', '10', '11', '100', '101', '110', '111', '1000'];
+      const FRQ = [1, 1, 0, 2, 3, 0, 2, 2, 1];
+      const PCT = [8, 8, 0, 17, 25, 0, 17, 17, 8];
+      const NEW = ['100', '101', '111', '1', '0', '1000', '10', '11', '110'];
+      const OLD = CODE.map((c) => c.length);
+      const NL = NEW.map((c) => c.length);
+      const X0 = 210, CW = 128, ROW = 52, Y0 = 40;
+      const cell = (key, c, r, txt, col, bold, bg) => {
+        if (bg) g.push(h('rect', { key: key + 'g', x: X0 + c * CW, y: Y0 + r * ROW,
+          width: CW - 4, height: ROW - 4, rx: 7, fill: bg }));
+        g.push(h('text', { key: key, x: X0 + c * CW + (CW - 4) / 2,
+          y: Y0 + r * ROW + 34, textAnchor: 'middle', fontFamily: EN,
+          fontSize: bold ? 23 : 21, fontWeight: bold ? 800 : 500, fill: col }, txt));
+      };
+      const rowLabel = (r, txt, col) => g.push(h('text', { key: 'rl' + r, x: 36,
+        y: Y0 + r * ROW + 34, fontFamily: KR, fontSize: 22, fontWeight: 700,
+        fill: col }, txt));
+      rowLabel(0, '글자', MUT);
+      rowLabel(1, '확률', MUT);
+      rowLabel(2, '순서대로 · 길이', MUT);
+      rowLabel(3, '확률 × 길이', MUT);
+      rowLabel(4, '빈도순 · 길이', GRN);
+      rowLabel(5, '확률 × 길이', GRN);
+      let bOld = 0, bNew = 0;
+      LT.forEach((L, i) => {
+        const a = FRQ[i] * OLD[i] / 12, b = FRQ[i] * NL[i] / 12;
+        bOld += FRQ[i] * OLD[i]; bNew += FRQ[i] * NL[i];
+        cell('a' + i, i, 0, L, INK, true, null);
+        cell('b' + i, i, 1, PCT[i] + '%', 'var(--fg-3)', false, null);
+        cell('c' + i, i, 2, String(OLD[i]), MUT, true, null);
+        cell('d' + i, i, 3, a.toFixed(2), MUT, false, '#F1F0F6');
+        cell('e' + i, i, 4, String(NL[i]), GRN, true, null);
+        cell('f' + i, i, 5, b.toFixed(2), GRN, false, '#EAF7F1');
+      });
+      // 합계 칸
+      const SX = X0 + 9 * CW + 16;
+      g.push(h('rect', { key: 'tb1', x: SX, y: Y0 + 3 * ROW - 4, width: 210,
+        height: ROW, rx: 10, fill: '#E7E5F0' }));
+      g.push(h('text', { key: 'tv1', x: SX + 105, y: Y0 + 3 * ROW + 30,
+        textAnchor: 'middle', fontFamily: EN, fontSize: 30, fontWeight: 800,
+        fill: INK }, (bOld / 12).toFixed(2)));
+      g.push(h('text', { key: 'tn1', x: SX + 105, y: Y0 + 4 * ROW + 22,
+        textAnchor: 'middle', fontFamily: EN, fontSize: 19, fill: MUT },
+        bOld + ' ÷ 12'));
+      g.push(h('rect', { key: 'tb2', x: SX, y: Y0 + 5 * ROW - 4, width: 210,
+        height: ROW, rx: 10, fill: GRN }));
+      g.push(h('text', { key: 'tv2', x: SX + 105, y: Y0 + 5 * ROW + 30,
+        textAnchor: 'middle', fontFamily: EN, fontSize: 30, fontWeight: 800,
+        fill: '#fff' }, (bNew / 12).toFixed(2)));
+      g.push(h('text', { key: 'tn2', x: SX + 105, y: Y0 + 6 * ROW + 22,
+        textAnchor: 'middle', fontFamily: EN, fontSize: 19, fontWeight: 700,
+        fill: GRN }, bNew + ' ÷ 12'));
+      g.push(h('text', { key: 'th', x: SX + 105, y: Y0 - 6, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 22, fontWeight: 800, fill: INK }, '합계'));
+      // 아래 요약
+      g.push(h('text', { key: 'n1', x: 36, y: 400, fontFamily: KR, fontSize: 23,
+        fill: 'var(--fg-3)' },
+        'E 는 확률 25% 인데 세 칸을 써서 혼자 0.75 를 먹고 있었다 — 한 칸으로 바꾸니 0.25 다'));
+      g.push(h('text', { key: 'n2', x: 36, y: 440, fontFamily: KR, fontSize: 23,
+        fill: 'var(--fg-3)' },
+        '반대로 한 번도 안 나오는 F 는 네 칸을 줘도 확률이 0 이라 비용이 없다'));
+      g.push(h('text', { key: 'n3', x: 36, y: 472, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: GRN },
+        '한 글자당 평균 2.58칸 → 1.83칸 — 31비트와 22비트를 12글자로 나눈 값이다'));
+      return svg(W, H, g);
+    })();
+
+
+    // ── 빈도순 재배정 ───────────────────────────────────────────
+    const codeResort = (() => {
+      const W = 1720, H = 520;
+      const g = [];
+      // 012 Gen AI Image.pptx p.6-7 의 표 그대로 — 빈도 합 12
+      const LT = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+      const CODE = ['0', '1', '10', '11', '100', '101', '110', '111', '1000'];
+      const FRQ = [1, 1, 0, 2, 3, 0, 2, 2, 1];
+      const PCT = [8, 8, 0, 17, 25, 0, 17, 17, 8];
+      const NEW = ['100', '101', '111', '1', '0', '1000', '10', '11', '110'];
+      const ORD = [4, 3, 6, 7, 0, 1, 8, 2, 5];   // 빈도 많은 순
+      const bits = (key, x, y, str, cw, col) => {
+        for (let i = 0; i < str.length; i++) {
+          g.push(h('rect', { key: key + i, x: x + i * (cw + 3), y: y, width: cw,
+            height: cw + 2, rx: 5, fill: '#fff', stroke: col, strokeWidth: 2.5 }));
+          g.push(h('text', { key: key + 't' + i, x: x + i * (cw + 3) + cw / 2,
+            y: y + cw / 2 + 9, textAnchor: 'middle', fontFamily: EN, fontSize: 18,
+            fontWeight: 800, fill: INK }, str[i]));
+        }
+      };
+      // 왼쪽 — 빈도순으로 줄 세우고 짧은 코드부터 나눠 준다
+      g.push(h('text', { key: 'lh', x: 36, y: 36, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: INK }, '① 빈도순으로 줄을 세운다'));
+      g.push(h('text', { key: 'lh2', x: 296, y: 36, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: GRN }, '② 짧은 코드부터'));
+      ORD.forEach((k, r) => {
+        const y = 56 + r * 50;
+        g.push(h('text', { key: 'rl' + r, x: 40, y: y + 26, fontFamily: EN,
+          fontSize: 24, fontWeight: 800, fill: FRQ[k] ? ACC : MUT }, LT[k]));
+        for (let i = 0; i < 3; i++)
+          g.push(h('rect', { key: 'rf' + r + i, x: 82 + i * 26, y: y + 6,
+            width: 22, height: 22, rx: 5,
+            fill: i < FRQ[k] ? ACC : '#EFEEF5' }));
+        g.push(h('text', { key: 'rp' + r, x: 176, y: y + 26, fontFamily: EN,
+          fontSize: 21, fill: MUT }, PCT[k] + '%'));
+        g.push(h('text', { key: 'ra' + r, x: 250, y: y + 26, fontFamily: EN,
+          fontSize: 22, fill: AX }, '→'));
+        bits('rb' + r, 300, y + 2, NEW[k], 30, GRN);
+        g.push(h('text', { key: 'rn' + r, x: 300 + 4 * 33 + 12, y: y + 26,
+          fontFamily: KR, fontSize: 20, fill: MUT }, NEW[k].length + '칸'));
+      });
+      // 오른쪽 — 같은 네 단어를 다시 적는다
+      g.push(h('text', { key: 'rh', x: 640, y: 36, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: INK }, '③ 같은 네 단어를 다시 적으면'));
+      const WORD = [['EGG', 'E,G,G'], ['BED', 'B,E,D'], ['HI', 'H,I'],
+                    ['HEAD', 'H,E,A,D']];
+      let oldT = 0, newT = 0;
+      WORD.forEach((w, i) => {
+        const y = 70 + i * 96;
+        const letters = w[1].split(',');
+        const o = letters.map((c) => CODE[LT.indexOf(c)]).join('');
+        const n = letters.map((c) => NEW[LT.indexOf(c)]).join('');
+        oldT += o.length; newT += n.length;
+        g.push(h('text', { key: 'wl' + i, x: 640, y: y + 40, fontFamily: EN,
+          fontSize: 27, fontWeight: 800, fill: INK }, w[0]));
+        // 이전
+        for (let k = 0; k < o.length; k++)
+          g.push(h('rect', { key: 'ob' + i + k, x: 746 + k * 24, y: y + 6,
+            width: 20, height: 26, rx: 4, fill: '#E7E5F0' }));
+        g.push(h('text', { key: 'on' + i, x: 1030, y: y + 28,
+          fontFamily: EN, fontSize: 21, fontWeight: 700, fill: MUT },
+          o.length + ' 비트'));
+        // 이후
+        bits('nb' + i, 746, y + 40, n, 26, GRN);
+        g.push(h('text', { key: 'nn' + i, x: 1030, y: y + 64,
+          fontFamily: EN, fontSize: 23, fontWeight: 800, fill: GRN },
+          n.length + ' 비트'));
+      });
+      g.push(h('rect', { key: 'sb', x: 1180, y: 152, width: 500, height: 196, rx: 20,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'st', x: 1214, y: 202, fontFamily: KR, fontSize: 24,
+        fill: 'var(--fg-3)' }, '네 단어를 적는 데'));
+      g.push(h('text', { key: 'so', x: 1214, y: 270, fontFamily: EN, fontSize: 40,
+        fontWeight: 800, fill: MUT }, oldT + ' 비트'));
+      g.push(h('text', { key: 'sa', x: 1390, y: 266, fontFamily: EN, fontSize: 34,
+        fill: AX }, '→'));
+      g.push(h('text', { key: 'sn', x: 1450, y: 272, fontFamily: EN, fontSize: 46,
+        fontWeight: 800, fill: GRN }, newT + ' 비트'));
+      g.push(h('text', { key: 'sc', x: 1214, y: 316, fontFamily: KR, fontSize: 21,
+        fill: GRN, fontWeight: 700 }, '정보는 그대로, 길이만 29% 줄었다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 정보량의 모양 ──────────────────────────────────────────
+    const idealShape = (() => {
+      const W = 1720, H = 470;
+      const g = [];
+      const PW = 400, PH = 260, PY = 54, GAP = 28;
+      const F = [
+        ['① 상수', 'y = c', (p) => 0.5, RED,
+         '다 같은 길이 — 처음에 한 짓', '자주 나오는 것에 이득이 없다'],
+        ['② 선형', 'y = 1 − p', (p) => 1 - p, '#E8873A',
+         '방향은 맞다', '거의 안 나오는 것에도 길이가 조금밖에 안 는다'],
+        ['③ 반비례', 'y = 1/p − 1', (p) => Math.min(1, 1 / Math.max(p, 0.02) / 10),
+         '#E8873A', '0 근처에서 커진다', '곱을 합으로 바꾸지 못한다'],
+        ['④ 음의 로그', 'y = − log p', (p) => -Math.log(Math.max(p, 0.012)) / 4.4,
+         GRN, '1 에서 0, 0 에서 무한', '곱을 합으로 바꾼다 — 이것이 답이다'],
+      ];
+      F.forEach((f, i) => {
+        const x0 = 36 + i * (PW + GAP);
+        const ok = i === 3;
+        g.push(h('rect', { key: 'b' + i, x: x0, y: PY, width: PW, height: PH, rx: 18,
+          fill: ok ? '#EAF7F1' : 'var(--surface-app)',
+          stroke: ok ? GRN : 'none', strokeWidth: ok ? 3 : 0 }));
+        g.push(h('text', { key: 't' + i, x: x0, y: 36, fontFamily: KR, fontSize: 24,
+          fontWeight: 800, fill: f[3] }, f[0]));
+        g.push(h('text', { key: 'e' + i, x: x0 + PW, y: 36, textAnchor: 'end',
+          fontFamily: EN, fontSize: 23, fontWeight: 700, fill: f[3] }, f[1]));
+        // 축
+        const ax = x0 + 54, ay = PY + PH - 46, aw = PW - 100, ah = PH - 86;
+        g.push(h('line', { key: 'xa' + i, x1: ax, y1: ay, x2: ax + aw, y2: ay,
+          stroke: '#C9C7D6', strokeWidth: 2 }));
+        g.push(h('line', { key: 'ya' + i, x1: ax, y1: ay, x2: ax, y2: ay - ah,
+          stroke: '#C9C7D6', strokeWidth: 2 }));
+        const d = [];
+        for (let k = 0; k <= 100; k++) {
+          const p = 0.012 + (k / 100) * 0.988;
+          const v = Math.max(0, Math.min(1, f[2](p)));
+          d.push((k ? 'L' : 'M') + (ax + (k / 100) * aw).toFixed(1) + ' '
+            + (ay - v * ah).toFixed(1));
+        }
+        g.push(h('path', { key: 'c' + i, d: d.join(' '), fill: 'none',
+          stroke: f[3], strokeWidth: 4.5 }));
+        g.push(h('text', { key: 'xl' + i, x: ax + aw, y: ay + 26, textAnchor: 'end',
+          fontFamily: EN, fontSize: 19, fill: MUT }, 'P(x) → 1'));
+        g.push(h('text', { key: 'yl' + i, x: ax - 10, y: ay - ah + 4,
+          textAnchor: 'end', fontFamily: KR, fontSize: 18, fill: MUT }, '길다'));
+        g.push(h('text', { key: 'n1' + i, x: x0, y: PY + PH + 36, fontFamily: KR,
+          fontSize: 21, fontWeight: 700, fill: ok ? GRN : INK }, f[4]));
+        g.push(h('text', { key: 'n2' + i, x: x0, y: PY + PH + 68, fontFamily: KR,
+          fontSize: 20, fill: ok ? GRN : MUT }, f[5]));
+      });
+      return svg(W, H, g);
+    })();
+
+    // ── 분포를 움직여 보는 엔트로피 ────────────────────────────
+    const entropyPlay = (() => {
+      const STEPS = 40;
+      const t = this.state.ent;                    // 0 = 균등, 40 = 한 곳에 몰림
+      const lam = t / STEPS * 3;
+      const LAB = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+      const raw = LAB.map((_, i) => Math.exp(-lam * i));
+      const sum = raw.reduce((a, b) => a + b, 0);
+      const p = raw.map((v) => v / sum);
+      const H = -p.reduce((a, v) => a + v * Math.log2(v), 0);
+      const HMAX = 3;                              // 여덟 글자 균등일 때
+
+      const SW = 1720, SH = 440;
+      const g = [];
+      // 왼쪽 — 분포
+      const BX = 40, BW = 86, PITCH = 106, BASE = 366, TOP = 60;
+      const ymax = Math.max(0.3, Math.max.apply(null, p) * 1.06);
+      g.push(h('text', { key: 'lt', x: BX, y: 36, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: MUT }, '여덟 글자가 나올 확률 P(x)'));
+      // 균등선
+      const uy = BASE - (0.125 / ymax) * (BASE - TOP);
+      g.push(h('line', { key: 'ul', x1: BX, y1: uy, x2: BX + 8 * PITCH - 20, y2: uy,
+        stroke: AX, strokeWidth: 2, strokeDasharray: '8 6' }));
+      g.push(h('text', { key: 'ut', x: BX + 8 * PITCH - 16, y: uy + 7,
+        fontFamily: KR, fontSize: 19, fill: MUT }, '균등 12.5%'));
+      p.forEach((v, i) => {
+        const hgt = Math.max(4, (v / ymax) * (BASE - TOP));
+        g.push(h('rect', { key: 'b' + i, x: BX + i * PITCH, y: BASE - hgt,
+          width: BW, height: hgt, rx: 8, fill: ACC,
+          opacity: 0.35 + 0.6 * (v / ymax) }));
+        g.push(h('text', { key: 'v' + i, x: BX + i * PITCH + BW / 2, y: BASE - hgt - 12,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 19, fontWeight: 700,
+          fill: ACC }, (v * 100).toFixed(1) + '%'));
+        g.push(h('text', { key: 'l' + i, x: BX + i * PITCH + BW / 2, y: BASE + 32,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 22, fontWeight: 800,
+          fill: INK }, LAB[i]));
+      });
+      g.push(h('line', { key: 'ax', x1: BX - 6, y1: BASE, x2: BX + 8 * PITCH - 14,
+        y2: BASE, stroke: '#C9C7D6', strokeWidth: 2 }));
+      g.push(h('text', { key: 'hint', x: BX, y: 420, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '← 마우스를 왼쪽으로 두면 고르게, 오른쪽으로 두면 한 곳에 몰린다 →'));
+
+      // 오른쪽 — 엔트로피
+      const RX = 980;
+      g.push(h('rect', { key: 'rb', x: RX, y: 24, width: 700, height: 356, rx: 22,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'rt', x: RX + 40, y: 76, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: MUT }, '이 분포의 엔트로피'));
+      g.push(h('text', { key: 'rv', x: RX + 40, y: 170, fontFamily: EN, fontSize: 82,
+        fontWeight: 800, fill: ACC }, H.toFixed(2)));
+      g.push(h('text', { key: 'ru', x: RX + 230, y: 170, fontFamily: KR, fontSize: 30,
+        fontWeight: 700, fill: MUT }, '비트 / 글자'));
+      // 게이지
+      const GX = RX + 40, GW = 620, GY = 220;
+      g.push(h('rect', { key: 'gb', x: GX, y: GY, width: GW, height: 26, rx: 13,
+        fill: '#E4E2EE' }));
+      g.push(h('rect', { key: 'gf', x: GX, y: GY, width: Math.max(6, GW * H / HMAX),
+        height: 26, rx: 13, fill: ACC }));
+      g.push(h('text', { key: 'g0', x: GX, y: GY + 52, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '0 — 답을 이미 안다'));
+      g.push(h('text', { key: 'g1', x: GX + GW, y: GY + 52, textAnchor: 'end',
+        fontFamily: KR, fontSize: 20, fill: MUT }, '3 — 여덟 글자 균등'));
+      g.push(h('text', { key: 'nt', x: GX, y: GY + 110, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: INK },
+        H > 2.7 ? '무엇이 나올지 전혀 모른다 — 적어 둘 것이 가장 많다'
+          : H > 1.6 ? '조금 치우쳤다 — 그만큼 줄일 수 있다'
+          : H > 0.7 ? '많이 치우쳤다 — 절반 아래로 줄어든다'
+          : '거의 A 만 나온다 — 적을 것이 거의 없다'));
+      g.push(h('text', { key: 'nn', x: GX, y: GY + 146, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '같은 글자 수라도 분포가 다르면 담는 데 드는 비트가 달라진다'));
+
+      const chip = (lab, val) => h('button', { key: lab,
+        onClick: () => this.setState({ ent: val }),
+        style: { border: t === val ? 'none' : '2px solid #D9D7E6',
+          cursor: 'pointer', borderRadius: '14px', padding: '14px 24px',
+          fontFamily: KR, fontSize: '21px', fontWeight: 700,
+          background: t === val ? ACC : '#fff',
+          color: t === val ? '#fff' : 'var(--fg-3)' } }, lab);
+
+      const onMove = (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+        const n = Math.round(f * STEPS);
+        if (n !== t) this.setState({ ent: n });
+      };
+
+      return h('div', { style: { display: 'flex', flexDirection: 'column',
+          gap: '16px', width: '100%', height: '100%' } },
+        h('div', { onMouseMove: onMove, onClick: onMove,
+          style: { flex: 1, minHeight: 0, cursor: 'ew-resize' } }, svg(SW, SH, g)),
+        h('div', { style: { display: 'flex', gap: '14px', alignItems: 'center' } },
+          chip('균등하게', 0), chip('조금 치우치게', 8),
+          chip('많이 치우치게', 20), chip('거의 하나만', 40),
+          h('span', { style: { fontFamily: KR, fontSize: '20px', color: MUT,
+            marginLeft: '12px' } },
+            '앞 장 A~I 코드는 서로의 접두어가 되는 문제가 있었다 \u2014 그 제약까지 넣은 최소 길이가 엔트로피다')));
+    })();
+
+    // ── 예측을 틀어 보는 크로스 엔트로피 ───────────────────────
+    const xentPlay = (() => {
+      const STEPS = 40;
+      const t = this.state.xe;
+      const a = t / STEPS;
+      const LAB = ['A', 'B', 'C', 'D', 'E'];
+      const TRUE = [0.40, 0.25, 0.20, 0.10, 0.05];
+      const WRONG = [0.01, 0.02, 0.07, 0.30, 0.60];
+      // 둘 다 합이 1 이라 섞어도 합이 1 이다 — 따로 정규화할 필요가 없다
+      const Q = TRUE.map((v, i) => (1 - a) * v + a * WRONG[i]);
+      const H = -TRUE.reduce((s2, v) => s2 + v * Math.log2(v), 0);
+      const CE = -TRUE.reduce((s2, v, i) => s2 + v * Math.log2(Q[i]), 0);
+      // 학생이 세 숫자를 더해 본다 — 화면에 찍히는 값끼리 맞아떨어져야 한다
+      const hS = H.toFixed(2), ceS = CE.toFixed(2);
+      const klS = (parseFloat(ceS) - parseFloat(hS)).toFixed(2);
+      const KL = CE - H;
+      const CONTRIB = TRUE.map((v, i) => v * -Math.log2(Q[i]));
+      let worst = 0;
+      CONTRIB.forEach((v, i) => { if (v > CONTRIB[worst]) worst = i; });
+
+      const SW = 1720, SH = 430;
+      const g = [];
+      // 왼쪽 — 실제 분포와 예측 분포를 나란히
+      const BX = 40, PITCH = 132, BW = 52, BASE = 320, TOP = 52;
+      const ymax = 0.66;
+      const bar = (key, x, v, fill, stroke, dash) => {
+        const hgt = Math.max(3, (v / ymax) * (BASE - TOP));
+        g.push(h('rect', { key: key, x: x, y: BASE - hgt, width: BW, height: hgt,
+          rx: 7, fill: fill, stroke: stroke, strokeWidth: stroke ? 3 : 0,
+          strokeDasharray: dash || 'none' }));
+        return hgt;
+      };
+      g.push(h('text', { key: 'lt', x: BX, y: 30, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: MUT }, '실제 분포 P(x)'));
+      g.push(h('rect', { key: 'k1', x: BX + 170, y: 14, width: 22, height: 18, rx: 4,
+        fill: 'none', stroke: INK, strokeWidth: 3 }));
+      g.push(h('text', { key: 'rt', x: BX + 208, y: 30, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: VIO }, '예측 분포 Q(x)'));
+      g.push(h('rect', { key: 'k2', x: BX + 378, y: 14, width: 22, height: 18, rx: 4,
+        fill: VIO }));
+      LAB.forEach((L, i) => {
+        const x = BX + i * PITCH;
+        bar('p' + i, x, TRUE[i], 'none', INK, '7 5');
+        bar('q' + i, x + BW + 8, Q[i], i === worst ? RED : VIO, null, null);
+        g.push(h('text', { key: 'pl' + i, x: x + BW / 2,
+          y: BASE - (TRUE[i] / ymax) * (BASE - TOP) - 10, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 17, fill: MUT },
+          (TRUE[i] * 100).toFixed(0) + '%'));
+        g.push(h('text', { key: 'ql' + i, x: x + BW + 8 + BW / 2,
+          y: BASE - (Q[i] / ymax) * (BASE - TOP) - 10, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 17, fontWeight: 700,
+          fill: i === worst ? RED : VIO }, (Q[i] * 100).toFixed(0) + '%'));
+        g.push(h('text', { key: 'll' + i, x: x + BW + 4, y: BASE + 32,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 22, fontWeight: 800,
+          fill: INK }, L));
+      });
+      g.push(h('line', { key: 'ax', x1: BX - 6, y1: BASE, x2: BX + 4 * PITCH + 2 * BW + 20,
+        y2: BASE, stroke: '#C9C7D6', strokeWidth: 2 }));
+      g.push(h('text', { key: 'hint', x: BX, y: 400, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '← 왼쪽이면 정확히 맞힌 예측, 오른쪽으로 갈수록 빗나간 예측 →'));
+
+      // 가운데 — 글자마다 얼마를 무는가
+      const TX = 720, TP = 104;
+      g.push(h('text', { key: 'tt', x: TX, y: 30, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: MUT }, '글자마다 무는 비용'));
+      [['P(x)', (i) => TRUE[i].toFixed(2), MUT, 78],
+       ['\u2212log\u2082 Q', (i) => (-Math.log2(Q[i])).toFixed(2), MUT, 122],
+       ['P \u00D7 \u2212log\u2082 Q', (i) => CONTRIB[i].toFixed(2), INK, 166],
+      ].forEach((r, k) => {
+        g.push(h('text', { key: 'rl' + k, x: TX, y: r[3], fontFamily: KR,
+          fontSize: 19, fill: MUT }, r[0]));
+        LAB.forEach((L, i) => {
+          const hot = k === 2 && i === worst;
+          if (hot) g.push(h('rect', { key: 'hb' + i, x: TX + 150 + i * TP - 6,
+            y: r[3] - 26, width: TP - 8, height: 36, rx: 8, fill: '#FDE7E7' }));
+          g.push(h('text', { key: 'c' + k + i, x: TX + 150 + i * TP + (TP - 20) / 2,
+            y: r[3], textAnchor: 'middle', fontFamily: EN,
+            fontSize: k === 2 ? 22 : 20, fontWeight: k === 2 ? 800 : 500,
+            fill: hot ? RED : r[2] }, r[1](i)));
+        });
+      });
+      LAB.forEach((L, i) => g.push(h('text', { key: 'th' + i,
+        x: TX + 150 + i * TP + (TP - 20) / 2, y: 34, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 20, fontWeight: 800, fill: INK }, L)));
+      g.push(h('text', { key: 'wn', x: TX, y: 212, fontFamily: KR, fontSize: 20,
+        fill: KL < 0.05 ? GRN : RED, fontWeight: 700 },
+        KL < 0.05
+          ? '예측이 실제와 같다 — 크로스 엔트로피가 엔트로피와 같아졌다. 더 내려갈 곳이 없다'
+          : LAB[worst] + ' 하나가 ' + (CONTRIB[worst] / CE * 100).toFixed(0)
+            + '% 를 먹는다 — 자주 나오는 것을 낮게 본 죄가 제일 비싸다'));
+
+      // 오른쪽 아래 — 엔트로피 + 더 쓴 양
+      const GX = TX, GW = 940, GY = 258, MAX = 6;
+      g.push(h('text', { key: 'gt', x: GX, y: GY - 10, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: MUT }, '크로스 엔트로피 = 엔트로피 + 더 쓴 양'));
+      g.push(h('rect', { key: 'gb', x: GX, y: GY, width: GW, height: 44, rx: 10,
+        fill: '#EFEEF5' }));
+      const wH = GW * H / MAX, wK = GW * KL / MAX;
+      g.push(h('rect', { key: 'gh', x: GX, y: GY, width: wH, height: 44, rx: 10,
+        fill: GRN }));
+      g.push(h('rect', { key: 'gk', x: GX + wH, y: GY, width: Math.max(2, wK),
+        height: 44, rx: 10, fill: RED }));
+      g.push(h('text', { key: 'ghl', x: GX + 16, y: GY + 30, fontFamily: EN,
+        fontSize: 21, fontWeight: 800, fill: '#fff' }, hS));
+      if (wK > 62)
+        g.push(h('text', { key: 'gkl', x: GX + wH + 16, y: GY + 30, fontFamily: EN,
+          fontSize: 21, fontWeight: 800, fill: '#fff' }, klS));
+      const card = (key, x, w, lab, val, col, note) => {
+        g.push(h('rect', { key: key + 'b', x: x, y: 326, width: w, height: 86, rx: 16,
+          fill: '#fff', stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 'l', x: x + 20, y: 356, fontFamily: KR,
+          fontSize: 19, fill: MUT }, lab));
+        g.push(h('text', { key: key + 'v', x: x + 20, y: 396, fontFamily: EN,
+          fontSize: 32, fontWeight: 800, fill: col }, val));
+        g.push(h('text', { key: key + 'n', x: x + w - 20, y: 396, textAnchor: 'end',
+          fontFamily: KR, fontSize: 18, fill: MUT }, note));
+      };
+      card('a', GX, 300, '엔트로피 H(P) — 고정', hS, GRN, '더는 못 내려간다');
+      card('b', GX + 316, 300, '크로스 엔트로피', ceS, ACC, '비트 / 글자');
+      card('c', GX + 632, 308, '더 쓴 양 (다음 장 KL)', klS, RED,
+        'CE \u2212 H');
+
+      const chip = (lab, val) => h('button', { key: lab,
+        onClick: () => this.setState({ xe: val }),
+        style: { border: t === val ? 'none' : '2px solid #D9D7E6', cursor: 'pointer',
+          borderRadius: '14px', padding: '14px 24px', fontFamily: KR,
+          fontSize: '21px', fontWeight: 700,
+          background: t === val ? ACC : '#fff',
+          color: t === val ? '#fff' : 'var(--fg-3)' } }, lab);
+
+      const onMove = (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+        const n = Math.round(f * STEPS);
+        if (n !== t) this.setState({ xe: n });
+      };
+
+      return h('div', { style: { display: 'flex', flexDirection: 'column',
+          gap: '14px', width: '100%', height: '100%' } },
+        h('div', { onMouseMove: onMove, onClick: onMove,
+          style: { flex: 1, minHeight: 0, cursor: 'ew-resize' } }, svg(SW, SH, g)),
+        h('div', { style: { display: 'flex', gap: '14px', alignItems: 'center' } },
+          chip('정확히 맞혔다', 0), chip('조금 어긋났다', 10),
+          chip('많이 어긋났다', 24), chip('완전히 빗나갔다', 40),
+          h('span', { style: { fontFamily: KR, fontSize: '20px', color: MUT,
+            marginLeft: '12px' } },
+            '\uC67C\uCABD \uB05D\uC5D0\uC11C\uB9CC \uB450 \uBD84\uD3EC\uAC00 \uAC19\uB2E4 \u2014 \uADF8\uB54C \uD06C\uB85C\uC2A4 \uC5D4\uD2B8\uB85C\uD53C\uAC00 \uC5D4\uD2B8\uB85C\uD53C\uC640 \uAC19\uC544\uC9C4\uB2E4')));
+    })();
+
+    // ── 크로스 엔트로피가 터지는 이유 ───────────────────────────
+    const xentBlow = (() => {
+      const W = 1720, H = 440;
+      const g = [];
+      const CASE = [
+        ['실제 자주 · 예측 낮게', '큰 확률', '긴 코드', '합이 폭발', RED],
+        ['실제 드묾 · 예측 높게', '작은 확률', '짧은 코드', '짧아야 할 곳이 뒤바뀐다', '#E8873A'],
+        ['두 분포가 같으면', '큰 확률', '짧은 코드', '가장 효율적 — 손실 최소', GRN],
+      ];
+      CASE.forEach((c, i) => {
+        const x = 40 + i * 552;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 30, width: 512, height: 330, rx: 20,
+          fill: '#fff', stroke: c[4], strokeWidth: 3 }));
+        g.push(h('text', { key: 't' + i, x: x + 32, y: 88, fontFamily: KR,
+          fontSize: 25, fontWeight: 800, fill: c[4] }, c[0]));
+        g.push(h('rect', { key: 'p' + i, x: x + 32, y: 118, width: 200, height: 64,
+          rx: 12, fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'pt' + i, x: x + 132, y: 158, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fill: 'var(--fg-3)' }, c[1]));
+        g.push(h('text', { key: 'x' + i, x: x + 252, y: 160, fontFamily: EN,
+          fontSize: 28, fill: MUT }, '×'));
+        g.push(h('rect', { key: 'l' + i, x: x + 280, y: 118, width: 200, height: 64,
+          rx: 12, fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'lt' + i, x: x + 380, y: 158, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 22, fill: 'var(--fg-3)' }, c[2]));
+        g.push(h('text', { key: 'r' + i, x: x + 32, y: 262, fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: c[4] }, c[3]));
+        g.push(h('text', { key: 'n' + i, x: x + 32, y: 316, fontFamily: KR,
+          fontSize: 21, fill: MUT },
+          ['확률은 실제에서, 길이는 예측에서', '확률은 실제에서, 길이는 예측에서',
+           '엔트로피와 같아진다'][i]));
+      });
+      return svg(W, H, g);
+    })();
+
+    // ── 관점 전환 ───────────────────────────────────────────────
+    const shiftView = (() => {
+      const W = 1720, H = 260;
+      const g = [];
+      g.push(h('rect', { key: 'a', x: 40, y: 30, width: 740, height: 180, rx: 20,
+        fill: 'rgba(255,255,255,.07)' }));
+      g.push(h('text', { key: 'at', x: 76, y: 92, fontFamily: KR, fontSize: 27,
+        fontWeight: 700, fill: 'var(--neutral-lighter)' }, '지금까지'));
+      g.push(h('text', { key: 'av', x: 76, y: 158, fontFamily: KR, fontSize: 36,
+        fontWeight: 800, fill: '#fff' }, '예측값 ↔ 실제값'));
+      g.push(h('text', { key: 'ar', x: 830, y: 134, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 44, fill: '#6E6890' }, '→'));
+      g.push(h('rect', { key: 'b', x: 890, y: 30, width: 790, height: 180, rx: 20,
+        fill: 'rgba(0,228,155,.14)', stroke: 'rgba(0,228,155,.45)', strokeWidth: 3 }));
+      g.push(h('text', { key: 'bt', x: 926, y: 92, fontFamily: KR, fontSize: 27,
+        fontWeight: 700, fill: 'var(--neutral-lighter)' }, '지금부터'));
+      g.push(h('text', { key: 'bv', x: 926, y: 158, fontFamily: KR, fontSize: 36,
+        fontWeight: 800, fill: '#00E49B' }, '예측 분포 ↔ 실제 분포'));
+      return svg(W, H, g);
+    })();
+
+    // ── 픽셀 히스토그램 vs 이미지 분포 ─────────────────────────
+    const pixelVsImage = (() => {
+      const W = 1720, H = 440;
+      const g = [];
+      const rnd = (sd) => () => { sd = (sd * 1664525 + 1013904223) % 4294967296; return sd / 4294967296; };
+      // 같은 값 64개를 자리만 바꿔 둔 두 그림 — 히스토그램이 완전히 같다
+      const N = 8, LV = [0.06, 0.52, 0.95];
+      const shape = [];
+      for (let r = 0; r < N; r++)
+        for (let c = 0; c < N; c++) {
+          const dr = Math.abs(r - 3.5), dc = Math.abs(c - 3.5);
+          shape.push(Math.max(dr, dc) < 1.6 ? 2 : Math.max(dr, dc) < 2.6 ? 1 : 0);
+        }
+      const mix = shape.slice();
+      const r0 = rnd(7);
+      for (let i = mix.length - 1; i > 0; i--) {
+        const j = Math.floor(r0() * (i + 1));
+        const tmp = mix[i]; mix[i] = mix[j]; mix[j] = tmp;
+      }
+      const CELL = 22;
+      const pair = (key, x0, arr, name) => {
+        arr.forEach((v, i) => {
+          g.push(h('rect', { key: key + 'c' + i, x: x0 + (i % N) * CELL,
+            y: 78 + Math.floor(i / N) * CELL, width: CELL - 2, height: CELL - 2,
+            rx: 3, fill: ACC, opacity: LV[v] }));
+        });
+        g.push(h('text', { key: key + 'n', x: x0, y: 282, fontFamily: KR,
+          fontSize: 21, fontWeight: 700, fill: INK }, name));
+        const cnt = [0, 0, 0];
+        arr.forEach((v) => { cnt[v] += 1; });
+        cnt.forEach((n, i) => {
+          const hh = n / 40 * 52;
+          g.push(h('rect', { key: key + 'h' + i, x: x0 + i * 46, y: 352 - hh,
+            width: 38, height: hh, rx: 5, fill: ACC, opacity: 0.3 + i * 0.3 }));
+          g.push(h('text', { key: key + 'v' + i, x: x0 + i * 46 + 19, y: 374,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 17, fill: MUT },
+            String(n)));
+        });
+        g.push(h('text', { key: key + 'hl', x: x0 + 152, y: 348, fontFamily: KR,
+          fontSize: 18, fill: MUT }, '히스토그램'));
+      };
+      g.push(h('rect', { key: 'lb', x: 30, y: 46, width: 800, height: 352, rx: 20,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }));
+      g.push(h('text', { key: 'lx', x: 30, y: 30, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: RED }, '✗  픽셀 값 분포만 맞추면'));
+      pair('a', 96, shape, '모양이 있는 그림');
+      pair('b', 480, mix, '자리만 섞은 잡음');
+      g.push(h('text', { key: 'eq', x: 420, y: 178, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fontWeight: 800, fill: RED }, '='));
+      g.push(h('text', { key: 'lc', x: 60, y: 424, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: RED },
+        '값의 개수는 완전히 같다 — 그런데 하나는 그림이고 하나는 잡음이다'));
+      // 오른쪽 — 이미지 한 장이 점 하나
+      g.push(h('rect', { key: 'rb', x: 890, y: 46, width: 800, height: 352, rx: 20,
+        fill: '#EAF7F1', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'rx', x: 890, y: 30, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: GRN }, '○  이미지 한 장이 나올 확률의 분포를 맞댄다'));
+      const r1 = rnd(31);
+      for (let i = 0; i < 90; i++) {
+        const a2 = r1() * Math.PI * 1.15 + 0.5, rr = 82 + (r1() - 0.5) * 24;
+        g.push(h('circle', { key: 'dr' + i, cx: 1140 + Math.cos(a2) * rr * 1.4,
+          cy: 250 - Math.sin(a2) * rr, r: 6, fill: INK, opacity: 0.55 }));
+      }
+      for (let i = 0; i < 70; i++) {
+        const a2 = r1() * Math.PI * 2, rr = r1() * 66;
+        g.push(h('circle', { key: 'dg' + i, cx: 1470 + Math.cos(a2) * rr,
+          cy: 160 + Math.sin(a2) * rr * 0.8, r: 6, fill: GRN, opacity: 0.6 }));
+      }
+      g.push(h('text', { key: 'lr', x: 930, y: 300, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: INK }, '실제 사진들'));
+      g.push(h('text', { key: 'lg', x: 1546, y: 100, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: GRN }, '모델이 만든 것들'));
+      g.push(h('path', { key: 'arw', d: 'M1432 224 Q 1390 286 1276 286', fill: 'none',
+        stroke: GRN, strokeWidth: 3.5, strokeDasharray: '10 7' }));
+      g.push(h('path', { key: 'arh', d: 'M1288 278 L1270 287 L1289 296 Z', fill: GRN }));
+      g.push(h('text', { key: 'rc', x: 920, y: 352, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: GRN },
+        '이미지 한 장 = 100만 차원 공간의 점 하나. 두 점 구름의 차이를 줄인다'));
+      g.push(h('text', { key: 'rc2', x: 920, y: 386, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '그 확률을 직접 계산할 수는 없다 — 그래서 재는 방법이 갈렸다'));
+      return svg(W, H, g);
+    })();
+
+    // ── GAN 루프 ────────────────────────────────────────────────
+    const ganLoop = (() => {
+      const W = 1720, H = 460;
+      const g = [];
+      // z
+      g.push(h('rect', { key: 'z', x: 40, y: 170, width: 160, height: 110, rx: 18,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'zt', x: 120, y: 218, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 30, fontWeight: 800, fill: MUT }, 'z'));
+      g.push(h('text', { key: 'zn', x: 120, y: 254, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 20, fill: MUT }, '난수 100개'));
+      // G
+      g.push(h('rect', { key: 'G', x: 270, y: 150, width: 280, height: 150, rx: 20,
+        fill: '#EDF9F4', stroke: GRN, strokeWidth: 3.5 }));
+      g.push(h('text', { key: 'Gt', x: 410, y: 208, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 30, fontWeight: 800, fill: GRN }, '생성자'));
+      g.push(h('text', { key: 'Gn', x: 410, y: 250, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fill: MUT }, '위조범'));
+      // fake / real
+      g.push(h('rect', { key: 'f', x: 630, y: 60, width: 240, height: 110, rx: 16,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }));
+      g.push(h('text', { key: 'ft', x: 750, y: 126, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 26, fontWeight: 800, fill: RED }, '가짜 이미지'));
+      g.push(h('rect', { key: 'r', x: 630, y: 290, width: 240, height: 110, rx: 16,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'rt', x: 750, y: 356, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 26, fontWeight: 800, fill: INK }, '진짜 이미지'));
+      // D
+      g.push(h('rect', { key: 'D', x: 960, y: 150, width: 280, height: 150, rx: 20,
+        fill: '#EEF0FE', stroke: ACC, strokeWidth: 3.5 }));
+      g.push(h('text', { key: 'Dt', x: 1100, y: 208, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 30, fontWeight: 800, fill: ACC }, '판별자'));
+      g.push(h('text', { key: 'Dn', x: 1100, y: 250, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fill: MUT }, '감별사'));
+      // out
+      g.push(h('rect', { key: 'o', x: 1320, y: 170, width: 200, height: 110, rx: 18,
+        fill: '#fff', stroke: MUT, strokeWidth: 2.5 }));
+      g.push(h('text', { key: 'ot', x: 1420, y: 232, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 30, fontWeight: 800, fill: INK }, '0 / 1'));
+      const arr = (key, x1, y1, x2, y2, col) => {
+        g.push(h('line', { key: key, x1: x1, y1: y1, x2: x2 - 12, y2: y2, stroke: col,
+          strokeWidth: 3.5 }));
+        g.push(h('path', { key: key + 'h', d: 'M' + (x2 - 14) + ' ' + (y2 - 8) + ' L'
+          + x2 + ' ' + y2 + ' L' + (x2 - 14) + ' ' + (y2 + 8) + ' Z', fill: col }));
+      };
+      arr('a1', 200, 225, 270, 225, MUT);
+      arr('a2', 550, 200, 630, 130, GRN);
+      arr('a3', 870, 120, 960, 195, RED);
+      arr('a4', 870, 340, 960, 260, MUT);
+      arr('a5', 1240, 225, 1320, 225, ACC);
+      g.push(h('path', { key: 'fb', d: 'M1420 290 V 410 H 410 V 306', fill: 'none',
+        stroke: VIO, strokeWidth: 3.5, strokeDasharray: '11 8' }));
+      g.push(h('path', { key: 'fbh', d: 'M402 314 L410 298 L418 314 Z', fill: VIO }));
+      g.push(h('text', { key: 'fbt', x: 900, y: 442, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fontWeight: 700, fill: VIO },
+        '판별자를 속이는 방향으로 생성자를 학습시킨다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 번갈아 잠그는 그림 ─────────────────────────────────────
+    //    같은 모델 그림에 자물쇠만 옮겨 단다 — 두 장이 나란히 놓여야 뜻이 산다
+    const ganFreeze = (lockD) => {
+      const W = 1720, H = 470;
+      const g = [];
+      const ON = 1, OFF = 0.22;
+      const gOp = lockD ? ON : OFF;       // 생성자가 배우는 차례인가
+      const dOp = lockD ? OFF : ON;
+      const box = (key, x, y, w, hh, fill, stroke, op) =>
+        g.push(h('rect', { key: key, x: x, y: y, width: w, height: hh, rx: 20,
+          fill: fill, stroke: stroke, strokeWidth: 3.5, opacity: op }));
+      const lab = (key, x, y, t, col, fs, op, anchor) =>
+        g.push(h('text', { key: key, x: x, y: y, textAnchor: anchor || 'middle',
+          fontFamily: KR, fontSize: fs, fontWeight: 800, fill: col, opacity: op }, t));
+      const lock = (key, cx, cy, op) => {
+        g.push(h('rect', { key: key + 'b', x: cx - 26, y: cy - 14, width: 52,
+          height: 42, rx: 9, fill: '#0C0B17', opacity: op }));
+        g.push(h('path', { key: key + 's', d: 'M' + (cx - 14) + ' ' + (cy - 14)
+          + ' v -12 a 14 14 0 0 1 28 0 v 12', fill: 'none', stroke: '#0C0B17',
+          strokeWidth: 7, opacity: op }));
+        g.push(h('circle', { key: key + 'k', cx: cx, cy: cy + 6, r: 5,
+          fill: '#fff', opacity: op }));
+      };
+      const arr = (key, x1, y1, x2, y2, col, op, dash) => {
+        g.push(h('line', { key: key, x1: x1, y1: y1, x2: x2 - 12, y2: y2,
+          stroke: col, strokeWidth: 3.5, opacity: op,
+          strokeDasharray: dash || 'none' }));
+        g.push(h('path', { key: key + 'h', d: 'M' + (x2 - 14) + ' ' + (y2 - 8)
+          + ' L' + x2 + ' ' + y2 + ' L' + (x2 - 14) + ' ' + (y2 + 8) + ' Z',
+          fill: col, opacity: op }));
+      };
+      // z → 생성자 → 가짜 이미지
+      box('z', 40, 172, 150, 104, 'var(--surface-app)', 'none', gOp);
+      lab('zt', 115, 214, 'z', MUT, 28, gOp);
+      lab('zn', 115, 250, '난수 100개', MUT, 19, gOp);
+      box('G', 250, 152, 270, 146, '#EDF9F4', GRN, gOp);
+      lab('Gt', 385, 210, '생성자', GRN, 30, gOp);
+      lab('Gn', 385, 250, '위조범', MUT, 20, gOp);
+      arr('a1', 190, 224, 250, 224, MUT, gOp);
+      box('f', 600, 58, 240, 106, '#FDF0F0', RED, ON);
+      lab('ft', 720, 122, '가짜 이미지', RED, 26, ON);
+      arr('a2', 520, 200, 600, 128, GRN, gOp);
+      // 진짜 이미지 — 생성자를 학습시킬 때는 쓰지 않는다
+      box('r', 600, 286, 240, 106, 'var(--surface-app)', 'none', lockD ? OFF : ON);
+      lab('rt', 720, 350, '진짜 이미지', INK, 26, lockD ? OFF : ON);
+      // 판별자
+      box('D', 960, 152, 270, 146, '#EEF0FE', ACC, dOp);
+      lab('Dt', 1095, 210, '판별자', ACC, 30, dOp);
+      lab('Dn', 1095, 250, '감별사', MUT, 20, dOp);
+      arr('a3', 840, 112, 960, 194, RED, ON);
+      arr('a4', 840, 340, 960, 258, MUT, lockD ? OFF : ON);
+      box('o', 1310, 172, 190, 104, '#fff', MUT, ON);
+      lab('ot', 1405, 234, '0 / 1', INK, 28, ON);
+      arr('a5', 1230, 224, 1310, 224, ACC, dOp);
+      // 자물쇠와 역전파
+      if (lockD) {
+        lock('lk', 1095, 128, 1);
+        lab('lt', 1095, 66, '가중치 고정', '#0C0B17', 21, 1);
+        g.push(h('path', { key: 'bp', d: 'M1405 292 V 404 H 385 V 306', fill: 'none',
+          stroke: VIO, strokeWidth: 4, strokeDasharray: '11 8' }));
+        g.push(h('path', { key: 'bph', d: 'M377 314 L385 296 L393 314 Z', fill: VIO }));
+        lab('bt', 900, 438, '기울기는 판별자를 그대로 통과해 생성자까지 간다', VIO, 23, 1);
+      } else {
+        lock('lk', 385, 128, 1);
+        lab('lt', 385, 66, '가중치 고정', '#0C0B17', 21, 1);
+        g.push(h('path', { key: 'bp', d: 'M1405 292 V 360 H 1095 V 306', fill: 'none',
+          stroke: VIO, strokeWidth: 4, strokeDasharray: '11 8' }));
+        g.push(h('path', { key: 'bph', d: 'M1087 314 L1095 296 L1103 314 Z',
+          fill: VIO }));
+        lab('bt', 1250, 400, '판별자만 바뀐다', VIO, 23, 1);
+      }
+      return svg(W, H, g);
+    };
+    const freezeG = ganFreeze(false);
+    const freezeD = ganFreeze(true);
+
+    // ── GAN 학습 절차 ───────────────────────────────────────────
+    const ganSteps = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const S = [['①', '가짜를 찍는다', '생성자로 만 장', GRN],
+                 ['②', '판별자를 학습시킨다', '진짜 1, 가짜 0', ACC],
+                 ['③', '판별자를 잠근다', '가중치 고정 — 학습 정지', RED],
+                 ['④', '생성자만 학습시킨다', '판별자가 1이라 답하도록', VIO]];
+      const CW = 390, GAP = 30, X0 = 40;
+      S.forEach((s, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 40, width: CW, height: 250, rx: 20,
+          fill: '#fff', stroke: s[3], strokeWidth: 3 }));
+        g.push(h('text', { key: 'n' + i, x: x + 30, y: 100, fontFamily: EN,
+          fontSize: 32, fontWeight: 800, fill: s[3] }, s[0]));
+        g.push(h('text', { key: 't' + i, x: x + 30, y: 166, fontFamily: KR,
+          fontSize: 28, fontWeight: 700, fill: INK }, s[1]));
+        g.push(h('text', { key: 's' + i, x: x + 30, y: 218, fontFamily: KR,
+          fontSize: 22, fill: 'var(--fg-3)' }, s[2]));
+        if (i < 3) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 176,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: AX }, '→'));
+      });
+      g.push(h('path', { key: 'loop', d: 'M1620 300 V 350 H 240 V 302', fill: 'none',
+        stroke: MUT, strokeWidth: 3, strokeDasharray: '10 7' }));
+      g.push(h('path', { key: 'lh', d: 'M232 310 L240 294 L248 310 Z', fill: MUT }));
+      g.push(h('text', { key: 'lt', x: 900, y: 388, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fill: MUT }, '수십 수백 번 반복'));
+      return svg(W, H, g);
+    })();
+
+    // ── 오토인코더의 잠재공간은 비어 있다 ──────────────────────
+    const aeGap = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const rnd = (sd) => () => { sd = (sd * 1664525 + 1013904223) % 4294967296; return sd / 4294967296; };
+      const tile = (key, x0, y0, arr, cell, col) => {
+        arr.forEach((v, i) => g.push(h('rect', { key: key + i,
+          x: x0 + (i % 6) * cell, y: y0 + Math.floor(i / 6) * cell,
+          width: cell - 2, height: cell - 2, rx: 2, fill: col, opacity: v })));
+      };
+      const r0 = rnd(5);
+      const noise = [], shape = [];
+      for (let i = 0; i < 36; i++) {
+        noise.push(0.1 + r0() * 0.85);
+        const r = Math.floor(i / 6), c = i % 6;
+        shape.push(Math.max(Math.abs(r - 2.5), Math.abs(c - 2.5)) < 1.6 ? 0.92 : 0.12);
+      }
+      // 왼쪽 — 그냥 오토인코더
+      g.push(h('rect', { key: 'lb', x: 30, y: 44, width: 800, height: 336, rx: 20,
+        fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }));
+      g.push(h('text', { key: 'lx', x: 30, y: 28, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: RED }, '✗  그냥 오토인코더의 잠재공간'));
+      const r1 = rnd(19);
+      const ISL = [[180, 140], [300, 250], [148, 290], [360, 120], [270, 180]];
+      ISL.forEach((c, k) => {
+        for (let i = 0; i < 22; i++) {
+          const a2 = r1() * Math.PI * 2, rr = r1() * 34;
+          g.push(h('circle', { key: 'p' + k + i, cx: c[0] + Math.cos(a2) * rr,
+            cy: c[1] + Math.sin(a2) * rr * 0.85, r: 5, fill: ACC, opacity: 0.5 }));
+        }
+      });
+      g.push(h('circle', { key: 'q', cx: 236, cy: 208, r: 17, fill: '#fff',
+        stroke: RED, strokeWidth: 4 }));
+      g.push(h('text', { key: 'qt', x: 236, y: 216, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 22, fontWeight: 800, fill: RED }, '?'));
+      g.push(h('text', { key: 'qn', x: 236, y: 254, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 18, fill: RED }, '여기를 찍으면?'));
+      g.push(h('text', { key: 'ar', x: 480, y: 216, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: RED }, '→'));
+      tile('n', 570, 132, noise, 26, RED);
+      g.push(h('text', { key: 'nn', x: 570, y: 316, fontFamily: KR, fontSize: 20,
+        fontWeight: 700, fill: RED }, '깨진 그림이 나온다'));
+      g.push(h('text', { key: 'lc', x: 56, y: 406, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' },
+        '점들 사이가 비어 있고, 어디가 비었는지 우리가 알 방법도 없다'));
+      // 오른쪽 — 분포를 못 박아 두면
+      g.push(h('rect', { key: 'rb', x: 890, y: 44, width: 800, height: 336, rx: 20,
+        fill: '#EAF7F1', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'rx', x: 890, y: 28, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: GRN }, '○  분포를 미리 못 박아 둔 잠재공간'));
+      const r2 = rnd(41);
+      for (let i = 0; i < 240; i++) {
+        const u1 = Math.max(1e-6, r2()), u2 = r2();
+        const rr = Math.sqrt(-2 * Math.log(u1)) * 44;
+        g.push(h('circle', { key: 'gp' + i, cx: 1090 + rr * Math.cos(u2 * Math.PI * 2),
+          cy: 210 + rr * Math.sin(u2 * Math.PI * 2) * 0.9, r: 5, fill: GRN,
+          opacity: 0.45 }));
+      }
+      g.push(h('circle', { key: 'gq', cx: 1112, cy: 190, r: 17, fill: '#fff',
+        stroke: GRN, strokeWidth: 4 }));
+      g.push(h('text', { key: 'gqt', x: 1112, y: 198, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 20, fontWeight: 800, fill: GRN }, 'z'));
+      g.push(h('text', { key: 'gar', x: 1340, y: 216, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: GRN }, '→'));
+      tile('s', 1430, 132, shape, 26, GRN);
+      g.push(h('text', { key: 'sn', x: 1430, y: 316, fontFamily: KR, fontSize: 20,
+        fontWeight: 700, fill: GRN }, '말이 되는 그림이 나온다'));
+      g.push(h('text', { key: 'rc', x: 916, y: 406, fontFamily: KR, fontSize: 21,
+        fill: 'var(--fg-3)' },
+        '표준정규분포라고 정해 두면 어디서 뽑아야 할지가 정해진다'));
+      return svg(W, H, g);
+    })();
+
+    // ── VAE 의 구조 ────────────────────────────────────────────
+    const vaeFlow = (() => {
+      const W = 1720, H = 430;
+      const g = [];
+      const CY = 188;
+      const trap = (key, x, w, h1, h2, fill, stroke) =>
+        g.push(h('path', { key: key, d: 'M' + x + ' ' + (CY - h1 / 2) + ' L'
+          + (x + w) + ' ' + (CY - h2 / 2) + ' L' + (x + w) + ' ' + (CY + h2 / 2)
+          + ' L' + x + ' ' + (CY + h1 / 2) + ' Z', fill: fill, stroke: stroke,
+          strokeWidth: 3 }));
+      const tx = (key, x, y, t, col, fs, w, anchor) =>
+        g.push(h('text', { key: key, x: x, y: y, textAnchor: anchor || 'middle',
+          fontFamily: KR, fontSize: fs, fontWeight: w || 700, fill: col }, t));
+      const arr = (key, x1, y1, x2, y2, col, dash) => {
+        g.push(h('line', { key: key, x1: x1, y1: y1, x2: x2 - 10, y2: y2,
+          stroke: col, strokeWidth: 3, strokeDasharray: dash || 'none' }));
+        g.push(h('path', { key: key + 'h', d: 'M' + (x2 - 12) + ' ' + (y2 - 7)
+          + ' L' + x2 + ' ' + y2 + ' L' + (x2 - 12) + ' ' + (y2 + 7) + ' Z',
+          fill: col }));
+      };
+      // x
+      g.push(h('rect', { key: 'x', x: 34, y: CY - 54, width: 108, height: 108,
+        rx: 12, fill: 'var(--surface-app)' }));
+      tx('xt', 88, CY + 10, 'x', INK, 32);
+      tx('xn', 88, CY + 86, '이미지', MUT, 19, 500);
+      arr('a0', 142, CY, 200, CY, MUT);
+      // 인코더
+      trap('enc', 200, 170, 150, 78, '#FFF4D6', '#E8A33A');
+      tx('enct', 285, CY + 8, '인코더', '#B9791B', 26);
+      // mu, sigma
+      const mb = (key, y, lab, col) => {
+        g.push(h('rect', { key: key, x: 410, y: y, width: 150, height: 62, rx: 12,
+          fill: '#fff', stroke: col, strokeWidth: 3 }));
+        tx(key + 't', 485, y + 40, lab, col, 28);
+      };
+      mb('mu', CY - 84, 'μ 평균', ACC);
+      mb('sg', CY + 22, 'σ 표준편차', ACC);
+      arr('a1', 370, CY - 30, 410, CY - 53, ACC);
+      arr('a2', 370, CY + 30, 410, CY + 53, ACC);
+      // 재매개변수화
+      g.push(h('circle', { key: 'eps', cx: 660, cy: CY - 108, r: 36, fill: '#F3EDFF',
+        stroke: VIO, strokeWidth: 3 }));
+      tx('epst', 660, CY - 100, 'ε', VIO, 28);
+      tx('epsn', 660, CY - 152, 'N(0,1) 에서 뽑는다', VIO, 18, 700);
+      g.push(h('rect', { key: 'rp', x: 600, y: CY - 46, width: 250, height: 92,
+        rx: 14, fill: '#F3EDFF', stroke: VIO, strokeWidth: 3 }));
+      g.push(h('text', { key: 'rpt', x: 725, y: CY + 12, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 28, fontWeight: 800, fill: VIO },
+        'z = μ + σ · ε'));
+      tx('rpn', 725, CY + 76, '재매개변수화 — 여기라야 미분이 된다', VIO, 19, 700);
+      arr('a3', 560, CY - 53, 600, CY - 20, ACC);
+      arr('a4', 560, CY + 53, 600, CY + 20, ACC);
+      arr('a5', 660, CY - 72, 660, CY - 46, VIO);
+      arr('a6', 850, CY, 910, CY, VIO);
+      // 디코더
+      trap('dec', 910, 170, 78, 150, '#EDF9F4', GRN);
+      tx('dect', 995, CY + 8, '디코더', '#00805A', 26);
+      arr('a7', 1080, CY, 1140, CY, GRN);
+      g.push(h('rect', { key: 'xh', x: 1140, y: CY - 54, width: 108, height: 108,
+        rx: 12, fill: 'var(--surface-app)' }));
+      tx('xht', 1194, CY + 10, 'x̂', INK, 32);
+      tx('xhn', 1194, CY + 86, '복원한 이미지', MUT, 19, 500);
+      // 손실 두 개
+      g.push(h('rect', { key: 'l1', x: 1300, y: CY - 108, width: 380, height: 88,
+        rx: 16, fill: '#fff', stroke: GRN, strokeWidth: 3 }));
+      tx('l1t', 1330, CY - 70, '손실 ① 복원 오차', GRN, 23, 800, 'start');
+      tx('l1n', 1330, CY - 36, 'x 와 x̂ 가 같아지도록', MUT, 19, 500, 'start');
+      g.push(h('rect', { key: 'l2', x: 1300, y: CY + 12, width: 380, height: 110,
+        rx: 16, fill: '#FDF0F0', stroke: RED, strokeWidth: 3 }));
+      tx('l2t', 1330, CY + 50, '손실 ② KL', RED, 23, 800, 'start');
+      tx('l2n', 1330, CY + 84, 'μ·σ 를 N(0,1) 쪽으로 끌어당긴다', MUT, 19, 500, 'start');
+      tx('l2n2', 1330, CY + 112, '1부에서 배운 그 KL 이다', RED, 19, 700, 'start');
+      arr('a8', 1248, CY - 36, 1300, CY - 60, GRN);
+      g.push(h('path', { key: 'a9', d: 'M560 ' + (CY + 84) + ' Q 900 '
+        + (CY + 150) + ' 1300 ' + (CY + 78), fill: 'none', stroke: RED,
+        strokeWidth: 3, strokeDasharray: '9 6' }));
+      return svg(W, H, g);
+    })();
+
+    // ── 삼중고 ──────────────────────────────────────────────────
+    const trilemma = (() => {
+      const W = 720, H = 700;
+      const g = [];
+      const M = [['GAN', [1, 0, 1], VIO], ['VAE', [0, 1, 1], GRN],
+                 ['Diffusion', [1, 1, 0], '#E8873A']];
+      const AX3 = ['화질', '다양성', '속도'];
+      g.push(h('text', { key: 'h', x: 30, y: 48, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: INK }, '셋 중 둘만 갖는다'));
+      AX3.forEach((a, j) => g.push(h('text', { key: 'ax' + j, x: 320 + j * 132,
+        y: 96, textAnchor: 'middle', fontFamily: KR, fontSize: 22, fontWeight: 700,
+        fill: MUT }, a)));
+      M.forEach((m, i) => {
+        const y = 130 + i * 170;
+        g.push(h('rect', { key: 'b' + i, x: 30, y: y, width: 660, height: 140, rx: 18,
+          fill: '#fff', stroke: m[2], strokeWidth: 3 }));
+        g.push(h('text', { key: 'n' + i, x: 62, y: y + 84, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: m[2] }, m[0]));
+        m[1].forEach((v, j) => {
+          g.push(h('circle', { key: 'c' + i + j, cx: 320 + j * 132, cy: y + 70, r: 26,
+            fill: v ? m[2] : 'none', stroke: v ? m[2] : '#D9D7E6', strokeWidth: 3 }));
+          if (!v) {
+            g.push(h('line', { key: 'x1' + i + j, x1: 320 + j * 132 - 13,
+              y1: y + 57, x2: 320 + j * 132 + 13, y2: y + 83, stroke: '#D9D7E6',
+              strokeWidth: 3 }));
+            g.push(h('line', { key: 'x2' + i + j, x1: 320 + j * 132 + 13,
+              y1: y + 57, x2: 320 + j * 132 - 13, y2: y + 83, stroke: '#D9D7E6',
+              strokeWidth: 3 }));
+          }
+        });
+      });
+      g.push(h('text', { key: 'cap', x: 30, y: 672, fontFamily: KR, fontSize: 21,
+        fill: MUT }, 'Generative learning trilemma (2021)'));
+      return svg(W, H, g);
+    })();
+
+    // ── 잠재공간에서 돌린다는 발상 ─────────────────────────────
+    const latentIdea = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const bar = (key, y, lab, val, max, col, note, big) => {
+        const bw = Math.max(20, 980 * (val / max));
+        g.push(h('text', { key: key + 'l', x: 40, y: y + 30, fontFamily: KR,
+          fontSize: 25, fontWeight: 800, fill: col }, lab));
+        g.push(h('rect', { key: key + 'b', x: 520, y: y, width: bw, height: 62,
+          rx: 12, fill: col }));
+        g.push(h('text', { key: key + 'v', x: 520 + bw + 22, y: y + 46,
+          fontFamily: EN, fontSize: big ? 36 : 32, fontWeight: 800, fill: col },
+          val.toLocaleString()));
+        g.push(h('text', { key: key + 'n', x: 40, y: y + 66, fontFamily: KR,
+          fontSize: 21, fill: MUT }, note));
+      };
+      bar('a', 54, '픽셀 공간에서 돌리면', 786432, 786432, RED,
+        '512 × 512 × 3', false);
+      bar('b', 214, '잠재공간에서 돌리면', 16384, 786432, GRN,
+        '64 × 64 × 4 — 8배로 눌렀다', true);
+      g.push(h('rect', { key: 'cb', x: 40, y: 312, width: 700, height: 66, rx: 16,
+        fill: 'var(--primary-pale)' }));
+      g.push(h('text', { key: 'ct', x: 70, y: 354, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: ACC }, '값의 개수가 48분의 1 이 된다'));
+      g.push(h('text', { key: 'cn', x: 780, y: 354, fontFamily: KR, fontSize: 23,
+        fill: 'var(--fg-3)' },
+        '이걸 천 번 돌려야 하니, 어디서 돌리느냐가 전부를 가른다'));
+      return svg(W, H, g);
+    })();
+
+    // ── Stable Diffusion 구조 ──────────────────────────────────
+    const sdArch = (() => {
+      const W = 1720, H = 470;
+      const g = [];
+      const CY = 150;
+      const box = (key, x, y, w, hh, fill, stroke, t1, t2, col) => {
+        g.push(h('rect', { key: key, x: x, y: y, width: w, height: hh, rx: 16,
+          fill: fill, stroke: stroke, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: x + w / 2, y: y + hh / 2 + (t2 ? -4 : 8),
+          textAnchor: 'middle', fontFamily: KR, fontSize: 24, fontWeight: 800,
+          fill: col }, t1));
+        if (t2) g.push(h('text', { key: key + 's', x: x + w / 2, y: y + hh / 2 + 30,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 19, fill: MUT }, t2));
+      };
+      const arr = (key, x1, y1, x2, y2, col, dash) => {
+        g.push(h('line', { key: key, x1: x1, y1: y1, x2: x2 - 11, y2: y2,
+          stroke: col, strokeWidth: 3.5, strokeDasharray: dash || 'none' }));
+        g.push(h('path', { key: key + 'h', d: 'M' + (x2 - 13) + ' ' + (y2 - 8)
+          + ' L' + x2 + ' ' + y2 + ' L' + (x2 - 13) + ' ' + (y2 + 8) + ' Z',
+          fill: col }));
+      };
+      box('img', 30, CY - 52, 170, 104, 'var(--surface-app)', 'none',
+        '이미지', '512×512×3', INK);
+      arr('a1', 200, CY, 256, CY, MUT);
+      box('enc', 256, CY - 52, 176, 104, '#FFF4D6', '#E8A33A',
+        'VAE 인코더', '÷ 8', '#B9791B');
+      arr('a2', 432, CY, 488, CY, '#E8A33A');
+      box('z1', 488, CY - 52, 176, 104, '#EEF0FE', ACC, '잠재 z', '64×64×4', ACC);
+      arr('a3', 664, CY, 720, CY, ACC);
+      box('un', 720, CY - 66, 300, 132, '#EDF9F4', GRN,
+        'U-Net × 1,000 스텝', '잡음을 한 칸씩 걷는다', '#00805A');
+      arr('a4', 1020, CY, 1076, CY, GRN);
+      box('z2', 1076, CY - 52, 176, 104, '#EEF0FE', ACC, '깨끗한 z', '64×64×4', ACC);
+      arr('a5', 1252, CY, 1308, CY, ACC);
+      box('dec', 1308, CY - 52, 176, 104, '#EDF9F4', GRN,
+        'VAE 디코더', '× 8', '#00805A');
+      arr('a6', 1484, CY, 1540, CY, GRN);
+      box('out', 1540, CY - 52, 150, 104, 'var(--surface-app)', 'none',
+        '이미지', '512×512×3', INK);
+      // 아래 — 텍스트 조건
+      box('tx', 260, 320, 300, 96, '#fff', VIO, '"우주복 입은 말"', '사용자 프롬프트', VIO);
+      arr('b1', 560, 368, 616, 368, VIO);
+      box('clip', 616, 320, 300, 96, '#F3EDFF', VIO,
+        'CLIP 텍스트 인코더', 'ViT-L/14', VIO);
+      g.push(h('path', { key: 'b2', d: 'M916 368 H 1000 V ' + (CY + 74), fill: 'none',
+        stroke: VIO, strokeWidth: 3.5, strokeDasharray: '10 7' }));
+      g.push(h('path', { key: 'b2h', d: 'M992 ' + (CY + 72) + ' L1000 ' + (CY + 56)
+        + ' L1008 ' + (CY + 72) + ' Z', fill: VIO }));
+      g.push(h('text', { key: 'b2t', x: 1030, y: 300, fontFamily: KR, fontSize: 22,
+        fontWeight: 800, fill: VIO }, '크로스 어텐션으로 U-Net 안에 들어간다'));
+      g.push(h('text', { key: 'cap', x: 30, y: 448, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '학습할 때는 잠재에 잡음을 얹어 맞히게 하고, 생성할 때는 잡음에서 시작해 걷어 낸다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 크로스 어텐션 ──────────────────────────────────────────
+    const crossAttn = (() => {
+      const W = 760, H = 420;
+      const g = [];
+      const WORD = ['우주복', '입은', '말', '이', '달린다'];
+      const SPOT = [['우주복 자리', 0], ['말 다리 자리', 2], ['배경 자리', 4]];
+      WORD.forEach((w, i) => {
+        g.push(h('rect', { key: 'w' + i, x: 460, y: 44 + i * 70, width: 260,
+          height: 54, rx: 12, fill: '#F3EDFF', stroke: VIO, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'wt' + i, x: 590, y: 78 + i * 70,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 22, fontWeight: 700,
+          fill: VIO }, w));
+      });
+      g.push(h('text', { key: 'wh', x: 590, y: 26, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 20, fontWeight: 800, fill: VIO }, '문장의 단어'));
+      SPOT.forEach((sp, i) => {
+        const y = 84 + i * 116;
+        g.push(h('rect', { key: 's' + i, x: 30, y: y - 28, width: 220, height: 58,
+          rx: 12, fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'st' + i, x: 140, y: y + 8, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fontWeight: 700, fill: '#00805A' }, sp[0]));
+        WORD.forEach((w, j) => {
+          const hot = j === sp[1];
+          g.push(h('line', { key: 'e' + i + j, x1: 250, y1: y,
+            x2: 460, y2: 71 + j * 70, stroke: hot ? VIO : '#D9D7E6',
+            strokeWidth: hot ? 4 : 1.5, opacity: hot ? 0.9 : 0.5 }));
+        });
+      });
+      g.push(h('text', { key: 'sh', x: 140, y: 26, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 20, fontWeight: 800, fill: '#00805A' },
+        '그림의 자리'));
+      g.push(h('text', { key: 'cap', x: 30, y: 404, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '굵은 선이 크게 반응한 짝이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 연기 ────────────────────────────────────────────────────
+    const smoke = (() => {
+      const W = 1720, H = 300;
+      const g = [];
+      const r = rng(7);
+      for (let s = 0; s < 5; s++) {
+        const x0 = 60 + s * 330;
+        g.push(h('rect', { key: 'f' + s, x: x0, y: 40, width: 280, height: 190,
+          rx: 14, fill: 'rgba(255,255,255,.05)',
+          stroke: 'rgba(255,255,255,.14)', strokeWidth: 2 }));
+        const spread = s / 4;
+        const n = 90;
+        for (let i = 0; i < n; i++) {
+          const cx = x0 + 40 + r() * 30 + spread * (r() * 200);
+          const cy = 135 + (r() - 0.5) * (24 + spread * 150);
+          g.push(h('circle', { key: 'p' + s + i, cx: Math.min(cx, x0 + 272),
+            cy: Math.max(46, Math.min(cy, 224)), r: 5 + r() * 4,
+            fill: '#D9C6FF', opacity: 0.5 - spread * 0.32 }));
+        }
+        if (s < 4) g.push(h('text', { key: 'a' + s, x: x0 + 302, y: 142,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: '#6E6890' }, '→'));
+      }
+      g.push(h('text', { key: 'l', x: 60, y: 278, fontFamily: KR, fontSize: 23,
+        fill: 'var(--neutral-lighter)' }, '어떤 모양 → 점점 퍼짐 → 균질한 상태'));
+      g.push(h('text', { key: 'r', x: 1660, y: 278, textAnchor: 'end', fontFamily: KR,
+        fontSize: 23, fontWeight: 700, fill: '#00E49B' },
+        '거꾸로 돌리는 알고리즘이 확산 모델이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 확산 단계 ───────────────────────────────────────────────
+    const diffSteps = (() => {
+      const W = 1720, H = 300;
+      const g = [];
+      const S = [['①', '아주 작은 잡음을 섞는다', '픽셀값에 0.1 쯤을 더하거나 뺀다'],
+                 ['②', '천 번쯤 반복한다', '완전한 잡음이 된다'],
+                 ['③', '거꾸로 가는 것을 배운다', '한 번에 다 말고 — 딱 한 칸만'],
+                 ['④', '모델은 하나뿐', '천 단계를 한 모델이 전부 담당한다']];
+      const CW = 390, GAP = 30, X0 = 40;
+      S.forEach((s, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: CW, height: 210, rx: 20,
+          fill: i === 3 ? 'var(--primary-pale)' : 'var(--surface-app)',
+          stroke: i === 3 ? ACC : 'none', strokeWidth: i === 3 ? 3 : 0 }));
+        g.push(h('text', { key: 'n' + i, x: x + 28, y: 78, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: i === 3 ? ACC : MUT }, s[0]));
+        g.push(h('text', { key: 't' + i, x: x + 74, y: 78, fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: INK }, s[1]));
+        g.push(h('text', { key: 's' + i, x: x + 28, y: 150, fontFamily: KR,
+          fontSize: 22, fill: 'var(--fg-3)' }, s[2]));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 274, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '천 단계라고 해서 모델이 천 개인 게 아니다 — 하나가 전부 맡는다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 확산 속의 U-Net ─────────────────────────────────────────
+    const unetInDiff = (() => {
+      const W = 1720, H = 440;
+      const g = [];
+      g.push(h('rect', { key: 'a', x: 40, y: 120, width: 320, height: 180, rx: 20,
+        fill: 'rgba(255,255,255,.07)', stroke: '#7B8CFF', strokeWidth: 3 }));
+      g.push(h('text', { key: 'at', x: 200, y: 196, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 27, fontWeight: 800, fill: '#7B8CFF' },
+        '잡음 낀 이미지'));
+      g.push(h('text', { key: 'as', x: 200, y: 240, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 22, fill: '#8D89A6' }, 'step t'));
+      g.push(h('text', { key: 'ar1', x: 405, y: 222, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 38, fill: '#6E6890' }, '→'));
+      g.push(h('rect', { key: 'u', x: 460, y: 90, width: 640, height: 240, rx: 22,
+        fill: 'rgba(0,228,155,.12)', stroke: '#00E49B', strokeWidth: 3.5 }));
+      g.push(h('text', { key: 'ut', x: 780, y: 162, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fontWeight: 800, fill: '#00E49B' }, 'U-Net'));
+      g.push(h('text', { key: 'us', x: 780, y: 214, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fill: 'var(--neutral-lighter)' },
+        '내려가며 맥락을 잡고, 올라오며 그린다'));
+      g.push(h('text', { key: 'us2', x: 780, y: 262, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fontWeight: 700, fill: '#00E49B' },
+        '“뭉개진 이미지를 그럴듯하게 바꿔 주는 모델”'));
+      g.push(h('text', { key: 'ar2', x: 1150, y: 222, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 38, fill: '#6E6890' }, '→'));
+      g.push(h('rect', { key: 'b', x: 1200, y: 120, width: 320, height: 180, rx: 20,
+        fill: 'rgba(255,255,255,.07)', stroke: '#7B8CFF', strokeWidth: 3 }));
+      g.push(h('text', { key: 'bt', x: 1360, y: 196, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 27, fontWeight: 800, fill: '#7B8CFF' },
+        '한 칸 덜 잡음'));
+      g.push(h('text', { key: 'bs', x: 1360, y: 240, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 22, fill: '#8D89A6' }, 'step t − 1'));
+      g.push(h('path', { key: 'loop', d: 'M1360 306 V 380 H 200 V 306', fill: 'none',
+        stroke: '#9E5DF9', strokeWidth: 3.5, strokeDasharray: '11 8' }));
+      g.push(h('path', { key: 'lh', d: 'M192 314 L200 298 L208 314 Z', fill: '#9E5DF9' }));
+      g.push(h('text', { key: 'lt', x: 780, y: 412, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 700, fill: '#9E5DF9' },
+        '이걸 천 번 반복하면 완전한 잡음에서 이미지 한 장이 나온다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 마무리 ──────────────────────────────────────────────────
+    const wrapUp = (() => {
+      const W = 1720, H = 260;
+      const g = [];
+      const T = [['GAN', '감별사를 세워 그 면에 다가갔다', VIO],
+                 ['오토인코더', '그 면을 직접 눌러 담았다', GRN],
+                 ['확산', '잡음에서 그 면으로 걸어 돌아왔다', '#E8873A']];
+      T.forEach((t, i) => {
+        const x = 40 + i * 552;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 512, height: 190, rx: 20,
+          fill: 'rgba(255,255,255,.07)', stroke: t[2], strokeWidth: 3 }));
+        g.push(h('text', { key: 'n' + i, x: x + 32, y: 84, fontFamily: KR,
+          fontSize: 30, fontWeight: 800, fill: t[2] }, t[0]));
+        g.push(h('text', { key: 's' + i, x: x + 32, y: 146, fontFamily: KR,
+          fontSize: 23, fill: 'var(--neutral-lighter)' }, t[1]));
+      });
+      g.push(h('text', { key: 'cap', x: 900, y: 246, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fontWeight: 700, fill: '#00E49B' },
+        '셋이 찾는 것은 같다 — 실제 데이터가 놓인 그 좁은 면, 매니폴드'));
+      return svg(W, H, g);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      weekMap, mseVsMle, codeLen, codeResort, entropyGain, idealShape,
+      entropyPlay, xentPlay, xentBlow, shiftView,
+      pixelVsImage, ganLoop, freezeG, freezeD, ganSteps, aeGap, vaeFlow,
+      trilemma, latentIdea, sdArch, crossAttn, smoke, diffSteps, unetInDiff,
+      wrapUp,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

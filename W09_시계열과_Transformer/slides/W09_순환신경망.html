@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W09_순환신경망</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.11 · 강의영상 ① 36:00 · 23 NN_timeseries.ipynb — 2교시. 1교시에 전통 기법을 다 봤으니 이제 뉴럴넷이 같은 문제를 어떻게 푸는지 본다. 뉴럴넷은 조립이다. 어떤 데이터든 어떤 목표든 조립해서 만들 수 있다는 게 지금까지 배운 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 26%,rgba(68,52,226,.34),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">9주차 · 2교시</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">순환신경망<br>RNN · LSTM · GRU</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">뉴럴 네트워크는 시계열을 어떻게 조립했나</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">23 NN_timeseries.ipynb · 24 CNN_LSTM.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="조립의 문제" data-screen-label="02" data-speaker-notes="지금까지 우리가 확인한 건 하나다. 뉴럴넷은 조립이다. 표는 덴스로, 이미지는 컨볼루션으로 풀었다. 그럼 시계열은? CNN이 필터 하나로 공간을 훑었듯 RNN은 가중치 하나로 시간을 훑는다. 발상이 같다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">되짚기</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">데이터가 바뀌면 <span style="color:var(--primary-main)">층</span>을 바꾼다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 36px;display:flex;flex-direction:column;gap:14px"><div style="font-size:32px;font-weight:800">표 데이터</div><div style="font-family:var(--font-display);font-size:26px;color:var(--primary-main);font-weight:700">Dense</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.45">모든 입력이 모든 뉴런에</p></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 36px;display:flex;flex-direction:column;gap:14px"><div style="font-size:32px;font-weight:800">이미지</div><div style="font-family:var(--font-display);font-size:26px;color:var(--primary-main);font-weight:700">Conv2D</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.45">필터 하나가 <b style="color:var(--fg-1)">공간을 이동</b></p></div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:16px;padding:34px 36px;display:flex;flex-direction:column;gap:14px"><div style="font-size:32px;font-weight:800;color:var(--primary-dark)">시계열</div><div style="font-family:var(--font-display);font-size:26px;color:var(--primary-dark);font-weight:700">RNN</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.45">가중치 하나가 <b style="color:var(--fg-1)">시간을 이동</b></p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">CNN 이 필터 하나로 <b style="color:var(--fg-1)">공간</b>을 훑었듯, RNN 은 가중치 하나로 <b style="color:var(--fg-1)">시간</b>을 훑는다. 발상이 같다.</p>
+</section>
+
+<section data-deck="0" data-label="실습 데이터" data-screen-label="03" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.12 · 23 NN_timeseries.ipynb — 실습 데이터는 KOSPI 지수다. 노트북에서는 yfinance 로 직접 받아 온다. 강의안의 그림은 2016년 3월부터 2019년 1월까지 구간이고, 노트북은 최신 구간까지 받아온다 — 받는 날짜에 따라 그림이 달라지는 게 정상이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.2fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">실습 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">KOSPI 지수</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">노트북에서는 <b style="color:var(--fg-1)">yfinance</b> 로 직접 받아 온다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">받는 날짜에 따라 <b style="color:var(--fg-1)">그림이 달라지는 게 정상</b>이다. 강의안 그림은 2016–2019 구간.</div>
+    <div style="padding:22px 26px;background:#FDF0F0;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">값을 그대로 쓰지 않는다 — 차분에 <b style="color:#D93636">전일 종가를 한 번 더 나눠</b> 수익률로 만든다.</div>
+  </div>
+  <div style="height:740px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/tl_s12_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>KOSPI 지수 시계열</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="시계열을 지도학습으로" data-screen-label="04" data-speaker-notes="출처: 강의영상 ① 12:00–12:50 · 013 Time Series.pptx p.15 — 이게 9주차 전체에서 제일 중요한 한 장이다. 시계열 분석의 거의 전부가 이것이다. 하나로 이어진 시계열을 자르고, 한 칸 밀어서 또 자르고, 계속 자른다. 그러면 우리가 이미 아는 지도학습 데이터셋이 된다. ARIMA도 RNN도 트랜스포머도 데이터를 만드는 방식은 이것과 같다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">시계열 분석의 거의 전부</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">잘라서 밀면 <span style="color:var(--accent-green)">지도학습</span>이 된다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="windowing"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">우리가 아는 그 <b style="color:#fff">X 와 y</b> 다. ARIMA 도, RNN 도, 트랜스포머도 데이터를 만드는 방식은 <b style="color:var(--accent-green)">전부 이것</b>이다.</p>
+</section>
+
+<section data-deck="0" data-label="데이터 구조" data-screen-label="05" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.13 — 앞 장에서 본 그 구조를 실제 데이터로 본 것이다. 과거 일정 기간을 입력으로, 그다음 시점을 출력으로 잘라 데이터셋을 만든다. 한 칸씩 밀면서 계속 만든다. 여기 그림은 12일을 넣고 13일째를 예측하는 구조다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 칸씩 밀면서 만든다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">과거 n 일 입력 → 다음 1 일 출력</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:26px">
+    <div style="background:#fff;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">샘플 1</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s13_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>입력 구간 1</span></div></div></div></div>
+    <div style="background:#fff;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">샘플 2</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s13_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>입력 구간 2</span></div></div></div></div>
+    <div style="background:#fff;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">샘플 3</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/tl_s13_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>입력 구간 3</span></div></div></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">빨간 꼬리가 <b style="color:#D93636">예측할 다음 한 칸</b>이다. 이렇게 잘라 두면 <b style="color:var(--fg-1)">우리가 아는 지도학습</b>이 된다.</p>
+</section>
+
+<section data-deck="0" data-label="RNN 의 전제" data-screen-label="06" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.14 · 강의영상 ① 40:20–41:30 — RNN을 처음 보면 이런 의문이 든다. 60일치를 그냥 60개 가중치로 펼치면 되는 거 아닌가? 그래도 되긴 한다. 그런데 순환신경망은 다른 전제를 깔았다. 하루하루의 변화는 다 같은 규칙을 따를 것이다. 그러니 가중치 하나로 전부 학습할 수 있을 것이다. 이 전제가 RNN의 전부다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 80% 30%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">RNN 의 전제</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">“하루하루의 변화는 다 <span style="color:var(--accent-green)">같은 규칙</span>을 따를 것이다”</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:32px 36px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;margin-bottom:14px;color:var(--neutral-lighter)">그냥 펼치면?</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.55">60일치를 60개 가중치로 — ARIMA 와 같은 방식. <b style="color:#fff">이렇게 해도 된다.</b></p>
+    </div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:16px;padding:32px 36px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;margin-bottom:14px;color:#00E49B">순환시키면</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">가중치 <b style="color:#fff">하나</b>가 60번 이동한다. 길이가 늘어나도 <b style="color:#fff">가중치는 그대로</b>다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="RNN 을 펼치면" data-screen-label="07" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.15 · 강의영상 ① 41:30–43:30 — 펼쳐서 보자. h0은 0에서 시작한다. 첫 데이터가 들어오면 두 가중치를 거쳐 하나의 히든 뉴런으로 합쳐지고, b를 더하고, 활성화 함수를 지나 h1이 만들어진다. 두 번째 데이터가 들어오면 h1이 영향을 준다. 여기서 중요한 건 W1도 W2도 b도 끝까지 같은 것을 쓴다는 점이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">펼쳐 보면</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">같은 가중치가 끝까지 간다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="rnnUnrolled"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">W₁ 도 W₂ 도 b 도 <b style="color:var(--fg-1)">전 구간에서 같은 값</b>이다. 시계열이 60이든 600이든 가중치는 늘지 않는다.</p>
+</section>
+
+<section data-deck="0" data-label="한 걸음씩 계산해 본다" data-screen-label="08" data-speaker-notes="출처: 강의영상 ① 41:30–43:30 의 손계산을 숫자 예제로 펼친 것 · 013 Timeseries LLM.pptx p.15 — 버튼을 눌러 가며 다섯 걸음을 직접 걸어 준다. 먼저 위쪽 파란 상자를 짚을 것 — W₁ 도 W₂ 도 b 도 여기 적힌 값 하나뿐이고 다섯 칸이 전부 이것을 쓴다. 히든 스테이트는 일부러 2차원으로 잡았다. 숫자가 둘이라야 뒤에서 평면에 찍어 볼 수 있다. h₀ 는 0.10, 0.10 으로 시작한다. 한 걸음 누를 때마다 x 가 들어오고, 가중합 결과가 나오고, tanh 를 지나 h 가 확정된다. 그 h 가 위로도 나가고 오른쪽으로도 간다는 걸 화살표로 짚을 것. 다섯 걸음을 다 걸으면 마지막 h₅ 하나만 남는다 — 그것으로 예측한다. 값은 개념 예시이고 학습된 실제 가중치가 아니다." style="background:var(--surface-app);padding:56px var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:18px;font-family:var(--font-sans);color:var(--fg-1);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:54px;font-weight:800;line-height:1.1;letter-spacing:-0.03em">숫자를 넣고 한 걸음씩</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">히든 스테이트는 2차원 · 버튼을 눌러 한 시점씩</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="rnnWalk"></span></div>
+</section>
+
+<section data-deck="0" data-label="시계열마다 다른 벡터" data-screen-label="09" data-speaker-notes="출처: 신규 — 앞 장의 계산을 여러 계열로 확장한 개념 예시 · 강의영상 ① 46:00–47:00 의 문제의식을 이어받았다. 방금 한 계산을 계열 여덟 개에 똑같이 돌린다고 생각해 보자. 가중치는 한 벌 그대로다. 계열마다 마지막에 남는 두 숫자만 달라진다. 여기서 학생들에게 물어볼 것 — 어느 계열끼리 숫자가 닮았나. 오르는 것끼리, 흔들리는 것끼리 숫자가 붙어 있다는 걸 스스로 찾게 할 것. 표시된 값은 개념 예시이고 실제 학습 결과가 아니다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 가중치에 여러 시계열을 넣어 본다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">개념 예시 — 실제 학습 결과가 아니다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="seriesToVec"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">움직임이 닮은 계열끼리 <b style="color:var(--fg-1)">두 숫자의 부호와 크기가 닮았다.</b> 우리가 그렇게 시킨 적은 없다.</p>
+</section>
+
+<section data-deck="0" data-label="맥락 벡터의 지도" data-screen-label="10" data-speaker-notes="출처: 신규 — 앞 장의 여덟 벡터를 평면에 찍은 개념도 · 강의영상 ① 42:30–43:40 의 컨텍스트 벡터 설명을 그림으로 옮겼다. 앞 장의 두 숫자를 좌표로 보고 그냥 찍은 것이다. 그랬더니 사분면이 갈렸다. 가로축은 방향, 세로축은 흔들림으로 읽힌다. 중요한 건 우리가 축에 이름을 붙여 준 적이 없다는 점이다. 예측을 맞히라고만 시켰는데 학습이 알아서 이렇게 갈라 놓았다. 그래서 RNN 은 예측기이면서 동시에 요약기다. 긴 시계열 하나를 숫자 몇 개로 줄여 준다. 이 벡터를 컨텍스트 벡터라고 부르고, 3교시 언어 모델에서 같은 이름이 그대로 다시 나온다. 좌표는 개념 예시다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:820px"><span data-dc-slot="contextMap"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">학습이 끝나면</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">두 숫자가<br>지도가 된다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">마지막 히든 스테이트를 좌표로 찍었더니 <b style="color:var(--fg-1)">움직임이 닮은 계열끼리</b> 같은 사분면에 모였다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">가로축은 <b style="color:var(--fg-1)">방향</b>, 세로축은 <b style="color:var(--fg-1)">흔들림</b>으로 읽힌다. 그런데 우리가 축에 이름을 붙인 적은 없다 — 예측을 맞히라고만 시켰다.</div>
+    <div style="padding:24px 28px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.55">그러니 RNN 은 예측기이자 <b style="color:#00E49B">요약기</b>다. 긴 시계열 하나를 <b style="color:#00E49B">숫자 몇 개</b>로 줄여 준다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="2교시 정리" data-screen-label="11" data-speaker-notes="출처: 신규 — 08~10 을 묶는 정리 장 · 강의영상 ① 47:00 언저리. 여기까지가 오늘 2교시의 핵심이다. 두 문장으로 남긴다. 첫째, 가중치 한 벌이면 길이가 얼마든 읽는다. 시계열이 60이든 600이든 파라미터는 늘지 않는다. 둘째, 다 읽고 나면 그 흐름이 벡터 하나에 남는다. 이 벡터의 이름이 컨텍스트 벡터이고 3교시 언어 모델에서 그대로 다시 나온다는 걸 반드시 예고할 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 26%,rgba(68,52,226,.32),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">여기까지가 RNN 이다</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.18;letter-spacing:-0.02em">가중치 <span style="color:var(--accent-green)">한 벌</span>로 긴 시계열을 읽고,<br>그 흐름을 <span style="color:var(--accent-green)">벡터 하나</span>로 남긴다</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#fff">길이는 문제가 아니다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">60 이든 600 이든 <b style="color:#fff">W₁ · W₂ · b 한 벌</b>이면 된다. 길어져도 파라미터는 늘지 않는다.</p>
+    </div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#00E49B">맥락이 남는다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">마지막 히든 스테이트에 <b style="color:#fff">방향과 흔들림</b>이 담긴다. 이것이 <b style="color:#fff">컨텍스트 벡터</b>다.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">이 이름은 <b style="color:#fff">3교시 언어 모델</b>에서 그대로 다시 나온다.</p>
+</section>
+
+<section data-deck="0" data-label="입력이 숫자 하나일 필요는 없다" data-screen-label="12" data-speaker-notes="출처: 013 Time Series.pptx p.19–20 의 다변량 입력을 개념도로 앞당긴 것 · 강의영상 ① 63:00–64:30. 지금까지는 한 시점에 숫자 하나였다. 그럴 이유가 없다. 한 시점에 벡터를 통째로 넣으면 된다. 코스피 200 종목의 그날 수익률을 200차원으로 한 번에 넣으면 종목끼리 서로 주고받는 영향까지 같이 학습된다. 로봇도 마찬가지다 — 관절 각도와 토크와 가속도 센서를 한 시점의 벡터로 묶어 넣는다. 바뀌는 것은 W₁ 의 크기뿐이라는 점을 반드시 짚을 것. 구조도 W₂ 도 b 도 그대로다. 뒤에서 서울 25개 시군구 지수를 한꺼번에 넣는 실제 사례가 다시 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:720px"><span data-dc-slot="multiDim"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">확장</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 시점에<br>벡터를 통째로</h2>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">코스피 200 종목</div>
+        <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">하루치를 <b style="color:var(--fg-1)">200 차원</b>으로 한 번에 넣으면 종목끼리 <b style="color:var(--fg-1)">주고받는 영향</b>까지 같이 학습된다.</p>
+      </div>
+      <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">로봇의 센서</div>
+        <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">관절 각도 · 토크 · 가속도를 한 시점의 벡터로 묶는다. 몸 전체가 <b style="color:var(--fg-1)">한 시계열</b>이 된다.</p>
+      </div>
+    </div>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">바뀌는 건 <b style="color:var(--primary-dark)">W₁ 의 크기뿐</b>이다. 구조도, W₂ 도, b 도 그대로다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="RNN 의 한계" data-screen-label="13" data-speaker-notes="출처: 013 Time Series.pptx p.22 · 강의영상 ① 48:30–49:40 — RNN 의 한계. 먼저 좋은 소식부터. 같은 가중치를 반복해서 쓰기 때문에 시점을 얼마든지 늘릴 수 있다. 구조상 길이 제한이 없다. 그런데 바로 거기서 문제가 나온다. 매 시점 h 는 새 입력과 섞여 다시 tanh 를 지난다. 그러면 오래된 정보의 지분은 스텝을 지날 때마다 곱해져서 줄어든다. 열 걸음 뒤에는 첫 입력이 거의 남아 있지 않다. 그림의 오른쪽이 최근, 왼쪽이 먼 과거다 — 왼쪽 끝이 흰 배경에 녹아 사라지는 것이 바로 그것이다. 학습 쪽에서도 같은 일이 벌어진다. 초기 시점까지 오차가 전파되기 어렵고 오래 걸린다. 그래서 사람들이 기억을 둘로 나누는 방법을 찾았고 그것이 LSTM 이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">멀어질수록 <span style="color:#D93636">흐려진다</span></h2>
+  </div>
+  <div style="height:300px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/rn_fading_memory.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>오른쪽은 선명하고 왼쪽으로 갈수록 사라지는 기억의 띠</span></div></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);margin-top:-14px">
+    <span>먼 과거</span><span>최근</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:700">길이는 얼마든지 늘릴 수 있다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">같은 가중치를 <b style="color:var(--fg-1)">반복해서 쓰는 구조</b>라 시점 수에 제한이 없다.</p>
+    </div>
+    <div style="background:#FDF0F0;border:2px solid #D93636;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#D93636">그런데 오래된 것부터 지워진다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">매 시점 h 가 새 입력과 섞여 다시 tanh 를 지난다. 옛 정보의 지분이 <b style="color:var(--fg-1)">스텝마다 곱해져 줄어든다.</b></p>
+    </div>
+  </div>
+  <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:var(--type-body);color:var(--fg-3)">해결 시도 —</span>
+    <span style="background:var(--surface-app);border-radius:999px;padding:14px 26px;font-size:24px">층을 더 쌓기</span>
+    <span style="background:var(--surface-app);border-radius:999px;padding:14px 26px;font-size:24px">히든 차원 늘리기</span>
+    <span style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:999px;padding:14px 26px;font-size:24px;font-weight:700;color:var(--primary-dark)">기억을 둘로 나누기 → LSTM</span>
+  </div>
+</section>
+
+<section data-deck="0" data-label="LSTM" data-screen-label="14" data-speaker-notes="출처: 013 Time Series.pptx p.22 — LSTM은 겉모습은 RNN과 똑같다. 사슬 구조인 것도 같다. 다른 건 반복되는 모듈 안이다. RNN은 층이 하나였는데 LSTM은 넷이 특별한 방식으로 상호작용한다. 아래 범례를 먼저 짚어 줄 것 — 노란 상자가 신경망 층, 분홍 원이 원소별 연산, 화살표가 벡터 전달이다. Hochreiter & Schmidhuber (1997)." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(158,93,249,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">LONG SHORT-TERM MEMORY · 1997</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">겉은 같고, 안이 다르다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.35fr 1fr;gap:40px;align-items:center">
+    <div style="height:100%;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/ts_s22_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>LSTM 사슬 구조</span></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div style="height:130px;background:#fff;border-radius:14px;padding:16px"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s22_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>범례 — 신경망 층 · 원소별 연산 · 벡터 전달 · 연결 · 복사</span></div></div></div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">RNN 은 반복 모듈 안에 층이 <b style="color:#fff">하나</b>였다.<br>LSTM 은 <b style="color:#fff">넷</b>이 서로 맞물린다.</p>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">Hochreiter &amp; Schmidhuber (1997)</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Forget Gate" data-screen-label="15" data-speaker-notes="출처: 013 Time Series.pptx p.23 — 첫 번째 게이트. 시그모이드 함수를 통해 0 또는 1의 값으로 이전 cell state를 사용할지 안 할지를 결정한다. 0이면 장기 기억을 통째로 끄는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:#D93636">① Forget Gate</div>
+    <h2 style="margin:0;font-size:44px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">이전 기억을 쓸 것인가</h2>
+  </div>
+  <div style="height:470px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s23_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Forget gate 도해와 수식</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;background:#FDF0F0;border-radius:16px;padding:28px 34px;display:flex;flex-direction:column;justify-content:center;gap:10px">
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">시그모이드로 <b style="color:#D93636">0 또는 1</b> 을 만들어 이전 cell state 를 쓸지 말지 결정한다.</p>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">0 이면 곱해져서 장기 기억이 통째로 꺼진다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Input Gate" data-screen-label="16" data-speaker-notes="출처: 013 Time Series.pptx p.24 — 두 번째. 하이퍼볼릭 탄젠트로 이번 cell state 후보를 계산하고, 시그모이드로 그것을 이전 cell state와 합칠지를 결정한다. 무엇을 더할지는 tanh 가, 더할지 말지는 시그모이드가 정한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--primary-main)">② Input Gate</div>
+    <h2 style="margin:0;font-size:44px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">새 정보를 더할 것인가</h2>
+  </div>
+  <div style="height:470px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s24_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Input gate 도해와 수식</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;background:var(--primary-pale);border-radius:16px;padding:28px 34px;display:flex;flex-direction:column;justify-content:center;gap:10px">
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">tanh</b> 가 “무엇을 더할지”를 만들고, <b style="color:var(--primary-dark)">시그모이드</b> 가 “더할지 말지”를 정한다.</p>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">두 개가 곱해져서 위로 올라간다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Cell State" data-screen-label="17" data-speaker-notes="출처: 013 Time Series.pptx p.25 — 세 번째. 이전 cell state와 forget gate를 곱하고, 이번 cell state 후보와 input gate를 곱해서, 두 값을 더해 이번 cell state를 확정한다. 위쪽을 가로지르는 이 선이 장기 기억의 고속도로다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:#9E5DF9">③ Cell State</div>
+    <h2 style="margin:0;font-size:44px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">장기 기억이 갱신된다</h2>
+  </div>
+  <div style="height:470px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s25_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Cell State 도해와 수식</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;background:#F6F1FF;border-radius:16px;padding:28px 34px;display:flex;flex-direction:column;justify-content:center;gap:10px">
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">(이전 기억 × forget) <b style="color:#9E5DF9">+</b> (새 후보 × input) = 이번 기억.</p>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">위를 가로지르는 이 선이 <b style="color:var(--fg-3)">장기 기억의 고속도로</b>다 — 거의 손대지 않고 흘려보낸다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Hidden State" data-screen-label="18" data-speaker-notes="출처: 013 Time Series.pptx p.26 — 마지막. RNN과 동일하게 이전 hidden state와 입력값으로 히든 스테이트를 계산하고, 앞에서 만든 cell state를 tanh 로 계산한 후 곱한다. 그러면 새로운 hidden state가 완성된다. 이 값이 다음 칸으로도 가고 예측에도 쓰인다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:34px;font-weight:800;color:#00B37A">④ Hidden State</div>
+    <h2 style="margin:0;font-size:44px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">단기 기억을 뽑아낸다</h2>
+  </div>
+  <div style="height:470px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s26_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Hidden State 도해와 수식</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;background:#EDF9F4;border-radius:16px;padding:28px 34px;display:flex;flex-direction:column;justify-content:center;gap:10px">
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">갱신된 장기 기억을 <b style="color:#00B37A">tanh</b> 로 누른 뒤 output gate 와 곱한다.</p>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">이 값이 다음 칸으로도 가고, 예측에도 쓰인다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="직접 걸어 보기" data-screen-label="19" data-speaker-notes="출처: 강의영상 ① 51:00–55:40 — 네 게이트를 한 화면에 놓고 버튼으로 짚어 줄 것. 시그모이드는 0 또는 1을 가리키니 스위치 역할을 한다. 이게 시그모이드가 학습을 방해하는데도 지금까지 쓰이는 이유다. 모델 만들다가 이 변수가 중요한데 항상 필요하진 않다 싶을 때 마지막에 시그모이드 하나 얹어서 곱해 버리면 학습이 알아서 스위치를 만들어 준다." style="background:var(--surface-app);padding:56px var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:18px;font-family:var(--font-sans);color:var(--fg-1);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:54px;font-weight:800;line-height:1.1;letter-spacing:-0.03em">한 화면에서 다시 걸어 본다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">버튼을 눌러 한 단계씩</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="lstmWalk"></span></div>
+</section>
+
+<section data-deck="0" data-label="시그모이드는 스위치다" data-screen-label="20" data-speaker-notes="출처: 강의영상 ① 53:40–54:30 — 이 슬라이드는 LSTM을 넘어 두고두고 쓸 도구다. 시그모이드는 0 또는 1로 밀어붙이는 함수라서 곱하면 스위치가 된다. 학습이 알아서 켜고 끄는 법을 배운다. 10주차 MoE의 라우터도 정확히 같은 아이디어다. 그리고 파라미터는 게이트가 넷이라 RNN의 정확히 4배다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">두고두고 쓸 도구</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">시그모이드는<br>스위치다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">거의 <b style="color:var(--fg-1)">0 또는 1</b>을 가리킨다. 곱하면 <b style="color:var(--fg-1)">통과 / 차단</b>이 된다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">“이 변수가 중요한데 <b style="color:var(--fg-1)">항상 필요하진 않다</b>” 싶을 때 — 마지막에 시그모이드 하나 얹어 곱한다.<br><br><span style="color:var(--primary-main)">10주차 MoE 의 라우터도 정확히 같은 아이디어다.</span></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="height:400px"><span data-dc-slot="sigmoidSwitch"></span></div>
+    <div style="height:290px"><span data-dc-slot="paramCompare"></span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="LSTM 결과" data-screen-label="21" data-speaker-notes="출처: 013 Timeseries LLM.pptx p.23 · 강의영상 ① 58:00–59:30 — 솔직히 말하면 그림으로는 큰 차이가 안 느껴진다. LSTM으로 바꿔도 예측 그림은 Simple RNN 과 비슷하다. 여기서 실망하지 말고 관점을 바꿔야 한다 — 예측값이 아니라 중간의 벡터를 봐야 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/tl_s23_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>LSTM 예측 결과</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">솔직하게</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그림으로는<br>큰 차이가 없다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">결국 <b style="color:var(--fg-1)">직전 랙으로 다음 한 칸</b>을 예측하는 일이기 때문이다.</p>
+    <div style="padding:24px 28px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.55">그럼 <b style="color:#00E49B">무엇을 봐야 하나</b> — 예측값이 아니라 <b style="color:#00E49B">히든 스테이트</b>다.<br><br><span style="color:var(--neutral-lighter)">뉴럴 네트워크에서 가장 강력한 건 언제나 중간의 벡터였다.</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="GRU" data-screen-label="22" data-speaker-notes="출처: 013 Time Series.pptx p.28 — 2014년에 나온 GRU. Cell State 없이 Hidden State 하나로 처리한다. Reset Gate로 이전 히든 스테이트가 참여할지를 정하고, Update Gate로 이전 히든과 이번에 계산한 히든을 몇 대 몇 비율로 합칠지 정한다. 게이트가 둘이라 LSTM보다 가볍고, 성능은 데이터에 따라 비슷하거나 낫다. 노트북에서 둘 다 돌려 보게 할 것." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">GRU — 게이트를 둘로 줄이면</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Gated Recurrent Unit · 2014</span>
+  </div>
+  <div style="height:450px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s28_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GRU 도해와 수식</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+    <div style="background:#fff;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:8px;justify-content:center"><div style="font-size:26px;font-weight:800;color:var(--primary-main)">Cell State 없음</div><p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.45">Hidden State 하나로 처리</p></div>
+    <div style="background:#fff;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:8px;justify-content:center"><div style="font-size:26px;font-weight:800;color:var(--primary-main)">Reset Gate</div><p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.45">이전 히든이 참여할지 결정</p></div>
+    <div style="background:#fff;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:8px;justify-content:center"><div style="font-size:26px;font-weight:800;color:var(--primary-main)">Update Gate</div><p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.45">이전과 이번을 몇 대 몇으로 합칠지</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="도시 데이터에 적용" data-screen-label="23" data-speaker-notes="출처: 013 Time Series.pptx p.12–13 — 여기부터가 우리 분야 사례다. 부동산원이 발표하는 주택매매가격지수를 쓴다. 1986년부터 조사한 지정통계이고, 월간·주간으로 아파트·단독·연립 가격지수를 제공한다. R-ONE 사이트에서 받을 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s12_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>R-ONE 부동산통계정보 화면</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">우리 분야 사례</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">주택매매<br>가격지수</h2>
+    <div style="height:250px;background:var(--surface-app);border-radius:14px;padding:18px"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s13_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>전국주택가격동향조사 조사개요</span></div></div></div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">1986년부터의 <b style="color:var(--fg-1)">지정통계</b>. 월간·주간으로 아파트·단독·연립 지수를 제공한다.<br><span style="color:var(--neutral-medium)">reb.or.kr — R-ONE 부동산통계정보</span></p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="한 지역을 예측해 보면" data-screen-label="24" data-speaker-notes="출처: 013 Time Series.pptx p.14–15, 18 — 서울 강북지역 도심권 종로구 주택매매가격지수로 해 본 것이다. 2003년 11월부터 2020년 12월까지를 학습하고, 2020년 1월부터 2021년 5월까지를 검증했다. 12개월 지수를 넣고 13개월째를 예측하는 구조로 데이터를 만들었다. 오른쪽 아래가 예측 결과인데, 빨간 선이 예측이고 검은 선이 실제다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">종로구 지수로 해 보면</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">학습 2003.11–2020.12 · 검증 2020.1–2021.5 · 12개월 입력 → 13개월 예측</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="background:#fff;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:23px;font-weight:700;color:var(--neutral-medium)">전체 계열</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s14_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>종로구 지수 전체</span></div></div></div></div>
+    <div style="background:#fff;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:23px;font-weight:700;color:var(--neutral-medium)">구간 확대</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s15_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>12개월 입력 구간</span></div></div></div></div>
+    <div style="background:#fff;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:23px;font-weight:700;color:var(--primary-main)">Simple RNN 결과</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s18_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>예측 결과</span></div></div></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">지수는 주가보다 <b style="color:var(--fg-1)">훨씬 매끄럽다</b> — 그래서 결과도 훨씬 그럴듯해 보인다. 그만큼 <b style="color:#D93636">쉬운 문제</b>이기도 하다.</p>
+</section>
+
+<section data-deck="0" data-label="입력이 꼭 숫자 하나여야 하나" data-screen-label="25" data-speaker-notes="출처: 013 Time Series.pptx p.19–20, 27 · 강의영상 ① 63:00–64:30 — 여기가 중요한 확장이다. 시계열 한 칸에 숫자를 하나만 넣을 이유가 없다. 25개 시군구의 가격지수를 한 칸에 25차원 벡터로 넣으면 서로의 영향까지 학습된다. 왼쪽이 RNN 결과, 오른쪽이 LSTM 결과다. 25개 지역이 한꺼번에 예측된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 칸에 <span style="color:var(--primary-main)">25개 지역</span>을 넣으면</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">서울 25개 시군구 가격지수 · 다변량 입력</span>
+  </div>
+  <div style="height:170px"><span data-dc-slot="multivar"></span></div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--neutral-medium)">Simple RNN</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s20_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>25개 시군구 RNN 예측</span></div></div></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:#9E5DF9">LSTM</div><div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s27_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>25개 시군구 LSTM 예측</span></div></div></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="맥락 벡터로 분류하기" data-screen-label="26" data-speaker-notes="출처: 013 Time Series.pptx p.32–36 — 이 사례가 오늘 제일 값지다. 축산 차량의 방문 이력을 시계열로 보고, 다음에 방문할 시설을 예측하는 Seq2Seq 모델을 학습시켰다. 목적은 예측이 아니라 맥락 벡터를 얻는 것이다. 50회 방문 이력으로 51번째를 예측한 정확도가 76.8퍼센트 나왔으니 맥락 설명력이 있다는 뜻이다. 그다음 3만 대 차량의 맥락 벡터를 군집분석해서 50개 그룹으로 나눴다. 그랬더니 농장 방문 비율이 높은 그룹, 사료공장이 따라붙는 그룹 같은 게 자동으로 갈렸다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">예측이 목적이 아니다 — <span style="color:var(--accent-green)">맥락 벡터</span>가 목적이다</h2>
+  </div>
+  <div style="height:250px;background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s33_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>방문 이력 Seq2Seq — 이전 방문으로 다음 방문 예측</span></div></div>
+  </div>
+  <div style="height:520px;display:grid;grid-template-columns:1fr 1.25fr;gap:34px;align-items:center">
+    <div style="height:520px;background:#fff;border-radius:16px;padding:18px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/ts_s35_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>맥락 벡터 군집 결과</span></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;gap:18px">
+        <div style="flex:1;background:rgba(255,255,255,.07);border-radius:14px;padding:22px 26px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:#00E49B">76.8%</div><div style="font-size:21px;color:var(--neutral-lighter);margin-top:6px">50회 이력으로 51번째 방문 시설 예측</div></div>
+        <div style="flex:1;background:rgba(255,255,255,.07);border-radius:14px;padding:22px 26px"><div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:#8ED6FF">3만 대</div><div style="font-size:21px;color:var(--neutral-lighter);margin-top:6px">맥락 벡터를 군집해 50개 그룹으로</div></div>
+      </div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">예측이 잘된다는 건 <b style="color:#fff">맥락 벡터에 정보가 담겼다</b>는 뜻이다. 그 벡터로 군집하면 <b style="color:#fff">차량의 성격</b>이 갈린다.</p>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">방문 시설 종류만 쓴 결과다 — 사육 두수·계절·날씨·농장 위험도를 더하면 더 정교해진다.</p>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="CNN + LSTM" data-screen-label="27" data-speaker-notes="출처: 013 Time Series.pptx p.37 · 강의영상 ① 64:00–65:00 · 24 CNN_LSTM.ipynb — 또 다른 확장. 이미지를 시계열의 한 칸으로 넣는 것이다. CNN으로 프레임을 읽되 무엇이냐를 묻지 않고 벡터만 만든다. 그 벡터를 시계열로 이어 붙여 LSTM이 학습한다. 이 논문은 도시 PM2.5 농도 예측에 CNN과 LSTM을 결합한 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:780px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s37_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>CNN + LSTM 결합 구조 (PM2.5 예측 논문)</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">CNN → 벡터 → LSTM</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이미지를<br>시계열의 한 칸으로</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">CNN 에게 <b style="color:#D93636">“무엇이냐”를 묻지 않는다.</b> 그냥 읽어서 <b style="color:var(--fg-1)">벡터만</b> 만들게 한다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">도시 <b style="color:var(--fg-1)">PM2.5 농도 예측</b>에 CNN 과 LSTM 을 결합한 연구.<br><br><span style="color:var(--neutral-medium)">케라스에는 이 조합이 ConvLSTM2D 한 줄로 들어 있다.</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="도시 확산 예측" data-screen-label="28" data-speaker-notes="출처: 강의영상 ① 65:00–74:00 · 24 CNN_LSTM.ipynb — 도시에 맞는 실험으로 도시 확산 모델을 골랐다. 원천 데이터를 못 구해서 임의의 시작점에서 팔방으로 퍼지는 가상 데이터를 만들었다. 100×100 격자 10년치를 넣고 다음 해를 예측한다. 실제 연구에서는 1채널이 아니라 녹지·고도·산림·인구·소득까지 다 채널로 넣는다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.3fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px"><span data-dc-slot="cityDiffusion"></span></div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">ConvLSTM2D · 도시 사례</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">도시 확산<br>예측</h2>
+    <div style="background:#fff;border-radius:14px;padding:22px 26px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">100 × 100 격자 · 10년치 입력 → <b style="color:var(--fg-1)">다음 해 한 장</b> 출력</div>
+    <div style="padding:22px 26px;background:#FDF0F0;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">여기 데이터는 <b style="color:#D93636">가상</b>이다 — 원천 데이터를 못 구해 규칙으로 생성했다.<br>실제 연구에서는 <b style="color:var(--fg-1)">녹지·고도·산림·인구·소득</b>을 전부 채널로 넣는다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="언어로 넘어간다" data-screen-label="29" data-speaker-notes="출처: 013 Time Series.pptx p.31 — 3교시로 넘어가는 다리. 순환신경망을 인코더-디코더로 묶으면 언어 모델이 된다. 앞 문장을 순서대로 받아 맥락을 담은 벡터를 만들고, 그 벡터에서 다른 언어의 문장을 뽑아낸다. 방금 본 축산차량 사례가 정확히 이 구조였다 — 데이터만 문장에서 방문 이력으로 바꾼 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 22% 80%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">2교시 정리 · 3교시로</div>
+  <h2 style="margin:0;font-size:52px;font-weight:800;line-height:1.2;letter-spacing:-0.02em;max-width:1700px">인코더–디코더로 묶으면<br><span style="color:var(--accent-green)">언어 모델</span>이 된다</h2>
+  <div style="height:250px;background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/ts_s31_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>인코더–디코더와 Context Vector</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:22px 28px;font-size:var(--type-small);line-height:1.5">시계열은 <b style="color:var(--accent-green)">잘라서 밀면</b> 지도학습이 된다</div>
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:22px 28px;font-size:var(--type-small);line-height:1.5">가중치 <b style="color:var(--accent-green)">하나</b>가 시간을 훑는다 — RNN</div>
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:22px 28px;font-size:var(--type-small);line-height:1.5">기억을 <b style="color:var(--accent-green)">장기·단기 둘</b>로 — LSTM · GRU</div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:14px;padding:22px 28px;font-size:var(--type-small);line-height:1.5">예측값보다 <b style="color:#00E49B">중간의 벡터</b>가 값지다</div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45;max-width:1700px">3교시 — <b style="color:#fff">언어도 시계열이다.</b> <span style="color:var(--neutral-medium);font-size:var(--type-small)">실습: 25 언어모델.ipynb · 26 Seq2Seq.ipynb · 27 attention.ipynb</span></p>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W09_순환신경망</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">29</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">조립의 문제</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">실습 데이터</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">시계열을 지도학습으로</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">데이터 구조</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">RNN 의 전제</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">RNN 을 펼치면</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">한 걸음씩 계산해 본다</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">시계열마다 다른 벡터</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">맥락 벡터의 지도</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">2교시 정리</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">입력이 숫자 하나일 필요는 없다</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">RNN 의 한계</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">LSTM</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">Forget Gate</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">Input Gate</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">Cell State</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">Hidden State</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">직접 걸어 보기</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">시그모이드는 스위치다</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">LSTM 결과</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">GRU</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">도시 데이터에 적용</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">한 지역을 예측해 보면</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">입력이 꼭 숫자 하나여야 하나</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">맥락 벡터로 분류하기</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">CNN + LSTM</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">도시 확산 예측</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">언어로 넘어간다</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  state = { gate: 0, rstep: 0 };
+
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+
+    const rng = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+    const gauss = (r) => {
+      const u = Math.max(r(), 1e-9), v = r();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+
+    // ── 창 나누기 ───────────────────────────────────────────────
+    const windowing = (() => {
+      const W = 1720, H = 520, N = 26, CW = 54, CH = 44, X0 = 250;
+      const cells = [];
+      for (let i = 0; i < N; i++)
+        cells.push(h('rect', { key: 'c' + i, x: X0 + i * (CW + 4), y: 44, width: CW,
+          height: CH, rx: 7, fill: 'rgba(255,255,255,.14)' }));
+      const row = (k) => {
+        const y = 150 + k * 106, g = [];
+        for (let i = 0; i < N; i++) {
+          const inX = i >= k && i < k + 11, isY = i === k + 11;
+          g.push(h('rect', { key: 'r' + k + '_' + i, x: X0 + i * (CW + 4), y: y,
+            width: CW, height: CH, rx: 7,
+            fill: isY ? '#00E49B' : (inX ? '#4434E2' : 'rgba(255,255,255,.07)') }));
+        }
+        g.push(h('text', { key: 'l' + k, x: X0 - 24, y: y + 31, textAnchor: 'end',
+          fontFamily: EN, fontSize: 23, fontWeight: 700,
+          fill: 'var(--neutral-lighter)' }, '샘플 ' + (k + 1)));
+        return h('g', { key: 'g' + k }, g);
+      };
+      return svg(W, H, [
+        h('text', { key: 'lb', x: X0 - 24, y: 75, textAnchor: 'end', fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: 'var(--neutral-lighter)' }, '원 시계열'),
+        cells, row(0), row(1), row(2),
+        h('text', { key: 'k1', x: X0, y: 500, fontFamily: KR, fontSize: 24, fill: '#4434E2',
+          fontWeight: 700 }, '■ 입력 X — 지난 11 시점'),
+        h('text', { key: 'k2', x: X0 + 420, y: 500, fontFamily: KR, fontSize: 24,
+          fill: '#00E49B', fontWeight: 700 }, '■ 정답 y — 다음 1 시점'),
+        h('text', { key: 'k3', x: W - 40, y: 500, textAnchor: 'end', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '한 칸씩 밀면서 샘플을 계속 만든다')]);
+    })();
+
+    // ── RNN 펼치기 ─────────────────────────────────────────────
+    //    칸 안을 열어 affine(가중합) → activation(tanh) 두 단계를 드러내고,
+    //    W1 · W2 · b 는 위쪽 버스에서 네 칸으로 똑같이 내려간다.
+    const rnnUnrolled = (() => {
+      const W = 1720, H = 620;
+      const CW = 232, GAP = 96, XL = 242;      // 칸 폭 · 칸 사이 · 첫 칸 왼쪽
+      const CT = 190, CB = 400, CY = 295;      // 칸 위 · 아래 · 가로선 높이
+      const cx = (i) => XL + i * (CW + GAP) + CW / 2;
+      const SUB = ['\u2080', '\u2081', '\u2082', '\u2083', '\u2084'];
+      const NB = '\u00A0';
+      const g = [];
+
+      for (let i = 0; i < 4; i++) {
+        const x0 = XL + i * (CW + GAP), c = cx(i), last = i === 3;
+
+        // 칸
+        g.push(h('rect', { key: 'c' + i, x: x0, y: CT, width: CW, height: CB - CT,
+          rx: 18, fill: '#fff', stroke: ACC, strokeWidth: last ? 4.5 : 2.5 }));
+
+        // ① 가중합 — W 는 네 칸이 같은 색, 같은 이름이다
+        g.push(h('rect', { key: 'a' + i, x: x0 + 12, y: 210, width: CW - 24, height: 70,
+          rx: 12, fill: '#F1F0FE' }));
+        g.push(h('text', { key: 'af' + i, x: c, y: 253, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fill: INK }, [
+          h('tspan', { key: 'w1', fill: ACC, fontWeight: 800 }, 'W\u2081'),
+          h('tspan', { key: 'x' }, 'x' + SUB[i + 1] + NB + '+' + NB),
+          h('tspan', { key: 'w2', fill: ACC, fontWeight: 800 }, 'W\u2082'),
+          h('tspan', { key: 'hp' }, 'h' + SUB[i] + NB + '+' + NB),
+          h('tspan', { key: 'bb', fill: ACC, fontWeight: 800 }, 'b')]));
+
+        // ② 활성화
+        g.push(h('text', { key: 'ar' + i, x: c, y: 303, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 20, fill: '#C9C7D6' }, '\u2193'));
+        g.push(h('rect', { key: 'g' + i, x: x0 + 52, y: 312, width: CW - 104, height: 66,
+          rx: 33, fill: '#F6F0FF', stroke: VIO, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'gt' + i, x: c, y: 356, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 26, fontWeight: 700, fill: VIO }, 'tanh'));
+
+        // 공유 버스에서 내려오는 점선
+        g.push(h('line', { key: 'd' + i, x1: c, y1: 150, x2: c, y2: CT, stroke: ACC,
+          strokeWidth: 2, strokeDasharray: '7 6' }));
+
+        // 입력
+        g.push(h('line', { key: 'iv' + i, x1: c, y1: 466, x2: c, y2: CB, stroke: '#C9C7D6',
+          strokeWidth: 2.5 }));
+        g.push(h('rect', { key: 'i' + i, x: c - 44, y: 470, width: 88, height: 62, rx: 12,
+          fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'it' + i, x: c, y: 510, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 25, fontWeight: 700, fill: INK }, 'x' + SUB[i + 1]));
+
+        // 히든 스테이트가 다음 칸으로
+        if (!last) {
+          g.push(h('line', { key: 'e' + i, x1: x0 + CW, y1: CY, x2: x0 + CW + GAP, y2: CY,
+            stroke: VIO, strokeWidth: 3.5 }));
+          g.push(h('text', { key: 'et' + i, x: x0 + CW + GAP / 2, y: CY - 16,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 24, fontWeight: 700,
+            fill: VIO }, 'h' + SUB[i + 1]));
+        }
+      }
+
+      const XR = XL + 3 * (CW + GAP) + CW;     // 마지막 칸 오른쪽
+      return svg(W, H, [
+        // 공유 파라미터 — 한 벌뿐이다
+        h('rect', { key: 'sb', x: 520, y: 20, width: 660, height: 98, rx: 18,
+          fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }),
+        h('text', { key: 'sw', x: 850, y: 64, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 32, fontWeight: 800, fill: ACC },
+          'W\u2081' + NB + NB + '\u00B7' + NB + NB + 'W\u2082' + NB + NB + '\u00B7'
+          + NB + NB + 'b'),
+        h('text', { key: 'sn', x: 850, y: 99, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '한 벌뿐이다 — 네 칸이 모두 이 값을 쓴다'),
+        h('line', { key: 'sv', x1: 850, y1: 118, x2: 850, y2: 150, stroke: ACC,
+          strokeWidth: 2, strokeDasharray: '7 6' }),
+        h('line', { key: 'sh', x1: cx(0), y1: 150, x2: cx(3), y2: 150, stroke: ACC,
+          strokeWidth: 2, strokeDasharray: '7 6' }),
+
+        // h0
+        h('rect', { key: 'h0', x: 28, y: 261, width: 122, height: 68, rx: 12,
+          fill: 'var(--surface-app)' }),
+        h('text', { key: 'h0t', x: 89, y: 304, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 25, fontWeight: 700, fill: MUT }, 'h\u2080' + NB + '=' + NB + '0'),
+        h('line', { key: 'h0e', x1: 150, y1: CY, x2: XL, y2: CY, stroke: VIO,
+          strokeWidth: 3.5 }),
+
+        g,
+
+        // 마지막 히든 스테이트 → 예측
+        h('line', { key: 'out', x1: XR, y1: CY, x2: XR + 84, y2: CY, stroke: GRN,
+          strokeWidth: 4 }),
+        h('text', { key: 'outt', x: XR + 42, y: CY - 16, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 24, fontWeight: 700, fill: GRN }, 'h\u2084'),
+        h('rect', { key: 'y', x: XR + 84, y: 255, width: 150, height: 80, rx: 14,
+          fill: '#EDF9F4', stroke: GRN, strokeWidth: 3 }),
+        h('text', { key: 'yt', x: XR + 159, y: 307, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: GRN }, '\u0177'),
+        h('text', { key: 'lab', x: XR + 42, y: 430, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fontWeight: 700, fill: ACC }, '마지막 히든 스테이트'),
+
+        h('text', { key: 'nin', x: 222, y: 511, textAnchor: 'end', fontFamily: KR,
+          fontSize: 23, fill: MUT }, '입력'),
+        h('text', { key: 'cap', x: 850, y: 580, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: MUT },
+          '칸 안은 언제나 이 둘뿐이다 — 가중합(affine) 한 번, 활성화(tanh) 한 번')]);
+    })();
+
+    // ── 08~10 이 함께 쓰는 것 ───────────────────────────────────
+    //    음수는 U+2212 로 찍는다 — 하이픈은 투사하면 안 보인다.
+    const fmt2 = (v) => (v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(2);
+    const SUB = ['\u2080', '\u2081', '\u2082', '\u2083', '\u2084', '\u2085'];
+
+    //    개념 예시 계열 여덟 개. h 는 학습된 값이 아니라 손으로 정한 값이다 —
+    //    "닮은 움직임이 닮은 자리로 간다" 만 보이면 되는 그림이기 때문이다.
+    const SERIES = [
+      { n: 'A', seed: 11, d:  1, v: 0.30, h: [ 0.71, -0.52 ], q: 4 },
+      { n: 'B', seed: 23, d:  1, v: 0.24, h: [ 0.58, -0.66 ], q: 4 },
+      { n: 'C', seed: 37, d:  1, v: 1.35, h: [ 0.64,  0.61 ], q: 1 },
+      { n: 'D', seed: 41, d:  1, v: 1.60, h: [ 0.49,  0.74 ], q: 1 },
+      { n: 'E', seed: 53, d: -1, v: 1.45, h: [-0.62,  0.58 ], q: 2 },
+      { n: 'F', seed: 67, d: -1, v: 1.20, h: [-0.75,  0.44 ], q: 2 },
+      { n: 'G', seed: 71, d: -1, v: 0.26, h: [-0.55, -0.63 ], q: 3 },
+      { n: 'H', seed: 89, d: -1, v: 0.32, h: [-0.68, -0.47 ], q: 3 },
+    ];
+    const QCOL = { 1: ACC, 2: RED, 3: VIO, 4: GRN };
+    const QTXT = { 1: '오르며 크게 흔들림', 2: '내리며 크게 흔들림',
+                   3: '조용히 내림', 4: '조용히 오름' };
+
+    //    카드와 사분면 구석이 같은 모양을 쓰도록 경로를 한 곳에서 만든다.
+    const sparkPath = (sd, dir, vol, x0, y0, w, hh) => {
+      const r = rng(sd), N = 44, a = [0];
+      for (let i = 1; i < N; i++) a.push(a[i - 1] + dir * 0.16 + gauss(r) * vol * 0.30);
+      const lo = Math.min.apply(null, a), hi = Math.max.apply(null, a);
+      const sp = (hi - lo) || 1;
+      return a.map((q, i) => (i ? 'L' : 'M')
+        + (x0 + i / (N - 1) * w).toFixed(1) + ' '
+        + (y0 + hh - (q - lo) / sp * hh).toFixed(1)).join(' ');
+    };
+
+    // ── 한 걸음씩 걸어 보는 RNN ─────────────────────────────────
+    //    히든은 2차원이다. 10 장에서 평면에 찍으려면 둘이어야 한다.
+    const rnnWalk = (() => {
+      const S = this.state.rstep;                    // 0 = 시작 전, 1..5 = 그 시점까지
+      const W1 = [0.9, -0.6];
+      const W2 = [[0.5, -0.4], [0.3, 0.6]];
+      const BB = [0.10, -0.05];
+      const XS = [0.40, 0.80, 0.30, -0.50, -0.90];
+      const hs = [[0.10, 0.10]], zs = [null];
+      for (let t = 0; t < 5; t++) {
+        const p = hs[t];
+        const z = [W1[0] * XS[t] + W2[0][0] * p[0] + W2[0][1] * p[1] + BB[0],
+                   W1[1] * XS[t] + W2[1][0] * p[0] + W2[1][1] * p[1] + BB[1]];
+        zs.push(z);
+        hs.push([Math.tanh(z[0]), Math.tanh(z[1])]);
+      }
+
+      const SW = 1720, SH = 560;
+      const CW = 190, GAP = 100, XL = 190, CT = 280, CB = 400, CY = 340;
+      const cxi = (i) => XL + i * (CW + GAP) + CW / 2;
+      const XR = XL + 4 * (CW + GAP) + CW;
+
+      // 2차원 벡터 칩 — 칸 두 개로 그려야 "숫자가 둘" 이 눈에 남는다
+      //    아직 안 걸은 시점은 값을 감춘다 — 흐리게라도 보이면 미리 읽혀 버린다
+      const chip = (key, c, y, lab, v, col, op) => h('g', { key: key, opacity: op },
+        h('rect', { x: c - 78, y: y, width: 156, height: 84, rx: 12, fill: '#fff',
+          stroke: col, strokeWidth: 2.5 }),
+        h('text', { x: c, y: y + 26, textAnchor: 'middle', fontFamily: EN, fontSize: 19,
+          fontWeight: 700, fill: col }, lab),
+        h('rect', { x: c - 70, y: y + 38, width: 66, height: 36, rx: 8, fill: '#F4F3FF' }),
+        h('rect', { x: c + 4, y: y + 38, width: 66, height: 36, rx: 8, fill: '#F4F3FF' }),
+        h('text', { x: c - 37, y: y + 64, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 20, fontWeight: 700, fill: v ? INK : MUT },
+          v ? fmt2(v[0]) : '?'),
+        h('text', { x: c + 37, y: y + 64, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 20, fontWeight: 700, fill: v ? INK : MUT },
+          v ? fmt2(v[1]) : '?'));
+
+      const g = [];
+      for (let i = 0; i < 5; i++) {
+        const x0 = XL + i * (CW + GAP), c = cxi(i);
+        const done = S >= i + 1, op = done ? 1 : 0.22;
+        g.push(h('rect', { key: 'c' + i, x: x0, y: CT, width: CW, height: CB - CT, rx: 16,
+          fill: '#fff', stroke: ACC, strokeWidth: S === i + 1 ? 4.5 : 2.5, opacity: op }));
+        g.push(h('text', { key: 'cf' + i, x: c, y: CT + 32, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 18, fill: MUT, opacity: op },
+          'W\u2081x + W\u2082h + b'));
+        g.push(h('rect', { key: 'cg' + i, x: x0 + 44, y: CT + 46, width: CW - 88,
+          height: 52, rx: 26, fill: '#F6F0FF', stroke: VIO, strokeWidth: 2, opacity: op }));
+        g.push(h('text', { key: 'ct' + i, x: c, y: CT + 81, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 23, fontWeight: 700, fill: VIO, opacity: op }, 'tanh'));
+
+        // 같은 값이 위로도, 오른쪽으로도 나간다
+        g.push(h('line', { key: 'up' + i, x1: c, y1: CT, x2: c, y2: 228, stroke: VIO,
+          strokeWidth: 3, opacity: op }));
+        g.push(h('path', { key: 'ua' + i, d: 'M' + (c - 8) + ' 232 L' + c + ' 218 L'
+          + (c + 8) + ' 232 Z', fill: VIO, opacity: op }));
+        g.push(chip('hc' + i, c, 130, 'h' + SUB[i + 1], done ? hs[i + 1] : null,
+          VIO, done ? 1 : 0.45));
+        if (i < 4)
+          g.push(h('line', { key: 'rt' + i, x1: x0 + CW, y1: CY, x2: x0 + CW + GAP,
+            y2: CY, stroke: VIO, strokeWidth: 3.5, opacity: op }));
+
+        // 입력
+        g.push(h('line', { key: 'iv' + i, x1: c, y1: 448, x2: c, y2: CB,
+          stroke: '#C9C7D6', strokeWidth: 2.5, opacity: op }));
+        g.push(h('rect', { key: 'ib' + i, x: c - 54, y: 448, width: 108, height: 58,
+          rx: 12, fill: '#fff', stroke: done ? INK : '#D9D7E6', strokeWidth: 2 }));
+        g.push(h('text', { key: 'ix' + i, x: c, y: 486, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 24, fontWeight: 700,
+          fill: done ? INK : '#C9C7D6' }, fmt2(XS[i])));
+        g.push(h('text', { key: 'il' + i, x: c, y: 534, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 20, fill: MUT }, 'x' + SUB[i + 1]));
+      }
+
+      const chart = svg(SW, SH, [
+        // 고정 파라미터 — 다섯 칸이 이 한 벌을 그대로 쓴다
+        h('rect', { key: 'pb', x: 14, y: 8, width: 806, height: 104, rx: 14,
+          fill: '#F1F0FE', stroke: ACC, strokeWidth: 2, strokeDasharray: '8 6' }),
+        h('text', { key: 'pt', x: 36, y: 42, fontFamily: KR, fontSize: 20,
+          fontWeight: 700, fill: ACC }, '고정 — 다섯 칸이 모두 이 한 벌을 쓴다'),
+        h('text', { key: 'p1', x: 36, y: 86, fontFamily: EN, fontSize: 20, fill: INK },
+          'W\u2081 = [ 0.9, \u22120.6 ]'),
+        h('text', { key: 'p2', x: 240, y: 86, fontFamily: EN, fontSize: 20, fill: INK },
+          'W\u2082 = [[ 0.5, \u22120.4 ], [ 0.3, 0.6 ]]'),
+        h('text', { key: 'p3', x: 606, y: 86, fontFamily: EN, fontSize: 20, fill: INK },
+          'b = [ 0.10, \u22120.05 ]'),
+        h('text', { key: 'sc', x: 1706, y: 58, textAnchor: 'end', fontFamily: EN,
+          fontSize: 32, fontWeight: 800, fill: S === 0 ? MUT : ACC }, S + ' / 5'),
+        h('text', { key: 'sn', x: 1706, y: 96, textAnchor: 'end', fontFamily: KR,
+          fontSize: 20, fill: MUT }, '같은 값이 위로도, 오른쪽으로도 간다'),
+
+        h('text', { key: 'lh', x: 92, y: 176, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 19, fill: MUT }, '히든 스테이트'),
+        chip('h0', 92, 298, 'h' + SUB[0], hs[0], MUT, 1),
+        h('line', { key: 'h0e', x1: 170, y1: CY, x2: XL, y2: CY, stroke: VIO,
+          strokeWidth: 3.5 }),
+        h('text', { key: 'li', x: 92, y: 486, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 19, fill: MUT }, '입력'),
+
+        g,
+
+        h('line', { key: 'oe', x1: XR, y1: CY, x2: XR + 46, y2: CY, stroke: GRN,
+          strokeWidth: 4, opacity: S >= 5 ? 1 : 0.2 }),
+        h('rect', { key: 'ob', x: XR + 46, y: 306, width: 120, height: 68, rx: 14,
+          fill: '#EDF9F4', stroke: GRN, strokeWidth: 3, opacity: S >= 5 ? 1 : 0.2 }),
+        h('text', { key: 'ot', x: XR + 106, y: 350, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 28, fontWeight: 800, fill: GRN, opacity: S >= 5 ? 1 : 0.2 },
+          '\u0177')]);
+
+      const btn = (lab, on, act) => h('button', { key: lab, onClick: on, disabled: !act,
+        style: { border: 'none', cursor: act ? 'pointer' : 'default', borderRadius: '14px',
+          padding: '20px 24px', fontFamily: KR, fontSize: '25px', fontWeight: 700,
+          background: act ? ACC : '#E7E5F0', color: act ? '#fff' : MUT } }, lab);
+
+      const line = (t, col) => h('div', { style: { fontFamily: EN, fontSize: '27px',
+        fontWeight: 700, color: col, letterSpacing: '0.01em' } }, t);
+
+      const card = S === 0
+        ? h('div', { style: { background: '#fff', borderRadius: '16px',
+              padding: '26px 30px', borderLeft: '8px solid ' + MUT } },
+            h('div', { style: { fontFamily: KR, fontSize: '26px', fontWeight: 800,
+              color: INK, marginBottom: '12px' } }, '아직 아무것도 들어오지 않았다'),
+            h('p', { style: { margin: 0, fontFamily: KR, fontSize: '23px',
+              color: 'var(--fg-3)', lineHeight: 1.55 } },
+              '히든 스테이트를 2차원으로 잡고 h\u2080 를 0.10, 0.10 으로 두고 시작한다. '
+              + '버튼을 누르면 x\u2081 이 들어온다.'))
+        : h('div', { style: { background: '#fff', borderRadius: '16px',
+              padding: '26px 30px', borderLeft: '8px solid ' + ACC,
+              display: 'flex', flexDirection: 'column', gap: '10px' } },
+            h('div', { style: { fontFamily: KR, fontSize: '26px', fontWeight: 800,
+              color: INK } }, S + '번째 걸음 — x' + SUB[S] + ' = ' + fmt2(XS[S - 1])
+              + ' 이 들어왔다'),
+            line('W\u2081\u00B7x' + SUB[S] + ' + W\u2082\u00B7h' + SUB[S - 1] + ' + b'
+              + '\u00A0 = \u00A0[ ' + fmt2(zs[S][0]) + ',\u00A0 ' + fmt2(zs[S][1]) + ' ]',
+              INK),
+            line('tanh \u2192 \u00A0h' + SUB[S] + '\u00A0 = \u00A0[ '
+              + fmt2(hs[S][0]) + ',\u00A0 ' + fmt2(hs[S][1]) + ' ]', VIO),
+            S === 5
+              ? h('p', { style: { margin: 0, fontFamily: KR, fontSize: '22px',
+                  color: GRN, fontWeight: 700 } },
+                  '이 h\u2085 가 맥락 벡터다 — 예측은 이것 하나로 한다.')
+              : null);
+
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px',
+          width: '100%', height: '100%' } },
+        h('div', { style: { flex: 1, minHeight: 0 } }, chart),
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 2.6fr',
+            gap: '28px', alignItems: 'stretch' } },
+          h('div', { style: { display: 'flex', flexDirection: 'column', gap: '12px',
+              justifyContent: 'center' } },
+            btn(S >= 5 ? '끝까지 왔다' : '다음 한 걸음  \u2192',
+              () => this.setState({ rstep: Math.min(5, S + 1) }), S < 5),
+            h('button', { onClick: () => this.setState({ rstep: 0 }),
+              style: { border: '2px solid #D9D7E6', cursor: 'pointer',
+                borderRadius: '14px', padding: '14px 24px', fontFamily: KR,
+                fontSize: '21px', fontWeight: 700, background: '#fff',
+                color: 'var(--fg-3)' } }, '처음으로')),
+          card));
+    })();
+
+    // ── 계열마다 다른 벡터 ──────────────────────────────────────
+    const seriesToVec = (() => {
+      const card = (s) => h('div', { key: s.n, style: {
+          background: '#fff', border: '2px solid ' + QCOL[s.q] + '33',
+          borderRadius: '16px', padding: '16px 18px', display: 'flex',
+          flexDirection: 'column', gap: '10px', minHeight: 0 } },
+        h('div', { style: { display: 'flex', alignItems: 'baseline',
+            justifyContent: 'space-between', gap: '8px' } },
+          h('span', { style: { fontFamily: EN, fontSize: '22px', fontWeight: 800,
+            color: QCOL[s.q] } }, '계열 ' + s.n),
+          h('span', { style: { fontFamily: KR, fontSize: '17px', color: MUT } },
+            QTXT[s.q])),
+        h('div', { style: { flex: 1, minHeight: '84px' } },
+          h('svg', { viewBox: '0 0 320 120', preserveAspectRatio: 'none',
+              style: { width: '100%', height: '100%', display: 'block' } },
+            h('path', { d: sparkPath(s.seed, s.d, s.v, 8, 10, 304, 100), fill: 'none',
+              stroke: QCOL[s.q], strokeWidth: 2.6,
+              vectorEffect: 'non-scaling-stroke' }))),
+        h('div', { style: { fontFamily: EN, fontSize: '21px', fontWeight: 700,
+            color: INK, background: 'var(--surface-app)', borderRadius: '10px',
+            padding: '10px 12px', textAlign: 'center' } },
+          'h = [ ' + fmt2(s.h[0]) + ',\u00A0 ' + fmt2(s.h[1]) + ' ]'));
+      return h('div', { style: { display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(2, 1fr)',
+        gap: '20px', width: '100%', height: '100%' } }, SERIES.map(card));
+    })();
+
+    // ── 맥락 벡터의 지도 ────────────────────────────────────────
+    const contextMap = (() => {
+      const W = 900, H = 820;
+      const X = (v) => 450 + v * 360;
+      const Y = (v) => 400 - v * 320;
+      const kids = [];
+      const tint = (k, x0, y0, w, hh, col) => kids.push(h('rect', { key: k, x: x0,
+        y: y0, width: w, height: hh, fill: col, opacity: 0.05 }));
+      tint('q1', 450, 44, 406, 356, ACC);
+      tint('q2', 44, 44, 406, 356, RED);
+      tint('q3', 44, 400, 406, 356, VIO);
+      tint('q4', 450, 400, 406, 356, GRN);
+      kids.push(h('line', { key: 'ax', x1: 44, y1: 400, x2: 856, y2: 400, stroke: AX,
+        strokeWidth: 2.5 }));
+      kids.push(h('line', { key: 'ay', x1: 450, y1: 44, x2: 450, y2: 756, stroke: AX,
+        strokeWidth: 2.5 }));
+      kids.push(h('text', { key: 'axr', x: 856, y: 434, textAnchor: 'end',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: MUT }, '오르는 흐름 \u2192'));
+      kids.push(h('text', { key: 'axl', x: 44, y: 434, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: MUT }, '\u2190 내리는 흐름'));
+      kids.push(h('text', { key: 'ayt', x: 466, y: 62, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: MUT }, '\u2191 크게 흔들린다'));
+      kids.push(h('text', { key: 'ayb', x: 466, y: 748, fontFamily: KR, fontSize: 21,
+        fontWeight: 700, fill: MUT }, '\u2193 잔잔하다'));
+
+      // 사분면 구석에 대표 모양 하나씩 — 카드의 그 계열과 같은 곡선이다
+      const corner = (key, s, x0, y0) => {
+        kids.push(h('path', { key: key + 'p',
+          d: sparkPath(s.seed, s.d, s.v, x0, y0, 168, 56), fill: 'none',
+          stroke: QCOL[s.q], strokeWidth: 3 }));
+        kids.push(h('text', { key: key + 't', x: x0 + 84, y: y0 + 92,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 21, fontWeight: 700,
+          fill: QCOL[s.q] }, QTXT[s.q]));
+      };
+      corner('c1', SERIES[2], 672, 66);
+      corner('c2', SERIES[4], 60, 66);
+      corner('c3', SERIES[6], 60, 620);
+      corner('c4', SERIES[0], 672, 620);
+
+      // 흩어진 이웃들 — 같은 성격의 계열이 더 있다는 뜻이다
+      const r = rng(2026);
+      SERIES.forEach((s, i) => {
+        for (let k = 0; k < 4; k++)
+          kids.push(h('circle', { key: 'f' + i + k,
+            cx: X(s.h[0] + (r() - 0.5) * 0.30), cy: Y(s.h[1] + (r() - 0.5) * 0.30),
+            r: 7, fill: QCOL[s.q], opacity: 0.26 }));
+      });
+      SERIES.forEach((s, i) => {
+        kids.push(h('circle', { key: 'p' + i, cx: X(s.h[0]), cy: Y(s.h[1]), r: 12,
+          fill: QCOL[s.q], stroke: '#fff', strokeWidth: 3 }));
+        kids.push(h('text', { key: 'l' + i, x: X(s.h[0]) + 20, y: Y(s.h[1]) + 8,
+          fontFamily: EN, fontSize: 21, fontWeight: 800, fill: QCOL[s.q] }, s.n));
+      });
+      kids.push(h('text', { key: 'cap', x: 450, y: 800, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 20, fill: MUT },
+        '축에 이름을 붙여 준 적은 없다 \u2014 개념 예시'));
+      return svg(W, H, kids);
+    })();
+
+    // ── 한 시점에 벡터를 통째로 ─────────────────────────────────
+    const multiDim = (() => {
+      const W = 920, H = 700, CY = 305;
+      const kids = [];
+      kids.push(h('text', { key: 'lv', x: 115, y: 62, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: MUT }, '한 시점의 입력'));
+      for (let k = 0; k < 8; k++)
+        kids.push(h('rect', { key: 'v' + k, x: 60, y: 90 + k * 44, width: 110,
+          height: 38, rx: 8, fill: '#F1F0FE', stroke: ACC, strokeWidth: 1.6 }));
+      kids.push(h('text', { key: 'vd', x: 115, y: 468, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 30, fill: MUT }, '\u22EE'));
+      kids.push(h('rect', { key: 'vl', x: 60, y: 486, width: 110, height: 38, rx: 8,
+        fill: '#F1F0FE', stroke: ACC, strokeWidth: 1.6 }));
+      kids.push(h('text', { key: 'vn', x: 115, y: 560, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 24, fontWeight: 800, fill: ACC }, '200 차원'));
+
+      kids.push(h('line', { key: 'a1', x1: 176, y1: CY, x2: 296, y2: CY, stroke: MUT,
+        strokeWidth: 3 }));
+      kids.push(h('text', { key: 'a1t', x: 236, y: CY - 18, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 22, fontWeight: 700, fill: ACC }, '\u00D7 W\u2081'));
+      kids.push(h('text', { key: 'a1s', x: 236, y: CY + 34, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 19, fill: MUT }, '2 \u00D7 200 행렬'));
+
+      kids.push(h('text', { key: 'cl', x: 435, y: 205, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: MUT }, 'RNN 칸'));
+      kids.push(h('rect', { key: 'cb', x: 300, y: 225, width: 270, height: 160, rx: 18,
+        fill: '#fff', stroke: ACC, strokeWidth: 3 }));
+      kids.push(h('text', { key: 'cf', x: 435, y: 268, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 20, fill: MUT }, 'W\u2081x + W\u2082h + b'));
+      kids.push(h('rect', { key: 'cg', x: 355, y: 290, width: 160, height: 62, rx: 31,
+        fill: '#F6F0FF', stroke: VIO, strokeWidth: 2.5 }));
+      kids.push(h('text', { key: 'ct', x: 435, y: 331, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 25, fontWeight: 700, fill: VIO }, 'tanh'));
+
+      kids.push(h('line', { key: 'a2', x1: 570, y1: CY, x2: 636, y2: CY, stroke: VIO,
+        strokeWidth: 3.5 }));
+      kids.push(h('text', { key: 'hl', x: 715, y: 245, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: MUT }, '히든 스테이트'));
+      kids.push(h('rect', { key: 'hb', x: 637, y: 263, width: 156, height: 84, rx: 12,
+        fill: '#fff', stroke: VIO, strokeWidth: 2.5 }));
+      kids.push(h('rect', { key: 'h1', x: 645, y: 301, width: 66, height: 36, rx: 8,
+        fill: '#F4F3FF' }));
+      kids.push(h('rect', { key: 'h2', x: 719, y: 301, width: 66, height: 36, rx: 8,
+        fill: '#F4F3FF' }));
+      kids.push(h('text', { key: 'ht', x: 715, y: 289, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 19, fontWeight: 700, fill: VIO }, 'h'));
+      kids.push(h('text', { key: 'hn', x: 715, y: 384, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 19, fill: MUT }, '크기는 우리가 정한다'));
+
+      kids.push(h('text', { key: 'nt', x: 460, y: 640, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 22, fill: MUT },
+        '입력이 몇 차원이든 구조는 그대로다 \u2014 W\u2081 만 넓어진다'));
+      return svg(W, H, kids);
+    })();
+
+    // ── LSTM 걸어보기 ───────────────────────────────────────────
+    const lstmWalk = (() => {
+      const g = this.state.gate;
+      const STEP = [
+        { t: 'Forget Gate', c: RED,
+          d: '직전 셀 스테이트를 이번 시점에 쓸 것인가. 시그모이드가 0 이면 장기 기억을 통째로 끈다.' },
+        { t: 'Input Gate', c: ACC,
+          d: 'tanh 가 “무엇을 더할지”를 만들고, 시그모이드가 “더할지 말지”를 정한다.' },
+        { t: 'Cell State', c: VIO,
+          d: '두 결정을 거쳐 장기 기억이 갱신되고, 그대로 다음 칸으로 흘러간다.' },
+        { t: 'Output Gate', c: GRN,
+          d: '갱신된 장기 기억에서 이번 시점의 단기 기억(히든 스테이트)을 뽑아낸다.' },
+      ];
+      const W = 1320, H = 700;
+      const on = (k) => g === k;
+      const dim = (k) => on(k) ? 1 : 0.22;
+      const box = (x, y, w, hh, lab, col, k, fs) => h('g', { key: lab, opacity: dim(k) },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 12, fill: '#fff',
+          stroke: col, strokeWidth: on(k) ? 4 : 2 }),
+        h('text', { x: x + w / 2, y: y + hh / 2 + 9, textAnchor: 'middle', fontFamily: EN,
+          fontSize: fs || 24, fontWeight: 700, fill: col }, lab));
+      const cur = STEP[g];
+      return h('div', { style: { display: 'grid', gridTemplateColumns: '2.15fr 1fr',
+          gap: '34px', width: '100%', height: '100%', alignItems: 'center' } },
+        h('div', { style: { height: '640px' } }, svg(W, H, [
+          h('rect', { key: 'cell', x: 150, y: 70, width: 1030, height: 480, rx: 22,
+            fill: '#fff', stroke: 'var(--border-1)', strokeWidth: 2 }),
+          h('line', { key: 'cs', x1: 60, y1: 150, x2: 1270, y2: 150,
+            stroke: VIO, strokeWidth: on(2) ? 9 : 5, opacity: on(2) ? 1 : 0.35 }),
+          h('text', { key: 'cs1', x: 60, y: 126, fontFamily: EN, fontSize: 24,
+            fontWeight: 700, fill: VIO, opacity: on(2) ? 1 : 0.55 }, 'c(t−1)'),
+          h('text', { key: 'cs2', x: 1270, y: 126, textAnchor: 'end', fontFamily: EN,
+            fontSize: 24, fontWeight: 700, fill: VIO, opacity: on(2) ? 1 : 0.55 }, 'c(t)'),
+          h('text', { key: 'cs3', x: 660, y: 126, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 22, fill: VIO, opacity: on(2) ? 1 : 0.45 },
+            '장기 기억 — 거의 손대지 않고 흘려보낸다'),
+          h('line', { key: 'bus', x1: 60, y1: 470, x2: 1270, y2: 470,
+            stroke: GRN, strokeWidth: on(3) ? 9 : 5, opacity: on(3) ? 1 : 0.35 }),
+          h('text', { key: 'hs1', x: 60, y: 508, fontFamily: EN, fontSize: 24,
+            fontWeight: 700, fill: GRN, opacity: on(3) ? 1 : 0.55 }, 'h(t−1)'),
+          h('text', { key: 'hs2', x: 1270, y: 508, textAnchor: 'end', fontFamily: EN,
+            fontSize: 24, fontWeight: 700, fill: GRN, opacity: on(3) ? 1 : 0.55 }, 'h(t)'),
+          h('rect', { key: 'xin', x: 600, y: 606, width: 120, height: 62, rx: 12,
+            fill: '#fff', stroke: MUT, strokeWidth: 2.5 }),
+          h('text', { key: 'xt', x: 660, y: 648, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 26, fontWeight: 700, fill: INK }, 'x(t)'),
+          h('line', { key: 'xl', x1: 660, y1: 604, x2: 660, y2: 474, stroke: MUT,
+            strokeWidth: 3 }),
+          [[295, RED, 0], [515, ACC, 1], [725, ACC, 1], [965, GRN, 3]].map(
+            (q, i) => h('line', { key: 'st' + i, x1: q[0], y1: 466, x2: q[0], y2: 390,
+              stroke: q[1], strokeWidth: 3, opacity: dim(q[2]) })),
+          box(210, 290, 170, 96, 'σ  forget', RED, 0),
+          box(430, 290, 170, 96, 'σ  input', ACC, 1),
+          box(640, 290, 170, 96, 'tanh', ACC, 1),
+          box(880, 290, 170, 96, 'σ  output', GRN, 3),
+          h('circle', { key: 'm1', cx: 295, cy: 150, r: 24, fill: '#fff', stroke: RED,
+            strokeWidth: on(0) ? 4 : 2, opacity: dim(0) }),
+          h('text', { key: 'm1t', x: 295, y: 160, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 26, fill: RED, opacity: dim(0) }, '×'),
+          h('circle', { key: 'm2', cx: 725, cy: 150, r: 24, fill: '#fff', stroke: VIO,
+            strokeWidth: on(2) ? 4 : 2, opacity: Math.max(dim(1), dim(2)) }),
+          h('text', { key: 'm2t', x: 725, y: 160, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 26, fill: VIO, opacity: Math.max(dim(1), dim(2)) }, '+'),
+          h('line', { key: 'l1', x1: 295, y1: 286, x2: 295, y2: 176, stroke: RED,
+            strokeWidth: 3, opacity: dim(0) }),
+          h('line', { key: 'l2a', x1: 515, y1: 286, x2: 515, y2: 230, stroke: ACC,
+            strokeWidth: 3, opacity: dim(1) }),
+          h('line', { key: 'l2b', x1: 515, y1: 230, x2: 725, y2: 230, stroke: ACC,
+            strokeWidth: 3, opacity: dim(1) }),
+          h('line', { key: 'l2c', x1: 725, y1: 286, x2: 725, y2: 176, stroke: ACC,
+            strokeWidth: 3, opacity: Math.max(dim(1), dim(2)) }),
+          h('line', { key: 'l3a', x1: 1090, y1: 154, x2: 1090, y2: 338, stroke: VIO,
+            strokeWidth: 3, opacity: dim(3), strokeDasharray: '7 6' }),
+          h('line', { key: 'l3b', x1: 1090, y1: 338, x2: 1056, y2: 338, stroke: VIO,
+            strokeWidth: 3, opacity: dim(3), strokeDasharray: '7 6' }),
+          h('line', { key: 'l4', x1: 965, y1: 388, x2: 965, y2: 466, stroke: GRN,
+            strokeWidth: 4, opacity: dim(3) }),
+        ])),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '22px' } },
+          h('div', { style: { display: 'flex', gap: '10px', flexWrap: 'wrap' } },
+            STEP.map((s, i) => h('button', { key: i,
+              onClick: () => this.setState({ gate: i }),
+              style: { border: 'none', cursor: 'pointer', borderRadius: '999px',
+                padding: '12px 20px', fontFamily: KR, fontSize: '21px', fontWeight: 700,
+                background: g === i ? s.c : '#fff',
+                color: g === i ? '#fff' : 'var(--fg-3)' } }, (i + 1) + '. ' + s.t))),
+          h('div', { style: { background: '#fff', borderRadius: '16px',
+              padding: '30px 32px', borderLeft: '8px solid ' + cur.c } },
+            h('div', { style: { fontFamily: EN, fontSize: '30px', fontWeight: 800,
+              color: cur.c, marginBottom: '14px' } }, cur.t),
+            h('p', { style: { margin: 0, fontFamily: KR, fontSize: '25px',
+              color: 'var(--fg-3)', lineHeight: 1.55 } }, cur.d)),
+          h('div', { style: { fontFamily: KR, fontSize: '22px', color: MUT,
+            lineHeight: 1.55 } }, '게이트가 넷 — 그래서 파라미터도 RNN 의 ',
+            h('b', { style: { color: INK } }, '4배'), ' 다.')));
+    })();
+
+    // ── 시그모이드 스위치 ───────────────────────────────────────
+    const sigmoidSwitch = (() => {
+      const W = 1000, H = 400, pad = 70;
+      const s = { x: v => pad + (v + 6) / 12 * (W - pad * 2),
+                  y: v => 320 - v * 250 };
+      const pts = [];
+      for (let i = 0; i <= 240; i++) {
+        const x = -6 + i / 240 * 12;
+        pts.push([x, 1 / (1 + Math.exp(-x))]);
+      }
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('rect', { key: 'z0', x: pad, y: s.y(0.12), width: W - pad * 2,
+          height: 320 - s.y(0.12), fill: RED, opacity: 0.08 }),
+        h('rect', { key: 'z1', x: pad, y: s.y(1), width: W - pad * 2,
+          height: s.y(0.88) - s.y(1), fill: GRN, opacity: 0.10 }),
+        h('line', { key: 'ax', x1: pad, y1: 320, x2: W - pad, y2: 320, stroke: AX,
+          strokeWidth: 2 }),
+        h('path', { key: 'c', d: pts.map((p, i) => (i ? 'L' : 'M') + s.x(p[0]).toFixed(1)
+          + ' ' + s.y(p[1]).toFixed(1)).join(' '), fill: 'none', stroke: ACC,
+          strokeWidth: 5 }),
+        h('text', { key: 't0', x: W - pad - 10, y: s.y(0.06) - 10, textAnchor: 'end',
+          fontFamily: KR, fontSize: 23, fontWeight: 700, fill: RED }, '≈ 0  차단'),
+        h('text', { key: 't1', x: pad + 10, y: s.y(0.94) - 10, fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: GRN }, '≈ 1  통과'),
+        h('text', { key: 'f', x: W / 2, y: 52, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 28, fontWeight: 600, fill: ACC }, 'σ(x) = 1 / (1 + e⁻ˣ)'),
+        h('text', { key: 'n', x: W / 2, y: 376, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: MUT }, '가운데를 지나는 구간이 좁다 — 그래서 스위치가 된다')]);
+    })();
+
+    // ── RNN vs LSTM 파라미터 ────────────────────────────────────
+    const paramCompare = (() => {
+      const W = 1000, H = 290;
+      const bar = (y, lab, n, col, note) => h('g', { key: lab },
+        h('text', { x: 30, y: y + 40, fontFamily: EN, fontSize: 28, fontWeight: 800,
+          fill: col }, lab),
+        h('rect', { x: 210, y: y, width: n / 14 * 560, height: 56, rx: 12,
+          fill: col, opacity: 0.85 }),
+        h('text', { x: 210 + n / 14 * 560 + 20, y: y + 40, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: col }, n + ' 개'),
+        h('text', { x: 210, y: y + 86, fontFamily: KR, fontSize: 20, fill: MUT }, note));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('text', { key: 'h', x: 30, y: 40, fontFamily: KR, fontSize: 22, fill: MUT },
+          'units = 1 · 순환 층의 파라미터만'),
+        bar(64, 'RNN', 3, ACC, 'W_x · W_h · b'),
+        bar(174, 'LSTM', 12, VIO, '게이트 넷 × 3 개')]);
+    })();
+
+    // ── 다변량 입력 ─────────────────────────────────────────────
+    const multivar = (() => {
+      const W = 1720, H = 170;
+      const g = [];
+      for (let k = 0; k < 5; k++) {
+        const x = 100 + k * 320;
+        g.push(h('rect', { key: 'b' + k, x: x, y: 30, width: 220, height: 92, rx: 14,
+          fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }));
+        for (let j = 0; j < 8; j++)
+          g.push(h('rect', { key: 'c' + k + '_' + j, x: x + 16 + j * 24, y: 48,
+            width: 18, height: 56, rx: 3, fill: ACC,
+            opacity: 0.25 + ((k * 3 + j) % 6) * 0.12 }));
+        g.push(h('text', { key: 't' + k, x: x + 110, y: 148, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fill: MUT }, (k + 1) + '월'));
+        if (k < 4) g.push(h('text', { key: 'a' + k, x: x + 268, y: 84,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 26, fill: AX }, '→'));
+      }
+      return svg(W, H, [g,
+        h('text', { key: 'l', x: 30, y: 84, textAnchor: 'end', fontFamily: KR,
+          fontSize: 22, fill: MUT }, ''),
+        h('text', { key: 'n', x: 100, y: 18, fontFamily: KR, fontSize: 22,
+          fontWeight: 700, fill: ACC }, '한 칸 = 25차원 벡터 (25개 시군구 지수)')]);
+    })();
+
+    // ── 도시 확산 ───────────────────────────────────────────────
+    const cityDiffusion = (() => {
+      const W = 1120, H = 790, G = 26;
+      const seeds = [[9, 8], [17, 15], [7, 18]];
+      const grids = [];
+      let cur = [];
+      for (let y = 0; y < G; y++) { cur.push([]); for (let x = 0; x < G; x++) cur[y].push(0); }
+      seeds.forEach(s => { cur[s[1]][s[0]] = 1; });
+      const r = rng(4711);
+      for (let step = 0; step < 14; step++) {
+        const nx = cur.map(row => row.slice());
+        for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+          if (cur[y][x]) continue;
+          let n = 0;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const yy = y + dy, xx = x + dx;
+            if (yy >= 0 && yy < G && xx >= 0 && xx < G && cur[yy][xx]) n++;
+          }
+          if (n > 0 && r() < 0.16 + n * 0.055) nx[y][x] = 1;
+        }
+        cur = nx;
+        grids.push(cur.map(row => row.slice()));
+      }
+      const panel = (gd, x0, y0, size, col, lab, sub) => {
+        const cs = size / G, cells = [];
+        for (let y = 0; y < G; y++) for (let x = 0; x < G; x++)
+          if (gd[y][x]) cells.push(h('rect', { key: y + '_' + x, x: x0 + x * cs,
+            y: y0 + y * cs, width: cs - 0.6, height: cs - 0.6, fill: col, opacity: 0.9 }));
+        return h('g', { key: lab },
+          h('rect', { x: x0 - 4, y: y0 - 4, width: size + 8, height: size + 8, rx: 8,
+            fill: '#fff', stroke: 'var(--border-1)', strokeWidth: 1.6 }),
+          cells,
+          h('text', { x: x0 + size / 2, y: y0 + size + 28, textAnchor: 'middle',
+            fontFamily: EN, fontSize: 20, fontWeight: 700, fill: col }, lab),
+          sub ? h('text', { x: x0 + size / 2, y: y0 + size + 52, textAnchor: 'middle',
+            fontFamily: KR, fontSize: 19, fill: MUT }, sub) : null);
+      };
+      const row = [];
+      for (let k = 0; k < 5; k++)
+        row.push(panel(grids[k * 2], 44 + k * 212, 96, 176, '#7C77A8',
+          'year ' + (k * 2 + 1), null));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('text', { key: 'h1', x: 44, y: 62, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: INK }, '입력 — 10년치 격자'),
+        row,
+        h('text', { key: 'ar', x: W / 2, y: 452, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 40, fill: MUT }, '↓  ConvLSTM2D'),
+        panel(grids[11], 236, 500, 220, ACC, '실제 다음 해', '정답'),
+        panel(grids[12], 656, 500, 220, GRN, '예측', '모델 출력'),
+        h('text', { key: 'n', x: W / 2, y: 764, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 21, fill: MUT }, '가상 데이터 — 규칙으로 생성한 것이다')]);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      windowing, rnnUnrolled, rnnWalk, seriesToVec, contextMap, multiDim,
+      lstmWalk, sigmoidSwitch, paramCompare,
+      multivar, cityDiffusion,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

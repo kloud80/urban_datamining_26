@@ -1,0 +1,23 @@
+/* ============================================================
+   BigValue — Spacing tokens
+   4-based scale; product uses rem = 10px.
+   ============================================================ */
+:root {
+  --space-1:  0.4rem;   /*  4px */
+  --space-2:  0.8rem;   /*  8px */
+  --space-3:  1.2rem;   /* 12px */
+  --space-4:  1.6rem;   /* 16px */
+  --space-5:  2.0rem;   /* 20px */
+  --space-6:  2.4rem;   /* 24px */
+  --space-7:  3.2rem;   /* 32px */
+  --space-8:  4.0rem;   /* 40px */
+  --space-10: 6.0rem;   /* 60px */
+  --space-12: 8.0rem;   /* 80px */
+
+  /* --- Layout constants (product chrome) --- */
+  --layout-topbar: 6rem;
+  --layout-rail:   6rem;
+  --layout-flow-panel: 24rem;
+  --layout-report-panel: 38rem;
+  --layout-max: 139rem;   /* marketing container max-width */
+}

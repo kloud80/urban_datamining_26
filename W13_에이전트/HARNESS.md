@@ -10,6 +10,9 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W13_에이전트/slides/W13_툴_에이전트와_MCP.html`
+
 노트북
 - `W13_에이전트/notebooks/36 ReinforcementLearning.ipynb`
 

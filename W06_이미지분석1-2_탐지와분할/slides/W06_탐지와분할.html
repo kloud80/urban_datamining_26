@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W06_탐지와분할</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.1 · 강의영상 detection 00:00 · 18 CNN_application.ipynb — 6주차. 지난주에 우리는 이미지 한 장이 무엇인지 맞히는 데까지 갔다. 오늘은 한 걸음 더 나간다. 그 안에 무엇이 어디에 있는지까지 알아낸다. 격자 데이터 이야기는 5주차 마지막에 이미 했으니, 오늘은 처음부터 탐지로 들어간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(158,93,249,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">6주차 · 이미지 분석 1-2</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.12;letter-spacing:-0.03em">탐지와 분할</h1>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">‘무엇이 있다’ 와 ‘어디에 있다’ 는 어떻게 다른 문제인가</p>
+  <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">한양대학교 도시공학과 · 19 YOLO.ipynb · 20 Unet.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 흐름" data-screen-label="02" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.21 — 오늘 순서. 1부가 탐지, 2부가 분할이다. 격자 데이터 응용은 5주차 마지막에 이미 했다. 지난주 CNN 기초가 없으면 오늘이 안 되니, 필요할 때마다 되짚어 준다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 흐름</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">두 걸음</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="weekMap"></span></div>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="03" data-speaker-notes="출처: 신규 · 강의영상 detection 01:00 — 오늘의 질문이다. 지금까지는 이미지 한 판을 주면 이게 3이냐 8이냐, 개냐 고양이냐를 맞혔다. 그런데 어느 물건이 어디에 있느냐는 전혀 다른 질문이다. 학생들에게 먼저 생각해 보게 할 것 — 분류기 하나를 가지고 있다면, 그걸로 위치까지 알아내려면 무엇을 더 해야 하는가. 그 답이 오늘 1부다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 질문</div>
+  <h2 style="margin:0;font-size:72px;font-weight:800;line-height:1.2;letter-spacing:-0.025em;max-width:1620px">‘무엇이 있다’ 와 ‘어디에 있다’ 는<br>어떻게 다른 문제인가?</h2>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1620px">분류기 하나를 이미 가지고 있다. 그걸로 <b style="color:var(--fg-1)">위치까지</b> 알아내려면 무엇을 더 해야 하나.</p>
+</section>
+
+<section data-deck="0" data-label="분류에서 탐지로" data-screen-label="04" data-speaker-notes="출처: 강의영상 detection 00:00–01:00 · 19 YOLO.ipynb — 1부다. 지금까지는 이미지 한 판을 주면 이게 무엇이냐를 맞혔다. 이제 그 안에 무엇이 어디에 있느냐를 묻는다. 그리고 한 걸음 더 나가면, 그 요소들의 관계를 설명해 문장으로 바꾸는 것까지 간다. 그게 지금 가장 중요한 연구 단계이고, 우리 수업에서는 12주차 멀티모달에서 다시 만난다. 오늘은 그 앞의 두 단계, 탐지와 분할을 본다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">1부 · 탐지</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">질문이 세 번 바뀐다</h2>
+  <div style="flex:1;min-height:0;max-height:480px"><span data-dc-slot="taskLadder"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">맨 오른쪽이 지금 가장 뜨거운 연구다 — <b style="color:var(--fg-1)">12주차 멀티모달</b>에서 다시 만난다.</p>
+</section>
+
+<section data-deck="0" data-label="탐지의 20년" data-screen-label="05" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.22 · Object Detection in 20 Years: A Survey (arXiv 1905.05055) · 강의영상 detection 01:00–02:00 — 탐지 알고리즘의 역사다. 가운데 2012년이 분기점이고, 그 자리에 AlexNet 이 있다. 왼쪽이 전통적 방법 — 사람이 특징을 설계해 넣던 시절이다. 오른쪽이 딥러닝 기반이다. 여기서부터 전부 뉴럴 네트워크로 넘어갔다. 그리고 오른쪽을 보면 위아래 두 갈래다. 아래가 R-CNN 계열, 위가 YOLO 계열이다. 각각 투 스테이지와 원 스테이지라고 부른다. 지금 실무에서 압도적으로 많이 쓰는 것은 YOLO 다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">2012년 <span style="color:var(--primary-main)">AlexNet</span> 을 기점으로 갈라진다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Object Detection in 20 Years: A Survey</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s22_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>객체 탐지 20년 로드맵 — 2012년 AlexNet 이후 딥러닝 기반으로, one-stage 와 two-stage 로 갈린다</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">오른쪽이 두 갈래로 갈린다 — 아래가 <b style="color:var(--fg-1)">R-CNN 계열(two-stage)</b>, 위가 <b style="color:var(--fg-1)">YOLO 계열(one-stage)</b>.</p>
+</section>
+
+<section data-deck="0" data-label="R-CNN — 잘라서 물어본다" data-screen-label="06" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.23 · 강의영상 detection 02:00–04:00 — R-CNN 의 발상은 놀랄 만큼 단순하다. 2012년에 우리는 이미지가 무엇인지 맞히는 학습된 뉴럴넷을 얻었다. 그러면 이렇게 하면 된다. 이미지 한 판에 박스를 마구잡이로 그린다. 크게도 작게도 이천 개쯤. 그 박스를 잘라서 224 픽셀로 늘리고 찌그러뜨린다. 그리고 AlexNet 에 넣는다. 어떤 박스에서 비행기 확률이 독보적으로 높게 나오면, 그 박스는 비행기로 탐지된 것이다. 이것을 투 스테이지 디텍터라고 한다. 1단계는 박스를 어떻게 만들 것인가, 2단계는 그 박스가 무엇인가. 이후 Fast R-CNN 은 박스를 만드는 일까지 뉴럴넷으로 학습시켰다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">R-CNN — 잘라서 물어본다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2014 · two-stage</span>
+  </div>
+  <div style="height:330px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s23_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>R-CNN 4단계 — 입력, 영역 제안 2천 개, CNN 피처 계산, 영역 분류</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="twoStage"></span></div>
+</section>
+
+<section data-deck="0" data-label="투 스테이지의 약점" data-screen-label="07" data-speaker-notes="출처: 강의영상 detection 04:00–05:00 — 투 스테이지에는 구조적인 약점이 있다. 학생들이 잘 놓치는 대목이니 천천히 짚을 것. 경사하강법은 손실에서 시작해 입력까지 하나의 사슬로 미분이 흘러가야 한다. 그런데 스테이지가 둘로 잘리면 그 사슬이 끊긴다. 박스를 만드는 단계와 분류하는 단계가 서로의 오차를 주고받지 못한다. 아무리 머리를 굴려 두 개를 잘 결합해도, 끊긴 곳에서 성능이 뭉개진다. 그래서 다음 장의 발상이 나온다 — 아예 한 번에 끝내자." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">구조적인 약점</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사슬이 <span style="color:#D93636">끊긴다</span></h2>
+  <div style="flex:1;min-height:0;max-height:380px"><span data-dc-slot="brokenChain"></span></div>
+  <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">경사하강은 손실에서 입력까지 <b style="color:#FF7AA2">하나의 사슬</b>로 흘러야 한다. 스테이지를 자르면 그 사슬이 끊긴다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">두 단계를 아무리 잘 결합해도 끊긴 자리에서 성능이 뭉개진다 — 그래서 다음 발상이 나온다.</span></div>
+</section>
+
+<section data-deck="0" data-label="YOLO — 한 번만 본다" data-screen-label="08" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.24 · You Only Look Once (arXiv 1506.02640) · 강의영상 detection 04:00–05:00 · 19 YOLO.ipynb — YOLO 다. You Only Look Once, 한 번만 보면 된다. 2016년 조셉 레드먼 논문이다. 투 스테이지를 버렸다. 앞 장에서 본 대로 박스를 먼저 만들고 나중에 분류하면 사슬이 끊기니, 아예 박스를 만드는 단계를 없앴다. 대신 이미지를 처음부터 균질한 격자로 잘라 놓는다. 그림에 적힌 세 단계가 전부다 — 448로 리사이즈하고, 합성곱 한 번 돌리고, 신뢰도로 걸러낸다. 여기서 제일 중요한 한 문장 — 격자 칸 하나하나가 자기 자리에서 박스와 클래스를 동시에 내놓는다. 분류와 위치가 한 텐서 안에서 같이 나온다. 그래서 역전파가 입력까지 한 사슬로 이어진다. 논문 당시 초당 45장, PASCAL VOC 에서 mAP 63.4 였다. 실시간이라는 말을 쓸 수 있게 된 첫 탐지기다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">YOLO — <span style="color:var(--primary-main)">한 번만 본다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2016 · Joseph Redmon · one-stage</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s24_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>YOLO Detection System — 448 리사이즈, 합성곱 한 번, 신뢰도로 걸러내기</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">박스를 만드는 <b style="color:var(--fg-1)">단계 자체를 없앴다</b> — 처음부터 균질한 격자로 자른다</div>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">칸 하나가 <b style="color:var(--fg-1)">박스와 클래스를 동시에</b> 내놓는다 — 한 텐서 안에서</div>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">그래서 <b style="color:var(--primary-dark)">역전파가 입력까지</b> 한 사슬로 이어진다</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="이름은 하나, 만든 사람은 여럿" data-screen-label="09" data-speaker-notes="출처: 신규 · 2026-09 기준 공개 자료 — YOLO 를 쓸 때 반드시 알아야 하는 이야기다. YOLO 는 한 팀이 쭉 만든 게 아니다. v1 부터 v3 까지가 조셉 레드먼이다. 그런데 2020년에 레드먼이 자기 연구가 군사적으로 쓰이는 것이 우려된다며 컴퓨터 비전 연구를 그만두겠다고 공개 선언했다. 그 뒤로는 다른 팀들이 이름을 이어받았다. v4 는 알렉세이 보치콥스키 팀, v5 는 울트라리틱스의 글렌 조커다. 지금 v8, v11, 그리고 2025년 9월의 YOLO26 까지 울트라리틱스가 만든다. 중간의 v6 은 메이투안, v7 은 또 다른 팀이다. 여기서 학생들이 반드시 가져가야 할 것 둘. 첫째, 버전 번호가 성능 순위가 아니다. 2025년 벤치마크 논문에서도 도메인에 따라 옛 버전이 더 나은 경우가 많다고 보고했다. 둘째, 라이선스다. 울트라리틱스 계열은 AGPL-3.0 이라, 회사 제품에 넣으려면 그 제품 소스를 전부 공개하거나 상용 라이선스를 사야 한다. 학교 연구와 수업은 문제없지만 실무에 쓸 때는 반드시 확인할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이름은 하나, <span style="color:var(--primary-main)">만든 사람은 여럿</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2026년 9월 기준</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="yoloLine"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px">
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55"><b style="color:var(--fg-1)">버전 번호는 성능 순위가 아니다.</b> 분야에 따라 옛 버전이 더 나은 경우가 흔하다.</div>
+    <div style="padding:24px 28px;background:#FDF0F0;border:2px solid #D93636;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">울트라리틱스 계열은 <b style="color:#D93636">AGPL-3.0</b> — 제품에 넣으려면 소스를 전부 공개하거나 상용 라이선스를 사야 한다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="AI Hub" data-screen-label="10" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.25 · 강의영상 detection 05:00–07:00 — 실습 데이터의 출처를 반드시 소개할 것. AI Hub 다. 과기부가 몇 조를 들여 만든 한국어·한국 문화 학습용 데이터 저장소다. 왜 만들었는지도 말해 줄 것 — 해외에는 학습용 데이터가 넘치는데 한국어와 한국 문화를 학습시킬 데이터는 외국에서 만들어 주지 않는다. 그래서 전 국민이 모여 라벨링을 했다. 연구 용도로는 거의 전부 무료다. 이미지 데이터가 특히 잘 되어 있다. 우리가 쓸 것은 교통문제 해결을 위한 CCTV 교통 영상이다. 학생들에게 반드시 계정을 만들어 두게 할 것 — 기말 발표 데이터의 출발점이 여기다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">실습 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">AI Hub</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">한국어와 한국 문화를 학습시킬 데이터는 <b style="color:var(--fg-1)">외국에서 만들어 주지 않는다.</b></p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">과기부가 <b style="color:var(--fg-1)">몇 조</b>를 들여 만들었다. 전 국민이 모여 라벨링했고, 연구 용도로는 거의 전부 무료다.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">오늘 쓸 것 — <b style="color:var(--primary-dark)">교통문제 해결을 위한 CCTV 교통 영상</b>.<br>계정을 지금 만들어 둘 것. 기말 발표 데이터의 출발점이다.</div>
+  </div>
+  <div style="height:760px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s25_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>AI Hub 데이터 분류 — 한국어, 영상이미지, 헬스케어, 재난안전환경, 농축수산, 교통물류</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="라벨은 박스와 번호다" data-screen-label="11" data-speaker-notes="출처: 강의영상 detection 08:00–10:00 · 19 YOLO.ipynb — 탐지 데이터가 어떻게 생겼는지. 한 세트가 두 파일이다. 고해상도 CCTV 이미지 하나, 그리고 JSON 라벨 파일 하나. JSON 을 열어 보면 bbox 가 있고 category_id 가 있다. bbox 는 사각형 네 숫자, category_id 는 그게 무엇인지의 번호다. 버스, 승용차, 보행자 같은 것들이다. 여기서 짚을 것 — 5주차 외벽 라벨은 사진 한 장에 답이 하나였다. 탐지는 사진 한 장에 답이 여러 개고, 각 답마다 위치가 붙는다. 라벨링 노동의 양이 완전히 다르다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:620px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s26_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>CCTV 교통 영상 — 도로와 차량</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">한 세트 = 두 파일</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">박스와 번호</h2>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-family:var(--font-display);font-size:23px;color:var(--fg-3);line-height:1.8">"bbox": [ x, y, w, h ]<br>"category_id": <b style="color:var(--primary-main)">1</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">승용차</span><br>"category_id": <b style="color:var(--primary-main)">4</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">버스</span><br>"category_id": <b style="color:var(--primary-main)">7</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">보행자</span></div>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">5주차 외벽은 사진 한 장에 <b style="color:var(--fg-1)">답이 하나</b>였다. 탐지는 <b style="color:var(--fg-1)">답이 여러 개</b>고 각각에 위치가 붙는다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="그냥 불러 쓴다" data-screen-label="12" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.26 · 강의영상 detection 06:00–07:00 · 19 YOLO.ipynb — 실습에서 실제로 하는 일은 이게 전부다. ultralytics 깃허브에서 YOLOv5 를 불러오고, 사전 학습된 가중치 파일을 내려받고, 이미지 폴더를 넘긴다. 가중치는 분야별로 여러 개가 공개돼 있어서 원하는 것을 골라 받으면 된다. 여기서 중요한 것은 우리가 학습을 시키지 않았다는 점이다. YOLOv5 는 우리 CCTV 데이터를 본 적이 없다. 그런데도 차와 사람을 찾아낸다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실습에서 하는 일</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">우리는 학습시키지 않는다</h2>
+  </div>
+  <div style="height:220px;background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s26_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>YOLOv5 by ultralytics</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0;max-height:300px"><span data-dc-slot="yoloSteps"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">YOLOv5 는 <b style="color:var(--fg-1)">우리 CCTV 데이터를 본 적이 없다.</b> 그런데도 차와 사람을 찾아낸다.</p>
+</section>
+
+<section data-deck="0" data-label="앞차를 놓쳤다" data-screen-label="13" data-speaker-notes="출처: 강의영상 detection 10:00–12:00 · 19 YOLO.ipynb — 결과를 보면 대부분 잘 찾는데 화면 앞쪽의 큰 차를 놓친다. 이게 YOLO 의 구조적 한계다. 균질한 격자로 잘라 놓았기 때문에, 물체가 그 격자 크기를 넘어서 버리면 인식하지 못한다. R-CNN 계열은 박스 크기 자체가 학습되니 큰 버스도 작은 버스도 잡는다. 그런데 여기서 실무 감각을 하나 줄 것 — CCTV 처럼 카메라가 고정돼 있고 화각이 일정한 화면에서는 물체 크기 범위가 정해져 있다. 그런 경우엔 차라리 빠르고 성능 좋은 YOLO 가 낫다. 도구를 고르는 기준은 순위표가 아니라 우리 데이터의 생김새다. 그리고 신뢰도 임계값 0.5 이야기도 할 것 — 낮추면 애매한 것까지 다 잡아 준다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">격자보다 큰 물체는 못 본다</h2>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="yoloLimit"></span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">도구를 고르는 기준은 순위표가 아니라 <b style="color:#00E49B">우리 데이터의 생김새</b>다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">CCTV 는 카메라가 고정돼 물체 크기 범위가 정해져 있다 — 그럼 빠른 YOLO 가 낫다.</span></div>
+</section>
+
+<section data-deck="0" data-label="다시 연구하지 않는다" data-screen-label="14" data-speaker-notes="출처: 강의영상 detection 12:00–13:30 — 실무 이야기다. 예전에는 이걸 만들려면 노하우가 엄청 필요했다. 이게 정말 사람인지 판단하려고 회귀도 돌리고 통계도 내고 별의별 짓을 다 했다. 지금은 그럴 필요가 없다. 상용 CCTV 감시 도구는 거의 전부 YOLO 몇 버전이냐만 물어보면 된다. 개별적으로 연구하지 않는다. 다만 앞에서 말한 라이선스는 잊지 말 것 — 코드는 열려 있지만 제품에 넣는 것은 공짜가 아니다. 버전이 올라갈수록 불꽃 검출, 사람 검출, 차량 검출 같은 학습된 가중치가 계속 공개된다. 학생들에게 줄 메시지 — 여러분이 만들 것은 탐지기가 아니라, 탐지 결과로 무엇을 알아낼지다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실무</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이건 다시 연구하지 않는다</h2>
+  <div style="height:360px;background:#fff;border-radius:18px;padding:20px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/dt_offtheshelf.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>완제품 탐지기가 놓인 선반을 지나쳐 도시 지도를 바라보는 사람</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:38px">
+    <div style="background:#fff;border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--neutral-medium)">예전에는</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">이게 정말 사람인지 판단하려고 <b style="color:var(--fg-1)">회귀도 돌리고 통계도 내고</b> 별의별 짓을 다 했다.</p>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-top:8px solid var(--primary-main)">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-main)">지금은</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">상용 감시 도구도 <b style="color:var(--fg-1)">“YOLO 몇 버전이냐”</b> 만 물어보면 된다. 가중치는 분야별로 계속 공개된다.</p>
+    </div>
+  </div>
+  <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">여러분이 만들 것은 <b style="color:#FF7AA2">탐지기가 아니다.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">탐지 결과로 <b style="color:#00E49B">무엇을 알아낼지</b> — 거기부터가 도시공학의 몫이다.</span></div>
+</section>
+
+<section data-deck="0" data-label="분할은 다른 문제다" data-screen-label="15" data-speaker-notes="출처: 강의영상 detection 13:30–15:00 · 20 Unet.ipynb — 2부다. 탐지는 하나하나의 물건을 찾아내는 일이었다. 이건 자동차인 것 같은데, 저건 사람인 것 같은데. 분할은 다르다. 이미지를 딱 찍어 놓고 여기는 산림인 것 같고 여기는 건물인 것 같고를 픽셀 단위로 칠하는 일이다. 용도가 다르다. 그리고 한마디 덧붙일 것 — 도시공학에서 제일 많이 쓰는 것이 이 분할이다. 도시 환경 분석에 그대로 쓰인다. 최근에는 둘을 섞은 모델도 많다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2부 · 분할</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">물건을 세는가, 땅을 칠하는가</h2>
+  <div style="flex:1;min-height:0;max-height:460px"><span data-dc-slot="detVsSeg"></span></div>
+  <div style="padding:28px 34px;background:var(--primary-pale);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1700px">도시공학에서 제일 많이 쓰는 것이 <b style="color:var(--primary-dark)">분할</b>이다 — 도시 환경 분석에 그대로 들어간다.</div>
+</section>
+
+<section data-deck="0" data-label="토지피복 데이터" data-screen-label="16" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.28 · 강의영상 detection 15:00–16:00 · 20 Unet.ipynb — 실습 데이터다. AI Hub 의 토지피복지도 항공위성 이미지. 왼쪽이 항공 영상, 오른쪽이 사람이 그린 라벨이다. 이게 진짜 노가다의 끝이다. 이미지 위에 여기는 산림, 여기는 건물 하고 일일이 그린 것이다. 이 정도로 정교하게 나올 수 있는 이유를 말해 줄 것 — 한 과제당 1년에 30억에서 70억을 썼다. 수백에서 천 명이 달려들었다. 인공지능 인력 문제를 데이터 라벨링으로 풀었다고들 하는데, 어쨌든 만들어 놓으니 잘 쓴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">왼쪽을 보고 오른쪽을 그린다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">AI Hub · 토지피복지도 항공위성 이미지</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s29_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>왼쪽 항공 영상 입력, 오른쪽 사람이 그린 토지피복 라벨</span></div></div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">이 정도로 정교한 이유 — 한 과제당 1년에 <b style="color:#00E49B">30억~70억</b>. 수백에서 천 명이 달려들었다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">사람이 이미지 위에 일일이 그린 것이다. 라벨링 노동이 곧 데이터의 값어치다.</span></div>
+</section>
+
+<section data-deck="0" data-label="라스터 — 픽셀에 코드가 들어간다" data-screen-label="17" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.29 · 강의영상 detection 19:00–22:00 · 20 Unet.ipynb — 라벨 파일이 이미지가 아니라는 것을 반드시 짚어야 한다. TIFF 라스터 파일이고 채널이 하나다. 그 한 채널의 픽셀에 색이 아니라 코드가 들어 있다. 10이면 건물, 20이면 주차장, 30이면 도로, 40이면 가로수, 50이면 논, 60이면 밭, 70이면 산림, 80이면 나지, 100이면 비대상지다. 우리 눈에 컬러로 보이는 것은 그 코드에 색을 입혀 출력한 것뿐이다. 라스터가 왜 중요한지도 말해 줄 것 — 층을 원하는 만큼 만들 수 있고, 메타에 좌표계까지 넣을 수 있어서 지도에 그대로 얹힌다. 셰이프 파일과 달리 정확히 격자화된 정보 덩어리다. 읽으려면 tifffile 라이브러리를 따로 설치해야 한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">라벨은 <span style="color:var(--primary-main)">그림이 아니다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">TIFF 라스터 · 1채널 · 픽셀에 코드</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="rasterCodes"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">컬러로 보이는 건 그 코드에 <b style="color:var(--fg-1)">색을 입혀 출력한 것</b>뿐이다.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">라스터는 층을 원하는 만큼 만들고 <b style="color:var(--primary-dark)">메타에 좌표계</b>까지 넣는다 — 지도에 그대로 얹힌다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="U-Net" data-screen-label="18" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.30 · U-Net 논문 arXiv 1505.04597 · 강의영상 detection 16:00–18:00 · 20 Unet.ipynb — 오늘 2부의 중심이다. U-Net. 항공 영상 분할에서 가장 많이 발전된 모델이고, 지금 여러분이 쓰는 이미지 생성 알고리즘의 핵심 키를 쥐고 있는 구조이기도 하다. 왼쪽 내려가는 길은 우리가 아는 그대로다. 572 곱하기 572 한 채널로 들어가 합성곱과 맥스풀링을 반복하며 크기는 줄고 피처는 늘어난다. 맨 아래가 30 곱하기 30 에 피처맵 1024장이다. 여기까지는 5주차와 똑같다. 다른 것은 그다음이다. 우리는 여기서 플래튼하고 이게 뭐냐고 물었다. U-Net 은 그러지 않는다. 다시 위로 올라간다. 전치 합성곱으로 이미지를 키우면서 피처를 줄인다. 그래서 출력이 숫자 하나가 아니라 라벨 이미지 한 장이 된다. 합성곱을 뒤집었다고 생각하면 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+  <div style="height:800px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_s30_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>U-Net 구조 — 내려가는 길과 올라오는 길, 그리고 copy and crop</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">U-Net · 2015</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">줄였다가<br>다시 키운다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">내려가는 길은 <b style="color:#fff">5주차와 똑같다.</b> 크기는 줄고 피처는 늘어난다.</p>
+    <div style="padding:26px 30px;background:rgba(255,255,255,.07);border-radius:14px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.6">다른 것은 그다음이다. 우리는 플래튼하고 “이게 뭐냐”고 물었다.<br>U-Net 은 <b style="color:#fff">다시 위로 올라가</b> 라벨 이미지 한 장을 그린다.</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--accent-green);line-height:1.45;font-weight:700">합성곱을 뒤집었다고 생각하면 된다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="내려가는 길, 올라오는 길" data-screen-label="19" data-speaker-notes="출처: 신규 — U-Net 구조를 우리 실습 크기로 다시 그린 것 · 20 Unet.ipynb. 실습에서 만든 것은 512 곱하기 512 곱하기 3 으로 들어간다. 맨 앞에 람다 함수로 255를 나눠 0에서 1로 만들고, 합성곱과 풀링으로 64, 128, 256 채널까지 내려간다. 그리고 전치 합성곱으로 다시 올라온다. 마지막 출력이 1채널이다. 여기서 가로로 이어진 회색 화살표, copy and crop 을 반드시 설명할 것 — 내려가면서 잃어버린 세밀한 위치 정보를 같은 높이의 올라오는 길에 그대로 이어 붙인다. 이게 없으면 경계가 뭉개진다. U 자 모양의 이름이 여기서 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">가로로 건너뛰는 선이 핵심이다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">실습 구현 · 512×512×3 → 512×512×1</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="unetShape"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">내려가며 잃어버린 <b style="color:var(--fg-1)">세밀한 위치 정보</b>를 같은 높이로 이어 붙인다. 이게 없으면 경계가 뭉개진다.</p>
+</section>
+
+<section data-deck="0" data-label="건물만 남긴다" data-screen-label="20" data-speaker-notes="출처: 강의영상 detection 22:00–24:00 · 20 Unet.ipynb — 실습에서는 아홉 개 클래스를 다 학습시키지 않는다. 시간이 없어서다. 건물만 1로 남기고 나머지는 전부 0으로 만든다. 그러면 문제가 아주 단순해진다 — 이 픽셀이 건물이냐 아니냐. 그래서 손실이 binary cross entropy 다. 100 에폭을 돌린다. 학생들에게 시킬 것 — 실습에서 건물 대신 산림이나 도로로 바꿔서 돌려 보게 할 것. 코드 한 줄만 바꾸면 된다. 어떤 클래스가 더 잘 맞고 어떤 게 안 맞는지가 그 자체로 발표 거리다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">문제를 단순하게 만든다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">아홉 클래스 → 건물이냐 아니냐</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="binarize"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1.1fr;gap:34px">
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">이 픽셀이 건물이냐 아니냐 — 그래서 손실은 <b style="color:var(--fg-1)">binary cross entropy</b>. 100 에폭.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">실습에서 <b style="color:var(--primary-dark)">건물 대신 산림이나 도로</b>로 바꿔 돌려 볼 것. 코드 한 줄이다 — 어떤 클래스가 잘 맞고 안 맞는지가 그대로 발표 거리다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="그 뒤의 분할" data-screen-label="21" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.31–33 — U-Net 이후의 흐름이다. DeepLabV3+ 는 구멍 뚫린 합성곱으로 같은 계산량에 더 넓은 범위를 본다. HRNet 은 고해상도를 끝까지 들고 간다. 그리고 2023년 Segment Anything, SAM 은 판을 바꿨다. 무엇을 찾을지 미리 정해 두지 않고, 점을 찍거나 박스를 치면 그 자리를 알아서 잘라낸다. 학습된 클래스가 아니어도 된다. 여기서 앞으로의 흐름을 예고할 것 — 이 프롬프트로 시키는 방식이 11주차에 다시 나오고, 이미지와 언어가 만나는 12주차로 이어진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그 뒤의 분할</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">DeepLabV3+ · HRNet · Segment Anything</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">DeepLabV3+</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/dt_s31_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>DeepLabV3+ 인코더–디코더 구조</span></div></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#00B37A">Segment Anything · 2023</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/dt_s33_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>SAM — 프롬프트로 지시하면 그 자리를 잘라낸다</span></div></div></div>
+    </div>
+  </div>
+  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">SAM 은 <b style="color:#00E49B">무엇을 찾을지 미리 정해 두지 않는다.</b> 점을 찍거나 박스를 치면 그 자리를 잘라낸다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">이 “시키는” 방식이 11주차 프롬프트, 12주차 멀티모달로 이어진다.</span></div>
+</section>
+
+<section data-deck="0" data-label="U-Net 이 뿌리다" data-screen-label="22" data-speaker-notes="출처: 강의영상 detection 14:00 — 오늘 2부에서 가장 멀리 내다보는 한 장이다. U-Net 은 분할 모델로 만들어졌지만, 지금 여러분이 쓰는 이미지 생성 모델의 뿌리이기도 하다. 왜냐하면 하는 일이 같기 때문이다 — 줄여서 뽑고, 다시 키워서 그린다. 분할은 그려 내는 것이 라벨 이미지였을 뿐이고, 생성은 그 자리에 진짜 그림이 들어간다. 7주차 확산 모델에서 이 그림이 그대로 다시 나온다고 예고할 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(158,93,249,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">멀리 내다보기</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">줄여서 뽑고, 다시 키워서 그린다<br>— 생성 모델도 <span style="color:var(--accent-green)">같은 일</span>을 한다</h2>
+  <div style="flex:1;min-height:0;max-height:340px"><span data-dc-slot="unetRoot"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">분할은 그려 내는 것이 <b style="color:#fff">라벨 이미지</b>였을 뿐이다. 생성은 그 자리에 <b style="color:#fff">진짜 그림</b>이 들어간다 — 7주차에서 다시 만난다.</p>
+</section>
+
+<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="23" data-speaker-notes="출처: 신규 — 학습참여도 평가용 토론. 3분. Q2 가 오늘의 핵심 질문이다. 탐지 결과는 그 자체로 답이 아니라 새로운 변수다. 차량 몇 대, 보행자 몇 명이 시간대별로 나오면 그게 곧 도시 데이터가 된다. Q3 은 기말 발표로 바로 이어지는 질문이니 나온 답을 반드시 적어 둘 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3분 · 옆 사람과</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">하나만 골라 이야기해 보자</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q1</b> &nbsp; 우리 동네 CCTV 에 YOLO 를 붙인다면, <b style="color:var(--fg-1)">격자 크기</b>를 어떻게 정하겠는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q2</b> &nbsp; 탐지 결과는 답이 아니라 <b style="color:var(--fg-1)">새 변수</b>다. 차량 수와 보행자 수가 시간대별로 나오면 무엇을 분석하겠는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q3</b> &nbsp; 항공 영상 분할로 <b style="color:var(--fg-1)">시계열 변화</b>를 본다면, 어떤 클래스의 증감이 도시 정책과 이어지겠는가?</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="24" data-speaker-notes="출처: 신규 — 오늘의 질문에 답하는 마지막 장. 무엇이 있다와 어디에 있다는 어떻게 다른가. 분류는 답이 하나다. 사진 한 장에 라벨 하나. 탐지는 답이 여러 개고 각각에 좌표가 붙는다. 분할은 답이 픽셀 수만큼이다. 답의 모양이 달라지면 모델의 출력 모양이 달라지고, 출력 모양이 달라지면 손실이 달라진다. 그게 세 문제의 진짜 차이다. 그리고 지난주 마지막에 본 것을 한 번 더 상기시킬 것 — 합성곱은 이미지 전용이 아니다. 옆자리가 의미 있으면 격자 데이터에도 그대로 쓴다. 다음 주 예고 — 지금까지는 있는 이미지를 읽었다. 다음 주는 없던 이미지를 만든다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 24% 78%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">오늘의 질문에 답한다</div>
+  <h2 style="margin:0;font-size:60px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">답의 모양이 다르면<br><span style="color:var(--accent-green)">손실이 달라진다</span></h2>
+  <div style="flex:1;min-height:0;max-height:300px"><span data-dc-slot="answerShape"></span></div>
+  <div style="padding:28px 34px;background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:16px;font-size:var(--type-body);line-height:1.5">그리고 지난주 마지막에 본 것 — <b style="color:#00E49B">합성곱은 이미지 전용이 아니다.</b> 옆자리가 의미 있으면 격자 데이터에도 그대로 쓴다.</div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">다음 주 — 지금까지는 <b style="color:#fff">있는 이미지를 읽었다.</b> 다음 주는 <b style="color:#fff">없던 이미지를 만든다.</b> &nbsp;<span style="color:var(--neutral-medium);font-size:var(--type-small)">예습: 21 GAN.ipynb · 24 Autoencoder.ipynb</span></p>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W06_탐지와분할</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">24</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">오늘의 흐름</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">분류에서 탐지로</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">탐지의 20년</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">R-CNN — 잘라서 물어본다</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">투 스테이지의 약점</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">YOLO — 한 번만 본다</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">이름은 하나, 만든 사람은 여럿</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">AI Hub</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">라벨은 박스와 번호다</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">그냥 불러 쓴다</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">앞차를 놓쳤다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">다시 연구하지 않는다</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">분할은 다른 문제다</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">토지피복 데이터</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">라스터 — 픽셀에 코드가 들어간다</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">U-Net</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">내려가는 길, 올라오는 길</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">건물만 남긴다</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">그 뒤의 분할</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">U-Net 이 뿌리다</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const rng = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+
+    // ── 6주차 지도 ──────────────────────────────────────────────
+    const weekMap = (() => {
+      const W = 1720, H = 400;
+      const C = [
+        ['1', '탐지 — 어디에 있나', ['R-CNN → YOLO', 'CCTV 교통 영상'], ACC],
+        ['2', '분할 — 픽셀마다 무엇인가', ['U-Net', '토지피복 항공영상'], VIO],
+      ];
+      const g = [];
+      const CW = 700, GAP = 100, X0 = 110;
+      C.forEach((c, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 40, width: CW, height: 280, rx: 20,
+          fill: '#fff', stroke: c[3], strokeWidth: i === 0 ? 4 : 2.5 }));
+        g.push(h('circle', { key: 'c' + i, cx: x + 54, cy: 106, r: 30, fill: c[3] }));
+        g.push(h('text', { key: 'n' + i, x: x + 54, y: 117, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 28, fontWeight: 800, fill: '#fff' }, c[0]));
+        g.push(h('text', { key: 't' + i, x: x + 102, y: 117, fontFamily: KR,
+          fontSize: 30, fontWeight: 800, fill: c[3] }, c[1]));
+        c[2].forEach((s, j) => g.push(h('text', { key: 's' + i + j, x: x + 36,
+          y: 190 + j * 44, fontFamily: KR, fontSize: 23, fill: 'var(--fg-3)' }, s)));
+        if (i < 1) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 192,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 34, fill: AX }, '→'));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 376, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '실습 — 19 YOLO.ipynb · 20 Unet.ipynb'));
+      return svg(W, H, g);
+    })();
+
+
+
+
+
+    // ── 과제 사다리 ─────────────────────────────────────────────
+    const taskLadder = (() => {
+      const W = 1720, H = 460;
+      const g = [];
+      const T = [
+        ['분류', '무엇이 있나', '사진 한 장 → 라벨 하나', GRN, '5주차'],
+        ['탐지', '어디에 있나', '박스 여러 개 + 각각의 라벨', ACC, '오늘 1부'],
+        ['분할', '어느 픽셀이 무엇인가', '픽셀 수만큼의 라벨', VIO, '오늘 2부'],
+        ['설명', '그래서 무슨 장면인가', '문장으로 바꾼다', MUT, '12주차'],
+      ];
+      const CW = 390, GAP = 30, X0 = 40;
+      T.forEach((t, i) => {
+        const x = X0 + i * (CW + GAP);
+        const dim = i === 3;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 60, width: CW, height: 300, rx: 20,
+          fill: dim ? 'var(--surface-app)' : '#fff', stroke: t[3],
+          strokeWidth: dim ? 2 : 3, strokeDasharray: dim ? '9 6' : 'none' }));
+        g.push(h('text', { key: 'k' + i, x: x + 32, y: 118, fontFamily: KR,
+          fontSize: 21, fontWeight: 700, fill: t[3] }, t[4]));
+        g.push(h('text', { key: 'n' + i, x: x + 32, y: 178, fontFamily: KR,
+          fontSize: 40, fontWeight: 800, fill: INK }, t[0]));
+        g.push(h('text', { key: 'q' + i, x: x + 32, y: 232, fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: t[3] }, t[1]));
+        g.push(h('text', { key: 's' + i, x: x + 32, y: 292, fontFamily: KR,
+          fontSize: 21, fill: 'var(--fg-3)' }, t[2]));
+        if (i < 3) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 216,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 32, fill: AX }, '→'));
+      });
+      return svg(W, H, g);
+    })();
+
+    // ── 투 스테이지 ─────────────────────────────────────────────
+    const twoStage = (() => {
+      const W = 1720, H = 240;
+      const g = [];
+      const S = [['1단계', '박스를 어떻게 만들까', '무작위로 2천 개쯤 자른다', ACC],
+                 ['2단계', '그 박스가 무엇일까', '224로 늘려 AlexNet 에 넣는다', VIO]];
+      S.forEach((s, i) => {
+        const x = 40 + i * 850;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 790, height: 170, rx: 20,
+          fill: '#fff', stroke: s[3], strokeWidth: 3 }));
+        g.push(h('text', { key: 'k' + i, x: x + 34, y: 72, fontFamily: KR,
+          fontSize: 24, fontWeight: 800, fill: s[3] }, s[0]));
+        g.push(h('text', { key: 'q' + i, x: x + 34, y: 122, fontFamily: KR,
+          fontSize: 30, fontWeight: 700, fill: INK }, s[1]));
+        g.push(h('text', { key: 's' + i, x: x + 34, y: 164, fontFamily: KR,
+          fontSize: 22, fill: 'var(--fg-3)' }, s[2]));
+      });
+      g.push(h('text', { key: 'ar', x: 850, y: 116, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 36, fill: AX }, '→'));
+      g.push(h('text', { key: 'cap', x: 40, y: 224, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '어떤 박스에서 한 클래스가 독보적으로 높게 나오면, 그 박스는 탐지된 것이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 끊긴 사슬 ───────────────────────────────────────────────
+    const brokenChain = (() => {
+      const W = 1720, H = 340;
+      const g = [];
+      const B = [['입력', MUT], ['박스 만들기', ACC], ['분류하기', VIO], ['손실', RED]];
+      const CW = 300, GAP = 120, X0 = 150;
+      B.forEach((b, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 90, width: CW, height: 110, rx: 18,
+          fill: '#fff', stroke: b[1], strokeWidth: 3 }));
+        g.push(h('text', { key: 't' + i, x: x + CW / 2, y: 155, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 27, fontWeight: 700, fill: b[1] }, b[0]));
+      });
+      // 역전파 화살표 — 오른쪽에서 왼쪽으로, 가운데서 끊긴다
+      for (let i = 3; i > 0; i--) {
+        const x2 = X0 + i * (CW + GAP), x1 = x2 - GAP;
+        const broken = i === 2;
+        g.push(h('line', { key: 'a' + i, x1: x2 - 4, y1: 250, x2: x1 + 4, y2: 250,
+          stroke: broken ? RED : GRN, strokeWidth: 4,
+          strokeDasharray: broken ? '10 10' : 'none', opacity: broken ? 0.55 : 1 }));
+        if (!broken)
+          g.push(h('path', { key: 'h' + i, d: 'M' + (x1 + 18) + ' 242 L' + (x1 + 2)
+            + ' 250 L' + (x1 + 18) + ' 258 Z', fill: GRN }));
+      }
+      const cx = X0 + 2 * (CW + GAP) - GAP / 2;
+      g.push(h('line', { key: 'cut1', x1: cx - 16, y1: 218, x2: cx + 16, y2: 282,
+        stroke: RED, strokeWidth: 5 }));
+      g.push(h('line', { key: 'cut2', x1: cx + 16, y1: 218, x2: cx - 16, y2: 282,
+        stroke: RED, strokeWidth: 5 }));
+      g.push(h('text', { key: 'ct', x: cx, y: 314, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 24, fontWeight: 800, fill: RED }, '여기서 끊긴다'));
+      g.push(h('text', { key: 'lt', x: 150, y: 60, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '초록 화살표 — 오차가 거꾸로 흘러가는 길'));
+      return svg(W, H, g);
+    })();
+
+    // ── YOLO 세 단계 ────────────────────────────────────────────
+    const yoloSteps = (() => {
+      const W = 1720, H = 260;
+      const g = [];
+      const S = [['①', 'YOLOv5 를 불러온다', 'ultralytics 깃허브'],
+                 ['②', '사전 학습 가중치를 받는다', 'yolov5s.pt · 분야별로 공개'],
+                 ['③', '이미지 폴더를 넘긴다', '신뢰도 0.5 이상만 출력']];
+      S.forEach((s, i) => {
+        const x = 40 + i * 550;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 510, height: 170, rx: 20,
+          fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'n' + i, x: x + 32, y: 76, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: ACC }, s[0]));
+        g.push(h('text', { key: 't' + i, x: x + 78, y: 76, fontFamily: KR,
+          fontSize: 27, fontWeight: 700, fill: INK }, s[1]));
+        g.push(h('text', { key: 's' + i, x: x + 32, y: 142, fontFamily: KR,
+          fontSize: 22, fill: 'var(--fg-3)' }, s[2]));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 238, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '19 YOLO.ipynb — 학습 코드는 한 줄도 없다'));
+      return svg(W, H, g);
+    })();
+
+
+
+    // ── YOLO 계보 ──────────────────────────────────────────────
+    const yoloLine = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const V = [['v1', '2016', 'Redmon', ACC], ['v2', '2016', 'Redmon', ACC],
+                 ['v3', '2018', 'Redmon', ACC], ['v4', '2020', 'Bochkovskiy', VIO],
+                 ['v5', '2020', 'Ultralytics', GRN], ['v6', '2022', 'Meituan', VIO],
+                 ['v7', '2022', 'Wang 외', VIO], ['v8', '2023', 'Ultralytics', GRN],
+                 ['v11', '2024', 'Ultralytics', GRN], ['v12', '2025', '커뮤니티', VIO],
+                 ['26', '2025', 'Ultralytics', GRN]];
+      const X0 = 40, PITCH = 152;
+      g.push(h('line', { key: 'ax', x1: X0, y1: 214, x2: X0 + 10 * PITCH + 100,
+        y2: 214, stroke: '#E4E2EE', strokeWidth: 3 }));
+      V.forEach((v, i) => {
+        const x = X0 + i * PITCH;
+        g.push(h('circle', { key: 'd' + i, cx: x + 50, cy: 214, r: 11, fill: v[3] }));
+        g.push(h('text', { key: 'n' + i, x: x + 50, y: 178, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 30, fontWeight: 800, fill: v[3] }, v[0]));
+        g.push(h('text', { key: 'y' + i, x: x + 50, y: 254, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fill: MUT }, v[1]));
+        g.push(h('text', { key: 'a' + i, x: x + 50, y: 286, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 18, fill: 'var(--fg-3)' }, v[2]));
+      });
+      // 레드먼이 손을 뗀 자리
+      g.push(h('line', { key: 'cut', x1: X0 + 3 * PITCH - 24, y1: 120,
+        x2: X0 + 3 * PITCH - 24, y2: 306, stroke: RED, strokeWidth: 3,
+        strokeDasharray: '9 6' }));
+      g.push(h('text', { key: 'ct', x: X0 + 3 * PITCH - 14, y: 96, fontFamily: KR,
+        fontSize: 22, fontWeight: 800, fill: RED }, '2020 — 원저자가 손을 뗀다'));
+      g.push(h('text', { key: 'ct2', x: X0 + 3 * PITCH - 14, y: 128, fontFamily: KR,
+        fontSize: 20, fill: MUT }, '군사적 사용을 우려해 연구 중단을 공개 선언'));
+      g.push(h('text', { key: 'cap', x: 40, y: 370, fontFamily: KR, fontSize: 22,
+        fill: MUT },
+        '이름만 이어졌을 뿐 만든 팀이 다르다 — 논문을 인용할 때 저자를 반드시 확인할 것'));
+      return svg(W, H, g);
+    })();
+
+    // ── YOLO 의 한계 ────────────────────────────────────────────
+    const yoloLimit = (() => {
+      const W = 1720, H = 480;
+      const g = [];
+      const panel = (key, x0, title, col, cells, big) => {
+        g.push(h('rect', { key: key + 'b', x: x0, y: 60, width: 760, height: 340,
+          rx: 20, fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: key + 't', x: x0 + 30, y: 40, fontFamily: KR,
+          fontSize: 26, fontWeight: 800, fill: col }, title));
+        // 균질 격자
+        for (let a = 0; a < 8; a++)
+          for (let b = 0; b < 4; b++)
+            g.push(h('rect', { key: key + 'g' + a + b, x: x0 + 30 + a * 88,
+              y: 84 + b * 76, width: 84, height: 72, rx: 6, fill: 'none',
+              stroke: '#D9D7E6', strokeWidth: 1.5 }));
+        cells.forEach((c, i) => {
+          g.push(h('rect', { key: key + 'd' + i, x: x0 + 30 + c[0] * 88,
+            y: 84 + c[1] * 76, width: c[2] * 88 - 6, height: c[3] * 76 - 6, rx: 8,
+            fill: 'none', stroke: GRN, strokeWidth: 3.5 }));
+        });
+        if (big) {
+          g.push(h('rect', { key: key + 'big', x: x0 + 30, y: 200, width: 330,
+            height: 190, rx: 12, fill: RED, opacity: 0.18, stroke: RED,
+            strokeWidth: 3.5, strokeDasharray: '10 7' }));
+          g.push(h('text', { key: key + 'bt', x: x0 + 195, y: 305,
+            textAnchor: 'middle', fontFamily: KR, fontSize: 25, fontWeight: 800,
+            fill: RED }, '격자보다 크다'));
+        }
+      };
+      panel('a', 40, 'YOLO — 격자가 균질하다', ACC,
+        [[3, 0, 1, 1], [5, 1, 1, 1], [6, 0, 1, 1], [2, 1, 1, 1]], true);
+      panel('b', 890, 'R-CNN 계열 — 박스 크기도 학습한다', VIO,
+        [[3, 0, 1, 1], [5, 1, 1, 1], [0, 2, 4, 2], [6, 0, 1, 1]], false);
+      g.push(h('text', { key: 'cap', x: 40, y: 448, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '화면 앞쪽의 큰 차를 놓치는 이유 — 물체가 격자 크기를 넘어서 버렸다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 탐지 vs 분할 ────────────────────────────────────────────
+    const detVsSeg = (() => {
+      const W = 1720, H = 440;
+      const g = [];
+      const r = rng(19);
+      // 왼쪽 — 탐지
+      g.push(h('rect', { key: 'lb', x: 60, y: 40, width: 700, height: 340, rx: 18,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'lt', x: 60, y: 24, fontFamily: KR, fontSize: 26,
+        fontWeight: 800, fill: ACC }, '탐지 — 물건을 센다'));
+      [[120, 90, 150, 100], [340, 160, 190, 120], [560, 80, 130, 90],
+       [180, 250, 170, 100]].forEach((b, i) => {
+        g.push(h('rect', { key: 'd' + i, x: b[0], y: b[1], width: b[2], height: b[3],
+          rx: 8, fill: 'none', stroke: ACC, strokeWidth: 3.5 }));
+        g.push(h('rect', { key: 'dl' + i, x: b[0], y: b[1] - 30, width: 92, height: 28,
+          rx: 6, fill: ACC }));
+        g.push(h('text', { key: 'dt' + i, x: b[0] + 46, y: b[1] - 9,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 17, fontWeight: 700,
+          fill: '#fff' }, ['car 0.92', 'bus 0.88', 'car 0.81', 'person 0.76'][i]));
+      });
+      // 오른쪽 — 분할
+      g.push(h('text', { key: 'rt', x: 960, y: 24, fontFamily: KR, fontSize: 26,
+        fontWeight: 800, fill: GRN }, '분할 — 픽셀마다 칠한다'));
+      const COL = ['#00B37A', '#7B8CFF', '#FFB86B', '#9E5DF9'];
+      for (let a = 0; a < 28; a++)
+        for (let b = 0; b < 14; b++) {
+          const k = (Math.sin(a * 0.4) + Math.cos(b * 0.55) + r() * 0.5);
+          const ci = k > 0.9 ? 0 : k > 0.1 ? 1 : k > -0.6 ? 2 : 3;
+          g.push(h('rect', { key: 's' + a + b, x: 960 + a * 25, y: 40 + b * 24.4,
+            width: 25, height: 25, fill: COL[ci], opacity: 0.85 }));
+        }
+      return svg(W, H, g);
+    })();
+
+    // ── 라스터 코드 ─────────────────────────────────────────────
+    const rasterCodes = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const C = [['10', '건물', '#7B8CFF'], ['20', '주차장', '#9E9AB8'],
+                 ['30', '도로', '#4A4A5A'], ['40', '가로수', '#4BB86B'],
+                 ['50', '논', '#C8E06A'], ['60', '밭', '#E8B84A'],
+                 ['70', '산림', '#1F8A4C'], ['80', '나지', '#C9A27A'],
+                 ['100', '비대상지', '#D9D7E6']];
+      C.forEach((c, i) => {
+        const x = 40 + (i % 5) * 336, y = 40 + Math.floor(i / 5) * 150;
+        g.push(h('rect', { key: 'b' + i, x: x, y: y, width: 310, height: 120, rx: 16,
+          fill: '#fff', stroke: c[2], strokeWidth: 3 }));
+        g.push(h('rect', { key: 'c' + i, x: x + 24, y: y + 26, width: 68, height: 68,
+          rx: 10, fill: c[2] }));
+        g.push(h('text', { key: 'n' + i, x: x + 116, y: y + 60, fontFamily: EN,
+          fontSize: 34, fontWeight: 800, fill: INK }, c[0]));
+        g.push(h('text', { key: 't' + i, x: x + 116, y: y + 98, fontFamily: KR,
+          fontSize: 23, fill: 'var(--fg-3)' }, c[1]));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 374, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '한 픽셀에 들어 있는 것은 색이 아니라 이 코드다 — tifffile 라이브러리로 읽는다'));
+      return svg(W, H, g);
+    })();
+
+    // ── U-Net 실습 모양 ─────────────────────────────────────────
+    const unetShape = (() => {
+      const W = 1720, H = 520;
+      const g = [];
+      const DOWN = [['512', 3, 0], ['512', 64, 0], ['256', 128, 1], ['128', 256, 2],
+                    ['64', 512, 3]];
+      const UP = [['128', 256, 2], ['256', 128, 1], ['512', 64, 0], ['512', 1, 0]];
+      const bx = (i) => 90 + i * 150, by = (lv) => 80 + lv * 82;
+      DOWN.forEach((d, i) => {
+        const lv = d[2];
+        g.push(h('rect', { key: 'd' + i, x: bx(i), y: by(lv), width: 110, height: 62,
+          rx: 10, fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'dz' + i, x: bx(i) + 55, y: by(lv) + 28,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 20, fontWeight: 700,
+          fill: ACC }, d[0]));
+        g.push(h('text', { key: 'df' + i, x: bx(i) + 55, y: by(lv) + 52,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 18, fill: MUT },
+          '피처 ' + d[1]));
+      });
+      UP.forEach((u, i) => {
+        const lv = u[2], x = bx(5 + i);
+        g.push(h('rect', { key: 'u' + i, x: x, y: by(lv), width: 110, height: 62,
+          rx: 10, fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'uz' + i, x: x + 55, y: by(lv) + 28,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 20, fontWeight: 700,
+          fill: GRN }, u[0]));
+        g.push(h('text', { key: 'uf' + i, x: x + 55, y: by(lv) + 52,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 18, fill: MUT },
+          '피처 ' + u[1]));
+      });
+      // 건너뛰는 선
+      [[1, 7], [2, 6], [3, 5]].forEach((p, i) => {
+        const lv = DOWN[p[0]][2];
+        g.push(h('line', { key: 'sk' + i, x1: bx(p[0]) + 110, y1: by(lv) + 31,
+          x2: bx(p[1]), y2: by(lv) + 31, stroke: '#9E9AB8', strokeWidth: 3,
+          strokeDasharray: '10 7' }));
+        g.push(h('path', { key: 'skh' + i, d: 'M' + (bx(p[1]) - 16) + ' '
+          + (by(lv) + 23) + ' L' + bx(p[1]) + ' ' + (by(lv) + 31) + ' L'
+          + (bx(p[1]) - 16) + ' ' + (by(lv) + 39) + ' Z', fill: '#9E9AB8' }));
+      });
+      g.push(h('text', { key: 'lt', x: 90, y: 54, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: ACC }, '내려가는 길 — Conv + MaxPool'));
+      g.push(h('text', { key: 'rt', x: 840, y: 54, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: GRN }, '올라오는 길 — Conv2DTranspose'));
+      g.push(h('text', { key: 'sc', x: 660, y: 462, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 24, fontWeight: 800, fill: '#6E6890' },
+        'copy and crop — 같은 높이로 건너뛴다'));
+      g.push(h('text', { key: 'cap', x: 90, y: 500, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '출력이 숫자 하나가 아니라 라벨 이미지 한 장이다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 이진화 ──────────────────────────────────────────────────
+    const binarize = (() => {
+      const W = 1720, H = 380;
+      const g = [];
+      const r = rng(53);
+      const COL = ['#7B8CFF', '#9E9AB8', '#4A4A5A', '#4BB86B', '#C8E06A', '#E8B84A',
+                   '#1F8A4C', '#C9A27A'];
+      const grid = [];
+      for (let a = 0; a < 24; a++) {
+        grid.push([]);
+        for (let b = 0; b < 12; b++) grid[a].push(Math.floor(r() * 8));
+      }
+      const draw = (x0, mapFn, lab, col) => {
+        for (let a = 0; a < 24; a++)
+          for (let b = 0; b < 12; b++)
+            g.push(h('rect', { key: lab + a + b, x: x0 + a * 28, y: 70 + b * 22,
+              width: 28, height: 22, fill: mapFn(grid[a][b]) }));
+        g.push(h('text', { key: lab + 'l', x: x0, y: 50, fontFamily: KR, fontSize: 25,
+          fontWeight: 800, fill: col }, lab));
+      };
+      draw(40, (v) => COL[v], '아홉 클래스 그대로', INK);
+      g.push(h('text', { key: 'ar', x: 790, y: 210, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 38, fill: AX }, '→'));
+      draw(860, (v) => (v === 0 ? '#7B8CFF' : '#EFEEF4'), '건물만 1, 나머지 0', ACC);
+      g.push(h('text', { key: 'cap', x: 40, y: 362, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '배치는 개념 예시 — 실제 라벨은 20 Unet.ipynb 에서 볼 것'));
+      return svg(W, H, g);
+    })();
+
+    // ── U-Net 이 뿌리다 ─────────────────────────────────────────
+    const unetRoot = (() => {
+      const W = 1720, H = 300;
+      const g = [];
+      const row = (y, lab, out, col) => {
+        g.push(h('text', { key: lab + 'l', x: 40, y: y + 40, fontFamily: KR,
+          fontSize: 26, fontWeight: 800, fill: col }, lab));
+        const S = ['이미지', '줄인다', '피처', '키운다'];
+        S.forEach((s, i) => {
+          const x = 360 + i * 230;
+          g.push(h('rect', { key: lab + i, x: x, y: y, width: 180, height: 60, rx: 14,
+            fill: 'rgba(255,255,255,.07)', stroke: col, strokeWidth: 2.5 }));
+          g.push(h('text', { key: lab + 't' + i, x: x + 90, y: y + 38,
+            textAnchor: 'middle', fontFamily: KR, fontSize: 22, fontWeight: 700,
+            fill: col }, s));
+          if (i < 3) g.push(h('text', { key: lab + 'a' + i, x: x + 205, y: y + 40,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 26, fill: '#6E6890' },
+            '→'));
+        });
+        g.push(h('text', { key: lab + 'a3', x: 1285, y: y + 40, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 26, fill: '#6E6890' }, '→'));
+        g.push(h('rect', { key: lab + 'o', x: 1320, y: y, width: 330, height: 60,
+          rx: 14, fill: col, opacity: 0.18, stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: lab + 'ot', x: 1485, y: y + 38, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 800, fill: col }, out));
+      };
+      row(60, '분할 · U-Net', '라벨 이미지', '#7B8CFF');
+      row(180, '생성 · 7주차', '진짜 그림', '#00E49B');
+      return svg(W, H, g);
+    })();
+
+    // ── 답의 모양 ───────────────────────────────────────────────
+    const answerShape = (() => {
+      const W = 1720, H = 260;
+      const g = [];
+      const T = [['분류', '라벨 1개', 'binary / categorical\ncross entropy', GRN],
+                 ['탐지', '박스 N개 + 라벨 N개', '위치 오차 + 분류 오차', '#7B8CFF'],
+                 ['분할', '픽셀 수만큼의 라벨', '픽셀마다 cross entropy', '#FF7AA2']];
+      T.forEach((t, i) => {
+        const x = 40 + i * 550;
+        g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 510, height: 190, rx: 20,
+          fill: 'rgba(255,255,255,.07)', stroke: t[3], strokeWidth: 3 }));
+        g.push(h('text', { key: 'n' + i, x: x + 32, y: 74, fontFamily: KR,
+          fontSize: 30, fontWeight: 800, fill: t[3] }, t[0]));
+        g.push(h('text', { key: 's' + i, x: x + 32, y: 122, fontFamily: KR,
+          fontSize: 23, fill: 'var(--neutral-lighter)' }, t[1]));
+        t[2].split('\n').forEach((ln, j) => g.push(h('text', { key: 'l' + i + j,
+          x: x + 32, y: 166 + j * 32, fontFamily: EN, fontSize: 20, fill: '#8D89A6' },
+          ln)));
+      });
+      return svg(W, H, g);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      weekMap, taskLadder, twoStage, yoloLine,
+      brokenChain, yoloSteps, yoloLimit, detVsSeg, rasterCodes, unetShape, binarize,
+      unetRoot, answerShape,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

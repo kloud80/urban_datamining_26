@@ -48,6 +48,7 @@
 ### 5주차 · 이미지 분석 1 — CNN 기초와 학습
 > 이미지를 픽셀 그대로 넣으면 왜 안 되는가?
 
+- 📊 **강의안** — [W05_CNN기초](https://kloud80.github.io/urban_datamining_26/W05_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1_CNN%EA%B8%B0%EC%B4%88/slides/W05_CNN%EA%B8%B0%EC%B4%88.html)
 - 📓 [11 ConvolutionLayer](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W05_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1_CNN%EA%B8%B0%EC%B4%88/notebooks/11%20ConvolutionLayer.ipynb)
 - 📓 [12 이미지구조](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W05_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1_CNN%EA%B8%B0%EC%B4%88/notebooks/12%20%EC%9D%B4%EB%AF%B8%EC%A7%80%EA%B5%AC%EC%A1%B0.ipynb)
 - 📓 [13 Conv2D](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W05_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1_CNN%EA%B8%B0%EC%B4%88/notebooks/13%20Conv2D.ipynb)
@@ -59,6 +60,7 @@
 ### 6주차 · 이미지 분석 1-2 — 탐지와 분할
 > '무엇이 있다'와 '어디에 있다'는 어떻게 다른 문제인가?
 
+- 📊 **강의안** — [W06_탐지와분할](https://kloud80.github.io/urban_datamining_26/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/slides/W06_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0.html)
 - 📓 [18 CNN_application](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/18%20CNN_application.ipynb)
 - 📓 [19 YOLO](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/19%20YOLO.ipynb)
 - 📓 [20 Unet](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/20%20Unet.ipynb)
@@ -67,6 +69,8 @@
 ### 7주차 · 이미지 분석 2 — 생성모델
 > 없던 이미지를 만들어 낸다는 것은 무엇을 학습한 것인가?
 
+- 📊 **강의안** — [W07_VLM과_멀티모달](https://kloud80.github.io/urban_datamining_26/W07_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D2_%EC%83%9D%EC%84%B1%EB%AA%A8%EB%8D%B8/slides/W07_VLM%EA%B3%BC_%EB%A9%80%ED%8B%B0%EB%AA%A8%EB%8B%AC.html)
+- 📊 **강의안** — [W07_생성모델](https://kloud80.github.io/urban_datamining_26/W07_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D2_%EC%83%9D%EC%84%B1%EB%AA%A8%EB%8D%B8/slides/W07_%EC%83%9D%EC%84%B1%EB%AA%A8%EB%8D%B8.html)
 - 📓 [21 GAN](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W07_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D2_%EC%83%9D%EC%84%B1%EB%AA%A8%EB%8D%B8/notebooks/21%20GAN.ipynb)
 - 📓 [22 GAN2](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W07_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D2_%EC%83%9D%EC%84%B1%EB%AA%A8%EB%8D%B8/notebooks/22%20GAN2.ipynb)
 - 📓 [23 GAN_Pix2Pix](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W07_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D2_%EC%83%9D%EC%84%B1%EB%AA%A8%EB%8D%B8/notebooks/23%20GAN_Pix2Pix.ipynb)
@@ -78,6 +82,9 @@
 ### 9주차 · 시계열·순환신경망·Transformer
 > 순서가 있는 데이터는 무엇이 다른가?
 
+- 📊 **강의안** — [W09_순환신경망](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%88%9C%ED%99%98%EC%8B%A0%EA%B2%BD%EB%A7%9D.html)
+- 📊 **강의안** — [W09_시계열분석](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EB%B6%84%EC%84%9D.html)
+- 📊 **강의안** — [W09_언어모델과_어텐션](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%96%B8%EC%96%B4%EB%AA%A8%EB%8D%B8%EA%B3%BC_%EC%96%B4%ED%85%90%EC%85%98.html)
 - 📓 [22 timeseries](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/notebooks/22%20timeseries.ipynb)
 - 📓 [23 NN_timeseries](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/notebooks/23%20NN_timeseries.ipynb)
 - 📓 [24 CNN_LSTM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/notebooks/24%20CNN_LSTM.ipynb)
@@ -88,29 +95,36 @@
 ### 10주차 · LLM 정렬과 활용
 > 언어 모델은 무엇을 맞히도록 학습되었는가?
 
+- 📊 **강의안** — [W10_LLM_학습_3단계](https://kloud80.github.io/urban_datamining_26/W10_LLM/slides/W10_LLM_%ED%95%99%EC%8A%B5_3%EB%8B%A8%EA%B3%84.html)
+- 📊 **강의안** — [W10_LLM의_구조](https://kloud80.github.io/urban_datamining_26/W10_LLM/slides/W10_LLM%EC%9D%98_%EA%B5%AC%EC%A1%B0.html)
 - 📓 [28 GPT](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W10_LLM/notebooks/28%20GPT.ipynb)
 - 📓 [29 LLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W10_LLM/notebooks/29%20LLM.ipynb)
 
 ### 11주차 · 프롬프트와 증강 생성
 > 모델이 모르는 것을 어떻게 알게 하는가?
 
+- 📊 **강의안** — [W11_프롬프트와_증강생성](https://kloud80.github.io/urban_datamining_26/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/slides/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1.html)
 - 📓 [30 LLM RAG](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/30%20LLM%20RAG.ipynb)
 
 ### 12주차 · 검색 기반 시스템
 > '비슷하다'를 컴퓨터는 어떻게 재는가?
 
+- 📊 **강의안** — [W12_멀티모달과_VLM](https://kloud80.github.io/urban_datamining_26/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/slides/W12_%EB%A9%80%ED%8B%B0%EB%AA%A8%EB%8B%AC%EA%B3%BC_VLM.html)
+- 📊 **강의안** — [W12_벡터DB와_검색](https://kloud80.github.io/urban_datamining_26/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/slides/W12_%EB%B2%A1%ED%84%B0DB%EC%99%80_%EA%B2%80%EC%83%89.html)
 - 📓 [31 LLAMA INDEX](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/notebooks/31%20LLAMA%20INDEX.ipynb)
+- 📓 [32 VLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/notebooks/32%20VLM.ipynb)
 - 📓 [35 GCN](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/notebooks/35%20GCN.ipynb)
 
 ### 13주차 · 에이전트
 > 도구를 쓸 줄 아는 모델은 무엇이 달라지는가?
 
+- 📊 **강의안** — [W13_툴_에이전트와_MCP](https://kloud80.github.io/urban_datamining_26/W13_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8/slides/W13_%ED%88%B4_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8%EC%99%80_MCP.html)
 - 📓 [36 ReinforcementLearning](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W13_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8/notebooks/36%20ReinforcementLearning.ipynb)
 
 ### 14주차 · 에이전트 하네스
 > 에이전트에게 무엇까지 맡기고, 무엇으로 채점하는가?
 
-- _🆕 신규 — 자료 준비 중_
+- 📊 **강의안** — [W14_에이전틱AI와_하네스](https://kloud80.github.io/urban_datamining_26/W14_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8_%ED%95%98%EB%84%A4%EC%8A%A4/slides/W14_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8B%B1AI%EC%99%80_%ED%95%98%EB%84%A4%EC%8A%A4.html)
 
 ### 15주차 · 도시 연구 발표 (30%)
 
@@ -124,7 +138,6 @@
 
 ## 아직 주차에 배정되지 않은 자료
 
-- 📓 [32 VLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/_%EB%AF%B8%EB%B0%B0%EC%A0%95/32%20VLM.ipynb) — 멀티모달. 7주 또는 10주 말미 확장 후보(G3). ViTFeatureExtractor → ViTImageProcessor 갱신 필요, OpenAI 키 필요
 - 📓 [33 Association TFIDF](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/_%EB%AF%B8%EB%B0%B0%EC%A0%95/33%20Association%20TFIDF.ipynb) — 연관분석. 2주차 사례로 축약하는 선택지(G3)
 - 📓 [34 CollaborateFiltering](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/_%EB%AF%B8%EB%B0%B0%EC%A0%95/34%20CollaborateFiltering.ipynb) — 협업 필터링. 12주 검색·추천과 붙일 수 있다(G3)
 

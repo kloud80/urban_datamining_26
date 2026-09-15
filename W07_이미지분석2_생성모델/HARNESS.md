@@ -10,6 +10,10 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W07_이미지분석2_생성모델/slides/W07_VLM과_멀티모달.html`
+- `W07_이미지분석2_생성모델/slides/W07_생성모델.html`
+
 노트북
 - `W07_이미지분석2_생성모델/notebooks/21 GAN.ipynb`
 - `W07_이미지분석2_생성모델/notebooks/22 GAN2.ipynb`

@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>툴 에이전트와 MCP — 13주차</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 13주차 강의영상 ② 82:20 — 지난 시간까지 RAG를 봤다. 그런데 자료를 시스템 프롬프트에 손으로 넣어 줬다. 그럼 그 자료를 누가 가져오나. 여기서 에이전트가 나온다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(245,158,11,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">13주차</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">툴 에이전트와<br>MCP</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">도구를 쓸 줄 아는 모델은 무엇이 달라지는가</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">한양대학교 도시공학과</p>
+</section>
+
+<section data-deck="0" data-label="빠져 있던 조각" data-screen-label="02" data-speaker-notes="출처: 강의영상 ② 83:00–83:40 — 지난 시간의 RAG에는 빠진 조각이 있었다. 자료를 시스템 프롬프트에 실으면 잘 답한다는 건 봤는데, 그 자료를 매번 누가 골라서 넣나. 손으로 넣을 수는 없다. 그럼 무엇을 넣어야 할지를 모델에게 물어보면 어떨까 — 이게 발상의 전환이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">지난 시간에 빠져 있던 것</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">그 자료를<br><span style="color:var(--primary-main)">누가</span> 골라서 넣나?</h2>
+  <div style="height:250px"><span data-dc-slot="missingPiece"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">발상의 전환 — <b style="color:var(--fg-1)">무엇이 필요한지를 모델에게 먼저 물어본다.</b></p>
+</section>
+
+<section data-deck="0" data-label="정답 대신 도구 목록" data-screen-label="03" data-speaker-notes="출처: 강의영상 ② 83:40–84:40 — 랭체인이 제시한 패러다임이 이것이다. 시스템 프롬프트에 정답을 넣어 놓지 않는다. 대신 툴 리스트를 넣어 준다. 이런 도구들을 줄 수 있다. 그리고 유저 질문에 답하려면 어떤 도구를 쓰면 좋을지 그걸 먼저 결정해 봐라, 라고 시킨다. 도구를 그냥 주는 게 아니라 무엇을 할 수 있는 도구인지 설명하고 어떤 파라미터를 보내야 하는지까지 알려 준다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정답 대신 <span style="color:var(--primary-main)">도구 목록</span>을 준다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">LangChain · 2022</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="toolList"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도구를 <b style="color:var(--fg-1)">설명</b>하고, <b style="color:var(--fg-1)">어떤 값을 넘겨야 하는지</b>까지 알려 준다. 그래야 고를 수 있다.</p>
+</section>
+
+<section data-deck="0" data-label="두 번 돈다" data-screen-label="04" data-speaker-notes="출처: 강의영상 ② 84:00–85:20 — 흐름이 이렇게 된다. 1차로 모델이 답한다. 다만 그 답은 사용자에게 안 보여 준다. '웹서치 툴을 써야 할 것 같고 검색어는 이것' 이라는 답이다. 서버가 그걸 받아서 실제로 검색을 하고, 결과를 모아서 다시 시스템 프롬프트에 담아 두 번째로 모델에 넣는다. 그때 나온 답을 사용자에게 보여 준다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">모델을 두 번 부른다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">1차 답변은 사용자에게 보여 주지 않는다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="twoPass"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">그래서 <b style="color:var(--fg-1)">느리다.</b> 딸깍 소리가 나면서 기다리는 그 시간이 이것이다.</p>
+</section>
+
+<section data-deck="0" data-label="실제로 물어보면" data-screen-label="05" data-speaker-notes="출처: 강의영상 ② 85:20–87:20 — 실제 예다. 최근 축구 경기 결과를 물으면 그냥은 못 답한다. 학습 시점 이후의 일이니까. 그런데 웹서치 툴을 붙여 주면 답한다. 여기서 학생들이 봐야 할 건 모델이 똑똑해진 게 아니라 도구가 붙었다는 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">같은 질문, 도구만 붙였다</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">“얼마 전 경기 결과가 어떻게 됐지?”</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="beforeAfter"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">모델이 <b style="color:#fff">똑똑해진 게 아니다.</b> 도구가 붙었을 뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="코드로 보면" data-screen-label="06" data-speaker-notes="출처: 강의영상 ② 85:40–87:20 — 코드로 보면 세 조각이다. 첫째, 검색을 실제로 수행하는 함수. 둘째, 그 함수를 툴 목록에 담는 것. 셋째, 프롬프트에 '적절한 도구를 선택하세요, 그리고 답하세요'를 넣는 것. 순서가 중요하다 — 예전에는 정답을 주고 답하라고 했는데, 이제는 툴을 먼저 고르고 답하라고 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">코드로는 세 조각뿐이다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">함수 · 툴 목록 · 프롬프트</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="threePieces"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">순서가 바뀐 것이 핵심이다 — 예전엔 <b style="color:var(--fg-1)">정답을 주고</b> 답하라 했고, 이제는 <b style="color:var(--fg-1)">도구를 고르고</b> 답하라 한다.</p>
+</section>
+
+<section data-deck="0" data-label="Function Calling" data-screen-label="07" data-speaker-notes="출처: 강의영상 ② 90:20–92:40 — 초기에는 툴을 어떻게 호출할지 그 형식까지 우리가 정해 줘야 했다. JSON으로 이렇게 답해라 같은 식으로. 그런데 이게 잘 되니까 오픈AI가 아예 내부에 담아 버렸다. 이게 function calling이다. 툴 목록을 넘기면 호출 방식까지 알아서 처리한다. 그리고 그 결과가 답변 본문이 아니라 별도 필드로 온다. 이게 중요하다 — 파싱할 필요가 없어졌다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">본문이 아니라 <span style="color:var(--primary-main)">별도 필드</span>로 온다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Function Calling</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="funcCall"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">답변 문장에서 <b style="color:#D93636">골라내지 않아도 된다.</b> 그래서 안정적으로 자동화된다.</p>
+</section>
+
+<section data-deck="0" data-label="학습 데이터까지 바뀌었다" data-screen-label="08" data-speaker-notes="출처: 강의영상 ② 92:40–93:20 — 여기서 재밌는 일이 벌어졌다. 이게 표준이 되니까 파인튜닝과 RLHF 데이터에도 검색 토큰이라는 게 들어갔다. 이런 질문이 나오면 답하기 전에 검색을 거쳐야 한다는 걸 학습 데이터에 넣어 버린 것이다. 그래서 지금 GPT에 질문하면 딸깍 소리가 나면서 검색을 갔다 온다. 모델이 스스로 판단하는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">한 바퀴 더</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">학습 데이터에<br>들어갔다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">“이런 질문에는 <b style="color:var(--fg-1)">답하기 전에 검색을 거쳐야 한다</b>” 를 SFT·RLHF 데이터에 넣었다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">지금 GPT 에 물으면 딸깍 소리를 내며 검색을 갔다 오는데 — <b style="color:var(--fg-1)">모델이 스스로 판단</b>한 것이다.</div>
+  </div>
+  <div style="height:730px"><span data-dc-slot="searchToken"></span></div>
+</section>
+
+<section data-deck="0" data-label="그런데 반대편이 문제였다" data-screen-label="09" data-speaker-notes="출처: 강의영상 ② 93:20–94:20 — 도구를 부르는 쪽은 표준화가 됐다. 그런데 반대편이 문제였다. 검색 결과로 HTML이 그냥 날아온다. 그걸 우리가 파싱해서 정리해야 한다. 외부 서비스마다 형식이 다 다르다. 그래서 앤트로픽이 제안한 게 MCP다. 너희도 우리랑 규약을 맞춰서 답을 달라는 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(217,54,54,.24),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">반대편의 문제</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">돌아오는 답의 형식이 <span style="color:#FF7AA2">제각각</span>이다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="parsingHell"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">서비스마다 다른 <b style="color:#fff">HTML · XML · 제각각의 JSON</b> — 매번 파싱 코드를 새로 써야 했다.</p>
+</section>
+
+<section data-deck="0" data-label="MCP" data-screen-label="10" data-speaker-notes="출처: 강의영상 ② 93:40–95:00 — MCP는 Model Context Protocol이다. 내가 툴로 너를 골라서 질문을 던졌으니, 너도 답을 줄 때 정해진 규약대로 달라는 것. 그러면 서로 소통하기 얼마나 좋겠느냐. 클로드가 제시했고 지금은 거의 표준으로 자리 잡아 가고 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">규약을 맞추자</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">MCP — Model Context Protocol</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="mcpFig"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">“내가 <b style="color:var(--fg-1)">정해진 형식으로 물을 테니</b>, 너도 <b style="color:var(--fg-1)">정해진 형식으로 답해 달라</b>” — 그게 전부다.</p>
+</section>
+
+<section data-deck="0" data-label="붙이면 이렇게 된다" data-screen-label="11" data-speaker-notes="출처: 강의영상 ② 94:40–97:20 — 실제로 붙여 본 사례다. 데이터 플랫폼을 MCP 서버로 등록해 두고 '한양대역 주변 커피숍 매출 분석해 줘'라고 하면, 리즈닝 과정이 보인다. 먼저 위치를 찾고, 어떤 분석 도구가 있는지 목록을 확인하고, 커피숍 매출을 불러올 수 있는 걸 고르고, 그 지역 데이터를 가져와 분석한다. LLM 혼자서는 못 하는 일이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">“한양대역 주변 커피숍 매출 분석해 줘”</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">데이터 플랫폼을 MCP 서버로 붙인 사례</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="mcpTrace"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">LLM 혼자서는 <b style="color:#D93636">못 하는 일</b>이다 — 외부 데이터를 조회할 수 있어야 한다.</p>
+</section>
+
+<section data-deck="0" data-label="도시 분야에 붙일 것들" data-screen-label="12" data-speaker-notes="이 슬라이드는 학생들이 자기 연구에 바로 가져가라고 넣는 장이다. 우리 분야에서 붙일 만한 도구를 생각해 보게 할 것. 공공데이터 API, GIS 도구, 벡터DB, 통계 조회. QGIS도 MCP로 연동하면 지시한 대로 조작해 준다는 이야기가 영상에 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">우리 분야에서</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">무엇을 도구로 붙일 수 있나</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:24px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">공공데이터 API</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">인구·건축물대장·토지이용</p></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">GIS 도구</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">QGIS 를 붙이면 <b style="color:var(--fg-1)">직접 조작</b>까지 한다</p></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">벡터 DB</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">지난 시간에 만든 기본계획 색인</p></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">법령 조회</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">시행령·조례까지 사슬로</p></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">통계 조회</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">도시계획 현황통계 — 3주차에 쓴 그것</p></div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px;justify-content:center"><div style="font-size:30px;font-weight:800;color:var(--primary-dark)">여러분의 코드</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">직접 만든 분석 함수도 <b style="color:var(--fg-1)">도구가 된다</b></p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="코드 제너레이터도 같은 구조" data-screen-label="13" data-speaker-notes="출처: 강의영상 ② 98:00–102:20 — 요즘 많이 쓰는 코드 제너레이터도 정확히 같은 구조다. IDE 안에서 돌면 파일에 대한 접근 권한을 갖는다. 계획을 세우고, 권한을 요청하고, 파일을 만들고, 코드를 쓰고, 테스트하고, 라이브러리를 깔고. 이 모든 게 에이전트가 도는 것이다. 그리고 그 핵심 엔진은 처음에 만들어진 그 LLM 그대로다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 22% 78%,rgba(0,228,155,.20),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">코드 제너레이터</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">이것도 <span style="color:var(--accent-green)">똑같은 에이전트</span>다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="codeAgent"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">핵심 엔진은 <b style="color:#fff">처음에 만들어진 그 LLM</b> 그대로다. 달라진 건 <b style="color:#fff">쥐여 준 도구</b>뿐이다.</p>
+</section>
+
+<section data-deck="0" data-label="잘 되는 것과 안 되는 것" data-screen-label="14" data-speaker-notes="출처: 강의영상 ② 99:00, 104:00–105:00 — 이게 재밌는 대목이다. 파이썬은 코드 제너레이터가 아주 잘 된다. 오픈소스가 너무 많아서다. 뉴럴넷과 딥러닝은 논문과 오픈소스로 이루어진 세상이라 공개가 잘 돼 있다. 반대로 자바 버전이나 임베디드로 가면 헤맨다. 지도 API도 마찬가지 — 공개된 코드가 많은 것과 적은 것의 차이가 그대로 성능 차이가 된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">잘 되는 것과 헤매는 것</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">차이는 하나 — 공개된 코드의 양</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="openness"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">학습에 쓸 코드가 <b style="color:var(--fg-1)">인터넷에 얼마나 있었나</b> — 그게 그대로 성능 차이가 된다.</p>
+</section>
+
+<section data-deck="0" data-label="방향성이 없으면" data-screen-label="15" data-speaker-notes="출처: 강의영상 ③ 68:40–69:20 — 이 수업에서 마지막까지 남길 한마디. 코드 제너레이터든 LLM이든 쓸 때 가장 큰 문제는 하나다. 내 방향성이 명확하지 않으면 이 친구도 못 잡아낸다. 도구가 아무리 좋아져도 무엇을 물을지는 사람이 정해야 한다. 이게 이 수업의 결론이기도 하다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 76% 26%,rgba(68,52,226,.34),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">이 수업이 마지막까지 남기는 한마디</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.3;letter-spacing:-0.025em;max-width:1700px">내 <span style="color:var(--accent-green)">방향성</span>이 없으면<br>이 친구도 못 잡아낸다</h2>
+  <div style="padding:34px 40px;background:rgba(255,255,255,.07);border-radius:18px;font-size:var(--type-body);line-height:1.55;max-width:1700px;color:var(--neutral-lighter)">도구가 아무리 좋아져도 <b style="color:#fff">무엇을 물을지</b>는 사람이 정해야 한다.<br>이번 학기 내내 같은 맥락으로 이어 온 이유다 — 히스토리를 따라 이해하면 새 기술도 어렵지 않게 붙일 수 있다.</div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="16" data-speaker-notes="정리. 에이전트는 정답 대신 도구 목록을 주고 무엇을 쓸지 모델이 고르게 하는 구조다. 그게 표준화되면서 function calling이 되고 MCP가 됐다. 코드 제너레이터도 같은 구조다. 다음 시간은 이 에이전트에게 무엇까지 맡기고 무엇으로 채점할 것인가 — 하네스로 간다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:20px;font-size:33px;line-height:1.4;max-width:1700px;color:var(--fg-2)">
+    <li>에이전트 = <b style="color:var(--fg-1)">정답 대신 도구 목록</b>을 주고, 무엇을 쓸지 모델이 고르게 한다.</li>
+    <li>모델을 <b style="color:var(--fg-1)">두 번 이상</b> 부른다 — 그래서 느리다.</li>
+    <li>부르는 쪽이 <b style="color:var(--fg-1)">function calling</b>, 답하는 쪽이 <b style="color:var(--fg-1)">MCP</b> 로 표준화됐다.</li>
+    <li>코드 제너레이터도 <b style="color:var(--fg-1)">정확히 같은 구조</b>다.</li>
+  </ol>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1700px">다음 — 이 에이전트에게 <b style="color:#00E49B">무엇까지 맡기고, 무엇으로 채점</b>할 것인가.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">에이전트 하네스 · 실습: 36 ReinforcementLearning.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">툴 에이전트와 MCP — 13주차</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">16</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">빠져 있던 조각</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">정답 대신 도구 목록</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">두 번 돈다</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">실제로 물어보면</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">코드로 보면</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">Function Calling</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">학습 데이터까지 바뀌었다</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">그런데 반대편이 문제였다</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">MCP</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">붙이면 이렇게 된다</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">도시 분야에 붙일 것들</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">코드 제너레이터도 같은 구조</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">잘 되는 것과 안 되는 것</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">방향성이 없으면</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const AMB = '#F59E0B';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const node = (x, y, w, hh, t, sub, col, bg, fs) => h('g', { key: t + x + y },
+      h('rect', { x: x, y: y, width: w, height: hh, rx: 16, fill: bg, stroke: col,
+        strokeWidth: 2.5 }),
+      h('text', { x: x + w / 2, y: y + hh / 2 + (sub ? -4 : 9), textAnchor: 'middle',
+        fontFamily: KR, fontSize: fs || 25, fontWeight: 700, fill: col }, t),
+      sub ? h('text', { x: x + w / 2, y: y + hh / 2 + 32, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 20, fill: MUT }, sub) : null);
+
+    // ── 빠진 조각 ───────────────────────────────────────────────
+    const missingPiece = (() => {
+      const W = 1720, H = 250;
+      return svg(W, H, [
+        node(30, 70, 300, 120, '질문', null, MUT, '#fff'),
+        h('text', { key: 'a1', x: 366, y: 138, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 34, fill: AX }, '→'),
+        h('rect', { key: 'gap', x: 400, y: 70, width: 400, height: 120, rx: 16,
+          fill: '#FDF0F0', stroke: RED, strokeWidth: 3, strokeDasharray: '13 10' }),
+        h('text', { key: 'gt', x: 600, y: 142, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 36, fontWeight: 800, fill: RED }, '???'),
+        h('text', { key: 'a2', x: 836, y: 138, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 34, fill: AX }, '→'),
+        node(870, 70, 380, 120, '시스템 프롬프트에', '자료를 싣는다', ACC, '#EEF0FE'),
+        h('text', { key: 'a3', x: 1286, y: 138, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 34, fill: AX }, '→'),
+        node(1320, 70, 300, 120, '답변', null, GRN, '#EDF9F4'),
+        h('text', { key: 'n', x: 400, y: 232, fontFamily: KR, fontSize: 24, fill: RED },
+          '지난 시간에는 여기를 손으로 채웠다'),
+      ]);
+    })();
+
+    // ── 툴 목록 ─────────────────────────────────────────────────
+    const toolList = (() => {
+      const W = 1720, H = 470;
+      const TOOL = [
+        ['web_search', '웹을 검색한다', 'keyword: string'],
+        ['get_weather', '날씨를 조회한다', 'city: string, date: string'],
+        ['query_vector_db', '문서 색인을 찾는다', 'question: string, top_k: int'],
+      ];
+      const g = [];
+      TOOL.forEach((t, i) => {
+        const y = 96 + i * 108;
+        g.push(h('rect', { key: 'r' + i, x: 40, y: y, width: 1640, height: 88, rx: 14,
+          fill: '#fff', stroke: 'var(--border-1)', strokeWidth: 2 }));
+        g.push(h('text', { key: 'n' + i, x: 76, y: y + 40, fontFamily: EN,
+          fontSize: 27, fontWeight: 800, fill: ACC }, t[0]));
+        g.push(h('text', { key: 'd' + i, x: 76, y: y + 72, fontFamily: KR,
+          fontSize: 22, fill: MUT }, t[1]));
+        g.push(h('rect', { key: 'p' + i, x: 980, y: y + 20, width: 660, height: 48,
+          rx: 9, fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'pt' + i, x: 1006, y: y + 52, fontFamily: EN,
+          fontSize: 22, fill: VIO }, t[2]));
+      });
+      return svg(W, H, [
+        h('text', { key: 'h1', x: 76, y: 62, fontFamily: KR, fontSize: 23,
+          fontWeight: 700, fill: MUT }, '이름 · 무엇을 하는 도구인가'),
+        h('text', { key: 'h2', x: 1006, y: 62, fontFamily: KR, fontSize: 23,
+          fontWeight: 700, fill: VIO }, '무엇을 넘겨야 하나'),
+        g,
+        h('text', { key: 'n', x: 40, y: 448, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' },
+          '설명이 부실하면 모델이 엉뚱한 도구를 고른다 — 설명이 곧 성능이다'),
+      ]);
+    })();
+
+    // ── 두 번 돈다 ──────────────────────────────────────────────
+    const twoPass = (() => {
+      const W = 1720, H = 470;
+      const ar = (x1, y1, x2, y2, k, col) => h('line', { key: 'a' + k, x1: x1, y1: y1,
+        x2: x2, y2: y2, stroke: col || AX, strokeWidth: 3 });
+      return svg(W, H, [
+        h('rect', { key: 'bg1', x: 20, y: 40, width: 830, height: 350, rx: 20,
+          fill: '#F7F8FF', stroke: ACC, strokeWidth: 3 }),
+        h('text', { key: 't1', x: 52, y: 88, fontFamily: KR, fontSize: 27,
+          fontWeight: 800, fill: ACC }, '1차 — 무엇을 쓸까'),
+        node(52, 120, 240, 110, '질문 + 툴 목록', null, MUT, '#fff', 22),
+        ar(292, 176, 340, 176, 1),
+        node(342, 120, 200, 110, 'LLM', null, ACC, '#EEF0FE'),
+        ar(542, 176, 590, 176, 2),
+        node(592, 108, 226, 134, 'web_search', '“한국 경기 결과”', VIO, '#F6F1FF', 23),
+        h('text', { key: 'n1', x: 52, y: 300, fontFamily: KR, fontSize: 23,
+          fill: RED }, '이 답은 사용자에게 보여 주지 않는다'),
+        h('text', { key: 'n1b', x: 52, y: 340, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, '서버가 받아서 실제로 검색을 실행한다'),
+        h('rect', { key: 'bg2', x: 870, y: 40, width: 830, height: 350, rx: 20,
+          fill: '#EDF9F4', stroke: GRN, strokeWidth: 3 }),
+        h('text', { key: 't2', x: 902, y: 88, fontFamily: KR, fontSize: 27,
+          fontWeight: 800, fill: GRN }, '2차 — 그 결과로 답하라'),
+        node(902, 108, 246, 134, '검색 결과', '시스템 프롬프트에', GRN, '#fff', 23),
+        ar(1148, 176, 1196, 176, 3),
+        node(1198, 120, 200, 110, 'LLM', null, ACC, '#EEF0FE'),
+        ar(1398, 176, 1446, 176, 4),
+        node(1448, 120, 220, 110, '최종 답변', null, GRN, '#fff'),
+        h('text', { key: 'n2', x: 902, y: 300, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, '사용자가 보는 것은 이것뿐이다'),
+        h('text', { key: 'n3', x: 20, y: 442, fontFamily: KR, fontSize: 23, fill: MUT },
+          '도구가 늘어나면 이 왕복이 세 번, 네 번으로 늘어난다'),
+      ]);
+    })();
+
+    // ── 전후 비교 ───────────────────────────────────────────────
+    const beforeAfter = (() => {
+      const W = 1720, H = 470;
+      const card = (x, tag, col, lines) => h('g', { key: tag },
+        h('rect', { x: x, y: 40, width: 820, height: 340, rx: 20,
+          fill: col === RED ? 'rgba(255,122,162,.10)' : 'rgba(0,228,155,.12)',
+          stroke: col, strokeWidth: 3 }),
+        h('text', { x: x + 36, y: 96, fontFamily: KR, fontSize: 27, fontWeight: 800,
+          fill: col }, tag),
+        lines.map((t, i) => h('text', { key: i, x: x + 36, y: 168 + i * 50,
+          fontFamily: KR, fontSize: 25, fill: 'var(--neutral-lighter)' }, t)));
+      return svg(W, H, [
+        card(20, '도구 없이', '#FF7AA2',
+          ['“제가 가진 정보는 특정 시점까지로',
+           ' 제한되어 있어 답변드릴 수 없습니다.”']),
+        card(880, '웹서치 도구를 붙이면', '#00E49B',
+          ['(검색 실행)', '“최근 경기 결과는 … 였습니다.”',
+           '출처와 함께 답한다']),
+        h('text', { key: 'n', x: 20, y: 434, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' },
+          '가중치는 하나도 바뀌지 않았다 — 입력에 실린 것만 달라졌다'),
+      ]);
+    })();
+
+    // ── 코드 세 조각 ────────────────────────────────────────────
+    const threePieces = (() => {
+      const W = 1720, H = 470;
+      const term = (x, n, t, lines, col) => h('g', { key: t },
+        h('rect', { x: x, y: 40, width: 540, height: 340, rx: 18, fill: '#1E1B2E' }),
+        h('circle', { cx: x + 40, cy: 82, r: 22, fill: col }),
+        h('text', { x: x + 40, y: 91, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 22, fontWeight: 800, fill: '#0C0B17' }, n),
+        h('text', { x: x + 76, y: 91, fontFamily: KR, fontSize: 25, fontWeight: 700,
+          fill: '#fff' }, t),
+        lines.map((l, i) => h('text', { key: i, x: x + 32, y: 148 + i * 40,
+          fontFamily: EN, fontSize: 20, fill: i === 0 ? '#8ED6FF' : '#C9C7D6' }, l)));
+      return svg(W, H, [
+        term(20, '1', '실제로 일하는 함수', [
+          'def my_web_search(keyword):',
+          '    html = browser.get(keyword)',
+          '    return parse(html)'], '#8ED6FF'),
+        term(590, '2', '툴 목록에 담는다', [
+          'tools = [',
+          '    my_web_search,',
+          '    get_weather, ... ]'], '#C4A2FF'),
+        term(1160, '3', '프롬프트를 바꾼다', [
+          '"당신은 도구를 가진 비서다.',
+          ' 질문에 맞는 도구를 고르고',
+          ' 그다음 답하라"'], '#00E49B'),
+        h('text', { key: 'n', x: 20, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '코드 자체는 단순하다 — 어려운 것은 도구 설명을 잘 쓰는 일이다'),
+      ]);
+    })();
+
+    // ── function calling ────────────────────────────────────────
+    const funcCall = (() => {
+      const W = 1720, H = 470;
+      const box = (x, y, w, hh, lab, lines, col, bad) => h('g', { key: lab },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 16, fill: '#1E1B2E',
+          stroke: col, strokeWidth: 3, strokeDasharray: bad ? '12 9' : 'none' }),
+        h('text', { x: x + 30, y: y + 46, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: col }, lab),
+        lines.map((l, i) => h('text', { key: i, x: x + 30, y: y + 96 + i * 38,
+          fontFamily: EN, fontSize: 21, fill: '#C9C7D6' }, l)));
+      return svg(W, H, [
+        box(20, 40, 820, 340, '예전 — 답변 문장 안에 섞여 온다', [
+          'content: "웹서치를 써야 할 것 같습니다.',
+          '  {\\"tool\\": \\"web_search\\",',
+          '   \\"keyword\\": \\"경기 결과\\"} 를',
+          '  실행해 주세요."'], RED, true),
+        h('text', { key: 'n1', x: 50, y: 428, fontFamily: KR, fontSize: 23, fill: RED },
+          '문장에서 골라내야 한다 — 형식이 흔들리면 깨진다'),
+        box(880, 40, 820, 340, '지금 — 별도 필드로 온다', [
+          'content: null',
+          'tool_calls: [{',
+          '   name: "web_search",',
+          '   arguments: { keyword: "경기 결과" } }]'], GRN, false),
+        h('text', { key: 'n2', x: 910, y: 428, fontFamily: KR, fontSize: 23,
+          fill: GRN }, '그대로 실행하면 된다'),
+      ]);
+    })();
+
+    // ── 검색 토큰 ───────────────────────────────────────────────
+    const searchToken = (() => {
+      const W = 1060, H = 730;
+      const row = (y, q, need) => h('g', { key: q },
+        h('rect', { x: 40, y: y, width: 980, height: 100, rx: 14, fill: '#fff',
+          stroke: 'var(--border-1)', strokeWidth: 2 }),
+        h('text', { x: 76, y: y + 60, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-2)' }, q),
+        h('rect', { x: 760, y: y + 26, width: 220, height: 48, rx: 24,
+          fill: need ? '#EDF9F4' : 'var(--surface-app)',
+          stroke: need ? GRN : '#C9C7D6', strokeWidth: 2 }),
+        h('text', { x: 870, y: y + 58, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fontWeight: 700, fill: need ? GRN : MUT },
+          need ? '검색한다' : '그냥 답한다'));
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: 'var(--surface-app)', rx: 16 }),
+        h('text', { key: 'h', x: 76, y: 66, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: INK }, '모델이 스스로 나누는 기준'),
+        row(100, '“도시기본계획이 뭐죠?”', false),
+        row(220, '“파이썬 리스트 정렬은?”', false),
+        row(340, '“어제 발표된 통계는?”', true),
+        row(460, '“이번 달 개정된 조례는?”', true),
+        h('text', { key: 'n', x: 76, y: 636, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, '학습 데이터에 “언제 검색해야 하는가” 가'),
+        h('text', { key: 'n2', x: 76, y: 676, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, '함께 들어갔기 때문이다'),
+      ]);
+    })();
+
+    // ── 파싱 지옥 ───────────────────────────────────────────────
+    const parsingHell = (() => {
+      const W = 1720, H = 470;
+      const src = (x, lab, fmt, col) => h('g', { key: lab },
+        h('rect', { x: x, y: 60, width: 340, height: 130, rx: 14,
+          fill: 'rgba(255,255,255,.08)', stroke: col, strokeWidth: 2.5 }),
+        h('text', { x: x + 170, y: 116, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 25, fontWeight: 700, fill: '#fff' }, lab),
+        h('text', { x: x + 170, y: 156, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 22, fill: col }, fmt),
+        h('line', { x1: x + 170, y1: 194, x2: 860, y2: 276, stroke: col,
+          strokeWidth: 2.5, opacity: 0.6 }));
+      return svg(W, H, [
+        src(40, '검색 엔진', 'HTML', '#FF7AA2'),
+        src(420, '공공데이터', 'XML', '#FF7AA2'),
+        src(800, '사내 API', 'JSON(a)', '#FF7AA2'),
+        src(1180, '지도 서비스', 'JSON(b)', '#FF7AA2'),
+        h('rect', { key: 'p', x: 620, y: 280, width: 480, height: 120, rx: 16,
+          fill: 'rgba(217,54,54,.18)', stroke: '#FF7AA2', strokeWidth: 3 }),
+        h('text', { key: 'pt', x: 860, y: 336, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: '#FF7AA2' }, '매번 새로 쓰는'),
+        h('text', { key: 'pt2', x: 860, y: 376, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: '#FF7AA2' }, '파싱 코드'),
+        h('text', { key: 'n', x: 40, y: 448, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' },
+          '도구 하나 붙일 때마다 사람이 붙어야 한다 — 확장이 안 된다'),
+      ]);
+    })();
+
+    // ── MCP ─────────────────────────────────────────────────────
+    const mcpFig = (() => {
+      const W = 1720, H = 470;
+      const srv = (y, lab) => h('g', { key: lab },
+        h('rect', { x: 1160, y: y, width: 520, height: 92, rx: 14, fill: '#EDF9F4',
+          stroke: GRN, strokeWidth: 2.5 }),
+        h('text', { x: 1196, y: y + 56, fontFamily: KR, fontSize: 25, fontWeight: 700,
+          fill: GRN }, lab),
+        h('line', { x1: 900, y1: 224, x2: 1156, y2: y + 46, stroke: GRN,
+          strokeWidth: 3 }));
+      return svg(W, H, [
+        node(40, 158, 320, 132, 'LLM', '도구를 고른다', ACC, '#EEF0FE'),
+        h('rect', { key: 'proto', x: 480, y: 140, width: 420, height: 168, rx: 18,
+          fill: '#FFF8EC', stroke: AMB, strokeWidth: 3.5 }),
+        h('text', { key: 'pt', x: 690, y: 214, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 36, fontWeight: 800, fill: AMB }, 'MCP'),
+        h('text', { key: 'pt2', x: 690, y: 258, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 23, fill: 'var(--fg-3)' }, '정해진 규약'),
+        h('line', { key: 'l1', x1: 360, y1: 224, x2: 476, y2: 224, stroke: AMB,
+          strokeWidth: 4 }),
+        srv(70, 'MCP 서버 — 공공데이터'),
+        srv(178, 'MCP 서버 — 사내 DB'),
+        srv(286, 'MCP 서버 — GIS 도구'),
+        h('text', { key: 'n1', x: 40, y: 90, fontFamily: KR, fontSize: 23, fill: MUT },
+          '한 번 맞춰 두면'),
+        h('text', { key: 'n2', x: 40, y: 384, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, '서버가 늘어도'),
+        h('text', { key: 'n3', x: 40, y: 424, fontFamily: KR, fontSize: 23,
+          fontWeight: 700, fill: INK }, '파싱 코드는 안 는다'),
+      ]);
+    })();
+
+    // ── MCP 트레이스 ────────────────────────────────────────────
+    const mcpTrace = (() => {
+      const W = 1720, H = 470;
+      const step = (i, t, sub) => {
+        const y = 40 + i * 84;
+        return h('g', { key: t },
+          h('circle', { cx: 76, cy: y + 38, r: 26, fill: ACC }),
+          h('text', { x: 76, y: y + 47, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 23, fontWeight: 800, fill: '#fff' }, i + 1),
+          h('rect', { x: 130, y: y, width: 1550, height: 76, rx: 14, fill: '#fff',
+            stroke: 'var(--border-1)', strokeWidth: 2 }),
+          h('text', { x: 166, y: y + 36, fontFamily: KR, fontSize: 25,
+            fontWeight: 700, fill: INK }, t),
+          h('text', { x: 166, y: y + 64, fontFamily: KR, fontSize: 21, fill: MUT },
+            sub),
+          i < 4 ? h('line', { x1: 76, y1: y + 64, x2: 76, y2: y + 96, stroke: ACC,
+            strokeWidth: 3 }) : null);
+      };
+      return svg(W, H, [
+        step(0, '위치를 먼저 찾는다', '“한양대역” 이 어디인지 조회'),
+        step(1, '쓸 수 있는 분석 도구 목록을 확인한다', 'MCP 서버가 무엇을 제공하는지'),
+        step(2, '커피숍 매출을 불러올 도구를 고른다', '목록 중에서 스스로 선택'),
+        step(3, '그 지역의 데이터를 가져온다', '반경 200m 안의 카드 매출'),
+        step(4, '결과를 정리해 답한다', '표와 설명으로'),
+      ]);
+    })();
+
+    // ── 코드 에이전트 ───────────────────────────────────────────
+    const codeAgent = (() => {
+      const W = 1720, H = 470;
+      const step = (x, n, t, sub, col) => h('g', { key: t },
+        h('rect', { x: x, y: 110, width: 300, height: 190, rx: 18,
+          fill: 'rgba(255,255,255,.07)', stroke: col, strokeWidth: 2.5 }),
+        h('circle', { cx: x + 46, cy: 158, r: 24, fill: col }),
+        h('text', { x: x + 46, y: 167, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 22, fontWeight: 800, fill: '#0C0B17' }, n),
+        h('text', { x: x + 26, y: 226, fontFamily: KR, fontSize: 27, fontWeight: 800,
+          fill: '#fff' }, t),
+        h('text', { x: x + 26, y: 266, fontFamily: KR, fontSize: 20,
+          fill: 'var(--neutral-medium)' }, sub));
+      const ar = (x) => h('text', { key: 'a' + x, x: x, y: 214, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 32, fill: '#8E8AA5' }, '→');
+      return svg(W, H, [
+        step(20, '1', '계획을 세운다', '무엇부터 할지', '#8ED6FF'),
+        ar(340),
+        step(360, '2', '권한을 요청한다', '파일을 만들어도 되나', '#F59E0B'),
+        ar(680),
+        step(700, '3', '직접 실행한다', '파일 · 코드 · 설치', '#C4A2FF'),
+        ar(1020),
+        step(1040, '4', '테스트한다', '돌려 보고 고친다', '#00E49B'),
+        ar(1360),
+        step(1380, '5', '반복한다', '될 때까지', '#00E49B'),
+        h('text', { key: 'n', x: 20, y: 404, fontFamily: KR, fontSize: 24,
+          fill: 'var(--neutral-lighter)' },
+          '13주차에 배운 “도구를 고르고 실행한다” 가 그대로 반복되는 것이다'),
+      ]);
+    })();
+
+    // ── 공개된 코드의 양 ────────────────────────────────────────
+    const openness = (() => {
+      const W = 1720, H = 470;
+      const bar = (y, lab, v, col, note) => h('g', { key: lab },
+        h('text', { x: 40, y: y + 44, fontFamily: KR, fontSize: 27, fontWeight: 700,
+          fill: col }, lab),
+        h('rect', { x: 420, y: y, width: v * 900, height: 62, rx: 12, fill: col,
+          opacity: 0.85 }),
+        h('text', { x: 420 + v * 900 + 22, y: y + 44, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: col }, note));
+      return svg(W, H, [
+        h('text', { key: 'h', x: 40, y: 54, fontFamily: KR, fontSize: 24, fill: MUT },
+          '인터넷에 공개된 코드의 양 (개념 비교)'),
+        bar(84, '파이썬 · 딥러닝', 1.0, GRN, '아주 잘 만든다'),
+        bar(184, '일반 웹 개발', 0.82, GRN, '잘 만든다'),
+        bar(284, '사내 표준 · 임베디드', 0.22, RED, '자주 헤맨다'),
+        h('rect', { key: 'nb', x: 40, y: 380, width: 1640, height: 76, rx: 14,
+          fill: 'var(--surface-app)' }),
+        h('text', { key: 'nt', x: 72, y: 428, fontFamily: KR, fontSize: 25,
+          fill: 'var(--fg-3)' },
+          '딥러닝은 논문과 오픈소스로 이루어진 세상이다 — 그래서 이 분야 코드가 가장 잘 나온다'),
+      ]);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      missingPiece, toolList, twoPass, beforeAfter, threePieces, funcCall,
+      searchToken, parsingHell, mcpFig, mcpTrace, codeAgent, openness,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

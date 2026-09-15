@@ -10,6 +10,10 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W10_LLM/slides/W10_LLM_학습_3단계.html`
+- `W10_LLM/slides/W10_LLM의_구조.html`
+
 노트북
 - `W10_LLM/notebooks/28 GPT.ipynb`
 - `W10_LLM/notebooks/29 LLM.ipynb`

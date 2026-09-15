@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>벡터DB와 검색 — 12주차</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 12주차 강의영상 ③ 01:00 · 31 LLAMA INDEX.ipynb — 지난 시간 RAG를 하다 멈췄다. 오늘은 그 검색 부분을 채운다. 벡터 데이터베이스가 지금 엄청나게 빠르게 성장하고 있다. 대기업 기준으로 작년 말부터 올해 초까지 100억 이상씩 들여 벡터DB를 구축했다. 2015년 빅데이터 구축 이후 한동안 안 하다가 다시 붐이 왔다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 26%,rgba(68,52,226,.34),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">12주차 · 1교시</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">벡터 DB 와 검색</h1>
+  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">‘비슷하다’ 를 컴퓨터는 어떻게 재는가</p>
+  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">한양대학교 도시공학과 · 31 LLAMA INDEX.ipynb</p>
+</section>
+
+<section data-deck="0" data-label="벡터는 처음이 아니다" data-screen-label="02" data-speaker-notes="출처: 강의영상 ③ 02:00–03:00 — 오늘 벡터 이야기를 하는데, 사실 이번 학기 내내 했던 얘기다. 중간에 어떤 벡터를 뽑아내면 그 숫자에 생각보다 많은 의미를 부여할 수 있다는 것. 이미지의 잠재변수, 시계열의 히든 스테이트, 언어의 임베딩. 오늘은 그 벡터를 저장하고 찾는 이야기다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">이번 학기 내내 했던 이야기</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">벡터는 오늘 처음이 아니다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="vectorHistory"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">오늘은 그 벡터를 <b style="color:var(--fg-1)">저장하고 찾는</b> 이야기다.</p>
+</section>
+
+<section data-deck="0" data-label="왜 지금 벡터DB인가" data-screen-label="03" data-speaker-notes="출처: 강의영상 ③ 01:20–04:20 — 왜 지금인가. LLM이 활성화되니 거기 들어갈 정성적 데이터, 즉 텍스트 원문을 벡터로 보관하자는 취지다. 기존 데이터베이스는 텍스트를 정량화해서 넣는 구조였다. 벡터DB는 원문을 그대로 넣자는 것이다. 도시계획은 기본계획이든 관리계획이든 몇백 페이지가 거의 텍스트다. 그 안에 함의가 엄청나게 많다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정량화하지 않고 원문을 넣는다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">기존 DB vs 벡터 DB</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="dbCompare"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도시계획은 <b style="color:var(--fg-1)">기본계획이든 관리계획이든 몇백 페이지가 텍스트</b>다. 그 안에 함의가 다 들어 있다.</p>
+</section>
+
+<section data-deck="0" data-label="DB 지형" data-screen-label="04" data-speaker-notes="출처: 강의영상 ③ 04:20–06:20 — 시장 상황. 오라클이 데이터베이스 최강자였고 무료 쪽은 MySQL, 마리아DB가 있었다. 그런데 PostgreSQL이 나오면서 지금은 오라클과 반반이다. PostgreSQL이 좋은 이유가 플러그인이다. PostGIS로 공간 연산을 하고, pgvector를 깔면 그대로 벡터DB가 된다. 도시 쪽에서는 이 조합이 특히 매력적이다. 아직 벡터DB에는 뚜렷한 메이저가 없다 — 무주공산이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">아직 <span style="color:var(--primary-main)">메이저가 없다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">그래서 지금 다들 뛰어들고 있다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="dbLandscape"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도시 쪽은 <b style="color:var(--fg-1)">PostGIS + pgvector</b> 조합이 특히 매력적이다 — 공간 연산과 벡터 검색이 한 DB 안에 있다.</p>
+</section>
+
+<section data-deck="0" data-label="실습 데이터" data-screen-label="05" data-speaker-notes="출처: 강의영상 ③ 07:00–13:00 · 31 LLAMA INDEX.ipynb — 실습 데이터는 토지이음에서 받은 안동시 2040 도시군기본계획 PDF다. 577페이지고 텍스트도 있고 표도 있다. 여러분이 관심 있는 도시로 바꿔서 해 보면 좋다. 참고로 우리가 쓰는 라이브러리는 라마인덱스인데, 라이브러리 자체가 중요한 게 아니다. 그리고 LLM 쪽 라이브러리는 정말 빠르게 바뀌어서 버전이 오르면 예전 코드가 아예 안 돈다. 그건 어쩔 수 없다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">실습 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">안동시 2040<br>도시군기본계획</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--surface-app);border-radius:12px;padding:20px 26px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:24px;color:var(--fg-3)">분량</span><span style="font-family:var(--font-display);font-size:34px;font-weight:800">577 페이지</span></div>
+      <div style="background:var(--surface-app);border-radius:12px;padding:20px 26px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:24px;color:var(--fg-3)">출처</span><span style="font-family:var(--font-display);font-size:24px;font-weight:700">토지이음</span></div>
+    </div>
+    <div style="padding:22px 26px;background:#FDF0F0;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">LLM 쪽 라이브러리는 <b style="color:#D93636">아주 빠르게 바뀐다.</b> 버전이 오르면 예전 코드가 안 도는 일이 흔하다 — 버전을 확인하고 고쳐 쓰는 게 정상이다.</div>
+  </div>
+  <div style="height:750px"><span data-dc-slot="pdfShape"></span></div>
+</section>
+
+<section data-deck="0" data-label="파이프라인" data-screen-label="06" data-speaker-notes="출처: 강의영상 ③ 13:00–15:40 — 전체 파이프라인은 네 단계다. 자른다, 벡터로 바꾼다, 저장한다, 찾는다. 각 단계마다 선택지가 있고 그 선택이 성능을 정한다. 이 그림 하나만 가져가도 오늘 수업은 남는다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">전체 파이프라인</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">자르고 · 벡터로 · 저장하고 · 찾는다</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="pipeline"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">단계마다 <b style="color:#fff">선택지</b>가 있고, 그 선택이 검색 품질을 정한다.</p>
+</section>
+
+<section data-deck="0" data-label="① 어떻게 자를 것인가" data-screen-label="07" data-speaker-notes="출처: 강의영상 ③ 20:40–21:40 — 첫 단계. 실습에서는 페이지 단위로 잘랐다. 그런데 페이지로 자르면 우연히 문맥 한가운데가 잘릴 수 있다. 그래서 회사에서 할 때는 문단 단위로 자르기도 하고, 목차 단위로 자르기도 한다. 여유가 있으면 여러 방식을 다 해 본다. 이 선택이 검색 품질을 크게 좌우한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">어떻게 자를 것인가</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Chunking — 여기서 품질이 갈린다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="chunking"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">페이지로 자르면 <b style="color:#D93636">문맥 한가운데가 잘릴 수 있다.</b> 여유가 있으면 여러 방식을 다 만들어 비교한다.</p>
+</section>
+
+<section data-deck="0" data-label="② 무엇으로 벡터를 만드나" data-screen-label="08" data-speaker-notes="출처: 강의영상 ③ 13:20–14:40 — 두 번째. 벡터를 만드는 모델을 고른다. 고품질 LLM으로 맥락 벡터를 뽑으면 환상적이겠지만 너무 비싸고 오래 걸린다. 그래서 보통은 가벼운 임베딩 모델을 쓴다. 우선 '찾는 것'이 목표이기 때문이다. 회사 안에서도 이 설계로 고민이 많다. 어떤 관점에서 문서를 벡터화할지에 따라 여러 벡터DB를 따로 만들어 두기도 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">무엇으로 벡터를 만드나</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">좋은 모델이 아니라 <span style="color:var(--primary-main)">알맞은 모델</span></h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-left:8px solid #D93636">
+      <div style="font-size:32px;font-weight:800;color:#D93636">고성능 LLM 으로</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">맥락을 깊이 담은 벡터가 나온다. <b style="color:var(--fg-1)">그런데 너무 비싸고 느리다</b> — 577 페이지에도 그렇다.</p>
+    </div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-left:8px solid var(--primary-main)">
+      <div style="font-size:32px;font-weight:800;color:var(--primary-dark)">가벼운 임베딩 모델로</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">실무의 기본. 목표는 <b style="color:var(--fg-1)">정확한 답</b>이 아니라 <b style="color:var(--fg-1)">맞는 페이지를 찾는 것</b>이다.</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1700px">어떤 관점에서 문서를 벡터화할지에 따라 <b style="color:var(--fg-1)">벡터DB 를 여러 벌</b> 만들어 두기도 한다.</p>
+</section>
+
+<section data-deck="0" data-label="③ 저장되는 것" data-screen-label="09" data-speaker-notes="출처: 강의영상 ③ 15:00–15:40, 23:40–24:40 — 저장할 때 중요한 게 있다. 벡터만 저장하는 게 아니다. 벡터를 키로 두고 그 아래에 원문 텍스트와 페이지 번호를 같이 저장한다. 왜냐면 나중에 LLM에게 넣어 줄 건 벡터가 아니라 원문이기 때문이다. 그리고 이 페이지 번호가 나중에 근거 표시가 된다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">벡터만 저장하는 게 아니다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">벡터 + 원문 + 위치</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="storeShape"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">LLM 에게 넣어 줄 건 <b style="color:#D93636">벡터가 아니라 원문</b>이다. 그리고 페이지 번호가 나중에 <b style="color:var(--fg-1)">근거</b>가 된다.</p>
+</section>
+
+<section data-deck="0" data-label="④ 질문도 벡터가 된다" data-screen-label="10" data-speaker-notes="출처: 강의영상 ③ 16:00–17:20 — 질의가 들어오면 같은 엔진으로 질문도 벡터로 만든다. 그리고 577개 페이지 벡터와 전부 비교해서 가장 비슷한 걸 찾는다. 여기서 중요한 건 반드시 같은 임베딩 모델을 써야 한다는 것이다. 다른 모델로 만든 벡터끼리는 비교가 의미가 없다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">질문도 같은 자로 잰다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">반드시 같은 임베딩 모델로</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="querySide"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">다른 모델로 만든 벡터끼리는 <b style="color:#D93636">비교가 아무 의미가 없다.</b> 문서를 만든 그 모델로 질문도 만들어야 한다.</p>
+</section>
+
+<section data-deck="0" data-label="비슷하다를 재는 법" data-screen-label="11" data-speaker-notes="출처: 강의영상 ③ 16:40–17:20 — 오늘의 질문에 답하는 장이다. 두 벡터가 비슷하다는 걸 어떻게 재나. 방향이 얼마나 같은지를 본다. 코사인 유사도다. 완전히 같은 방향이면 1, 직각이면 0. 길이가 아니라 방향을 보는 이유는 문서 길이가 달라도 주제가 같으면 비슷하다고 봐야 하기 때문이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">오늘의 질문에 답하면</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">방향이<br>얼마나 같은가</h2>
+    <div style="font-family:var(--font-display);font-size:32px;color:var(--primary-main);font-weight:600">cos θ = (A · B) / (|A| |B|)</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">같은 방향이면 <b style="color:#00B37A">1</b>, 직각이면 <b style="color:var(--fg-1)">0</b>.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">길이가 아니라 <b style="color:var(--fg-1)">방향</b>을 보는 이유 — 문서가 길든 짧든 <b style="color:var(--fg-1)">주제가 같으면</b> 비슷하다고 봐야 한다.</div>
+  </div>
+  <div style="height:760px"><span data-dc-slot="cosine"></span></div>
+</section>
+
+<section data-deck="0" data-label="실제로 물어보면" data-screen-label="12" data-speaker-notes="출처: 강의영상 ③ 16:40–19:40 · 31 LLAMA INDEX.ipynb — 실제 결과다. '현재 안동시 인구는 어떻게 되는지'를 물으면 577페이지 중에서 116페이지를 찾아온다. 그리고 그 페이지 내용을 근거로 답을 만든다. 기본계획의 골자를 물으면 148페이지 — 중심체계와 발전축이 적힌 페이지다. 코로나 대응을 물으면 513페이지. 디버그를 켜 두면 어느 페이지를 찾았는지 볼 수 있다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">실행 결과</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">577 페이지 중에서 <span style="color:var(--accent-green)">그 한 장</span></h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="hitPages"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">디버그를 켜 두면 <b style="color:#fff">어느 페이지를 골랐는지</b> 확인할 수 있다 — 반드시 켜 놓고 볼 것.</p>
+</section>
+
+<section data-deck="0" data-label="근거를 함께 준다" data-screen-label="13" data-speaker-notes="출처: 강의영상 ③ 17:20–19:40 — RAG의 가장 큰 실무적 가치가 이것이다. 답만 주는 게 아니라 몇 페이지를 참고했는지 함께 준다. 그러면 사람이 검증할 수 있다. 할루시네이션을 완전히 없애지는 못하지만, 틀렸을 때 바로 알아챌 수 있게 만든다. 행정 문서에서는 이게 결정적이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">실무에서 가장 큰 가치</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em;max-width:1700px">답이 아니라 <span style="color:var(--primary-main)">근거</span>를 준다</h2>
+  <div style="height:300px"><span data-dc-slot="citation"></span></div>
+  <div style="padding:30px 36px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1700px">할루시네이션을 <b style="color:#D93636">없애지는 못한다.</b> 대신 <b style="color:var(--fg-1)">틀렸을 때 바로 알아챌 수 있게</b> 만든다.<br><span style="color:var(--neutral-medium);font-size:var(--type-small)">행정 문서와 법령에서는 이 차이가 결정적이다.</span></div>
+</section>
+
+<section data-deck="0" data-label="임계치를 바꿔 보면" data-screen-label="14" data-speaker-notes="출처: 강의영상 ③ 25:40–28:20 — 유사도 임계치를 조정하면 가져오는 페이지 수가 달라진다. 0.85로 두면 관광 질문에 408과 413, 두 페이지만 나온다. 0.5로 낮추면 400페이지대가 통째로 나온다. 그 구간이 전부 관광 트렌드 내용이니 틀린 건 아니다. 다만 컨텍스트에 다 넣을 수는 없다. 그래서 이 값을 조절하는 게 실무 감각이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">임계치 하나로 결과가 바뀐다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">질문 — “안동시의 관광은?”</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="threshold"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">낮춘다고 틀린 게 아니다 — <b style="color:var(--fg-1)">그 구간이 전부 관광 내용</b>이다. 다만 컨텍스트에 다 넣을 수는 없다.</p>
+</section>
+
+<section data-deck="0" data-label="한 걸음 더" data-screen-label="15" data-speaker-notes="출처: 강의영상 ③ 24:40–25:40 — 요즘 연구 방향 둘. 하나는 정형화된 문서라면 목차를 먼저 벡터화해서 해석하고, 그걸로 벡터화 전략을 짜는 것. 또 하나는 그래프DB를 연동해서 문서끼리의 상호 관계를 별도 메타데이터로 설계하는 것. 기술적인 얘기지만 우리 분야에서 특히 고민해 볼 만하다 — 계획서는 상위계획과 하위계획이 사슬로 엮여 있으니까." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">지금 연구되는 방향</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 걸음 더</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:32px;font-weight:800;color:var(--primary-main)">목차를 먼저 읽는다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">정형화된 문서라면 목차를 먼저 벡터화해 해석하고, <b style="color:var(--fg-1)">그 구조에 맞춰</b> 자르는 전략을 짠다.</p>
+      <div style="flex:1;min-height:0"><span data-dc-slot="tocFirst"></span></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:18px;padding:34px 38px;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:32px;font-weight:800;color:#9E5DF9">문서끼리 엮는다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">그래프DB 로 <b style="color:var(--fg-1)">상호 관계</b>를 메타데이터로 둔다. 계획서는 상위·하위가 사슬로 엮여 있다.</p>
+      <div style="flex:1;min-height:0"><span data-dc-slot="graphDb"></span></div>
+    </div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="도시 분야에서 할 수 있는 것" data-screen-label="16" data-speaker-notes="출처: 강의영상 ③ 22:40–23:40 — 감각적으로 생각해 보자. 전국 170개 넘는 지자체의 도시군기본계획을 전부 벡터DB로 만들어 두면 무엇을 할 수 있나. 예전에는 이런 연구를 하려면 눈으로 다 읽어야 했다. 읽고 정량화하고. 시퀀스투시퀀스나 초기 BERT로는 긍정 부정 정도만 구분됐다. 지금은 질문 하나에 정확한 페이지를 찾아낼 수 있다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(0,228,155,.22),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">우리 분야에서</div>
+  <h2 style="margin:0;font-size:60px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">전국 지자체 기본계획을<br>전부 넣어 두면?</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:26px">
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:27px;font-weight:700;color:#fff">지자체 간 비교</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">같은 항목을 어떻게 다르게 썼는지</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:27px;font-weight:700;color:#fff">연도별 변화</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">계획의 언어가 어떻게 바뀌어 왔는지</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:30px 34px;display:flex;flex-direction:column;gap:12px"><div style="font-size:27px;font-weight:700;color:#fff">상·하위 계획 정합</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">위와 아래가 실제로 맞는지</p></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45;max-width:1700px">예전에는 <b style="color:#fff">눈으로 다 읽어야</b> 했다. 초기 모델로는 긍정·부정 정도만 갈렸다.</p>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="17" data-speaker-notes="정리. 벡터DB는 텍스트 원문을 그대로 담는 저장소다. 자르고, 벡터로 바꾸고, 원문과 함께 저장하고, 질문도 같은 자로 재서 찾는다. 비슷하다는 건 방향이 같다는 뜻이고 코사인 유사도로 잰다. 그리고 근거 페이지를 함께 주는 것이 실무의 핵심 가치다. 2교시는 이 벡터 이야기를 이미지까지 확장한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">1교시 정리</div>
+  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:20px;font-size:34px;line-height:1.4;max-width:1700px;color:var(--fg-2)">
+    <li>벡터DB 는 <b style="color:var(--fg-1)">원문을 그대로</b> 담는 저장소다.</li>
+    <li>자르고 · 벡터로 · <b style="color:var(--fg-1)">원문과 함께</b> 저장하고 · 질문도 같은 자로 잰다.</li>
+    <li>‘비슷하다’ = <b style="color:var(--fg-1)">방향이 같다</b> — 코사인 유사도.</li>
+    <li>답이 아니라 <b style="color:var(--fg-1)">근거 페이지</b>를 함께 주는 것이 실무 가치다.</li>
+  </ol>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1700px">2교시 — 이 벡터 이야기를 <b style="color:#00E49B">이미지까지</b> 확장한다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">CLIP · ViT · VLM · 실습: 31 LLAMA INDEX.ipynb → 32 VLM.ipynb</span></div>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">벡터DB와 검색 — 12주차</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">17</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">벡터는 처음이 아니다</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">왜 지금 벡터DB인가</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">DB 지형</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">실습 데이터</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">파이프라인</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">① 어떻게 자를 것인가</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">② 무엇으로 벡터를 만드나</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">③ 저장되는 것</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">④ 질문도 벡터가 된다</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">비슷하다를 재는 법</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">실제로 물어보면</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">근거를 함께 준다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">임계치를 바꿔 보면</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">한 걸음 더</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">도시 분야에서 할 수 있는 것</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const AMB = '#F59E0B';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+    const rng = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+
+    // ── 벡터의 계보 ─────────────────────────────────────────────
+    const vectorHistory = (() => {
+      const W = 1720, H = 470;
+      const card = (x, wk, t, sub, col, bg) => h('g', { key: t },
+        h('rect', { x: x, y: 60, width: 400, height: 300, rx: 18, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + 32, y: 112, fontFamily: EN, fontSize: 22, fontWeight: 700,
+          fill: MUT }, wk),
+        h('text', { x: x + 32, y: 172, fontFamily: KR, fontSize: 32, fontWeight: 800,
+          fill: col }, t),
+        h('text', { x: x + 32, y: 232, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-3)' }, sub));
+      return svg(W, H, [
+        card(20, '2주차', '주성분', 'PCA — 차원을 줄인 축', MUT, 'var(--surface-app)'),
+        card(450, '7주차', '잠재변수', '오토인코더의 가운데', MUT, 'var(--surface-app)'),
+        card(880, '9주차', '히든 스테이트', '시계열의 맥락', MUT, 'var(--surface-app)'),
+        card(1310, '10주차', '임베딩', '토큰의 의미', ACC, '#EEF0FE'),
+        h('text', { key: 'ar1', x: 430, y: 216, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fill: AX }, '→'),
+        h('text', { key: 'ar2', x: 860, y: 216, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fill: AX }, '→'),
+        h('text', { key: 'ar3', x: 1290, y: 216, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fill: AX }, '→'),
+        h('text', { key: 'n', x: 20, y: 424, fontFamily: KR, fontSize: 24,
+          fill: 'var(--fg-3)' },
+          '이름만 달랐을 뿐 전부 같은 것이다 — 의미를 담은 숫자 몇 개'),
+      ]);
+    })();
+
+    // ── DB 비교 ─────────────────────────────────────────────────
+    const dbCompare = (() => {
+      const W = 1720, H = 470;
+      const side = (x, lab, col, bg, rows, note) => h('g', { key: lab },
+        h('rect', { x: x, y: 30, width: 820, height: 350, rx: 18, fill: bg, stroke: col,
+          strokeWidth: 3 }),
+        h('text', { x: x + 34, y: 88, fontFamily: KR, fontSize: 30, fontWeight: 800,
+          fill: col }, lab),
+        rows.map((r, i) => h('g', { key: i },
+          h('rect', { x: x + 34, y: 116 + i * 66, width: 752, height: 52, rx: 10,
+            fill: '#fff', stroke: 'var(--border-1)' }),
+          h('text', { x: x + 56, y: 150 + i * 66, fontFamily: KR, fontSize: 23,
+            fill: 'var(--fg-2)' }, r))),
+        h('text', { x: x + 34, y: 356, fontFamily: KR, fontSize: 22, fill: MUT }, note));
+      return svg(W, H, [
+        side(20, '기존 데이터베이스', MUT, '#fff',
+          ['계획인구 = 158,000', '중심체계 코드 = A-1', '수립연도 = 2021'],
+          '사람이 미리 정량화해서 넣는다'),
+        side(880, '벡터 데이터베이스', ACC, '#F7F8FF',
+          ['“1도심 1부심 5지역거점으로 …”', '“코로나19 관련 현황을 고려하여 …”',
+           '“관광 트렌드 변화와 국내 …”'],
+          '원문을 그대로 넣고, 옆에 벡터를 붙인다'),
+        h('text', { key: 'n', x: 20, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '정량화하는 순간 “왜 그렇게 정했는지” 가 사라진다 — 그 함의가 텍스트에 있다'),
+      ]);
+    })();
+
+    // ── DB 지형 ─────────────────────────────────────────────────
+    const dbLandscape = (() => {
+      const W = 1720, H = 470;
+      const box = (x, y, w, hh, t, sub, col, bg, fs) => h('g', { key: t },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 16, fill: bg, stroke: col,
+          strokeWidth: 2.5 }),
+        h('text', { x: x + w / 2, y: y + hh / 2 - 4, textAnchor: 'middle', fontFamily: EN,
+          fontSize: fs || 28, fontWeight: 800, fill: col }, t),
+        h('text', { x: x + w / 2, y: y + hh / 2 + 34, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fill: MUT }, sub));
+      return svg(W, H, [
+        h('text', { key: 'h1', x: 20, y: 44, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: MUT }, '관계형 DB — 지금의 두 축'),
+        box(20, 66, 400, 130, 'Oracle', '상용 최강자', MUT, 'var(--surface-app)'),
+        box(440, 66, 400, 130, 'PostgreSQL', '오픈소스 · 반반', ACC, '#EEF0FE'),
+        h('text', { key: 'h2', x: 20, y: 268, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: MUT }, 'PostgreSQL 플러그인'),
+        box(20, 290, 400, 130, 'PostGIS', '공간 연산', GRN, '#EDF9F4'),
+        box(440, 290, 400, 130, 'pgvector', '벡터 검색', VIO, '#F6F1FF'),
+        h('text', { key: 'h3', x: 900, y: 44, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: MUT }, '전용 벡터 DB — 아직 정리되지 않았다'),
+        h('rect', { key: 'field', x: 900, y: 66, width: 800, height: 354, rx: 18,
+          fill: '#FFF8EC', stroke: AMB, strokeWidth: 3, strokeDasharray: '12 9' }),
+        h('text', { key: 'ft', x: 1300, y: 216, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 42, fontWeight: 800, fill: AMB }, '무주공산'),
+        h('text', { key: 'ft2', x: 1300, y: 268, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fill: 'var(--fg-3)' }, '제품이 계속 바뀐다 — 지금 고르지 말고'),
+        h('text', { key: 'ft3', x: 1300, y: 306, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 24, fill: 'var(--fg-3)' }, '옮기기 쉽게 설계할 것'),
+      ]);
+    })();
+
+    // ── PDF 모양 ────────────────────────────────────────────────
+    const pdfShape = (() => {
+      const W = 1080, H = 750;
+      const g = [];
+      const r = rng(577);
+      for (let i = 0; i < 24; i++) {
+        const c = i % 6, row = Math.floor(i / 6);
+        const x = 60 + c * 162, y = 120 + row * 152;
+        g.push(h('rect', { key: 'p' + i, x: x, y: y, width: 132, height: 128, rx: 8,
+          fill: '#fff', stroke: 'var(--border-1)', strokeWidth: 1.6 }));
+        const kind = r();
+        if (kind < 0.35) {
+          for (let k = 0; k < 5; k++)
+            g.push(h('rect', { key: 'l' + i + k, x: x + 14, y: y + 20 + k * 20,
+              width: 104 - (k === 4 ? 40 : 0), height: 8, rx: 3, fill: '#DEDCE6' }));
+        } else if (kind < 0.62) {
+          for (let a = 0; a < 4; a++) for (let b = 0; b < 3; b++)
+            g.push(h('rect', { key: 't' + i + a + b, x: x + 14 + b * 36,
+              y: y + 20 + a * 24, width: 32, height: 18, rx: 3,
+              fill: a === 0 ? '#C4C1D4' : '#EDECF2' }));
+        } else {
+          g.push(h('rect', { key: 'i' + i, x: x + 16, y: y + 22, width: 100,
+            height: 84, rx: 6, fill: '#E4E2EC' }));
+        }
+      }
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: 'var(--surface-app)', rx: 16 }),
+        h('text', { key: 'h', x: 60, y: 76, fontFamily: KR, fontSize: 26,
+          fontWeight: 700, fill: INK }, '텍스트 · 표 · 그림이 섞여 있다'),
+        g,
+        h('text', { key: 'n', x: 60, y: 716, fontFamily: KR, fontSize: 22, fill: MUT },
+          '표와 그림은 텍스트 추출이 어렵다 — 2교시에서 이 문제를 다시 만난다'),
+      ]);
+    })();
+
+    // ── 파이프라인 ──────────────────────────────────────────────
+    const pipeline = (() => {
+      const W = 1720, H = 480;
+      const step = (x, n, t, sub, col) => h('g', { key: t },
+        h('rect', { x: x, y: 80, width: 370, height: 250, rx: 20,
+          fill: 'rgba(255,255,255,.07)', stroke: col, strokeWidth: 3 }),
+        h('circle', { cx: x + 52, cy: 136, r: 28, fill: col }),
+        h('text', { x: x + 52, y: 147, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 27, fontWeight: 800, fill: '#0C0B17' }, n),
+        h('text', { x: x + 32, y: 212, fontFamily: KR, fontSize: 30, fontWeight: 800,
+          fill: '#fff' }, t),
+        h('text', { x: x + 32, y: 262, fontFamily: KR, fontSize: 22,
+          fill: 'var(--neutral-medium)' }, sub));
+      const ar = (x) => h('text', { key: 'a' + x, x: x, y: 218, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 38, fill: '#8E8AA5' }, '→');
+      return svg(W, H, [
+        step(20, '1', '자른다', '페이지 · 문단 · 목차', '#8ED6FF'),
+        ar(410),
+        step(450, '2', '벡터로', '임베딩 모델을 고른다', '#C4A2FF'),
+        ar(840),
+        step(880, '3', '저장한다', '벡터 + 원문 + 페이지', '#00E49B'),
+        ar(1270),
+        step(1310, '4', '찾는다', '질문도 벡터로 · 유사도', '#F59E0B'),
+        h('text', { key: 'n', x: 20, y: 408, fontFamily: KR, fontSize: 24,
+          fill: 'var(--neutral-lighter)' },
+          '1~3 은 미리 해 둔다(색인). 4 만 질문할 때마다 돈다.'),
+      ]);
+    })();
+
+    // ── 청킹 ────────────────────────────────────────────────────
+    const chunking = (() => {
+      const W = 1720, H = 470;
+      const panel = (x, lab, sub, col, bg, cuts) => {
+        const g = [];
+        for (let i = 0; i < 14; i++)
+          g.push(h('rect', { key: 'l' + i, x: x + 34, y: 120 + i * 20,
+            width: 460 - (i % 4 === 3 ? 120 : 0), height: 10, rx: 3,
+            fill: '#DEDCE6' }));
+        cuts.forEach((c, i) => g.push(h('line', { key: 'c' + i, x1: x + 24,
+          y1: 114 + c * 20, x2: x + 510, y2: 114 + c * 20, stroke: col,
+          strokeWidth: 3.5 })));
+        return h('g', { key: lab },
+          h('rect', { x: x, y: 40, width: 540, height: 350, rx: 18, fill: bg,
+            stroke: col, strokeWidth: 3 }),
+          h('text', { x: x + 34, y: 92, fontFamily: KR, fontSize: 28, fontWeight: 800,
+            fill: col }, lab),
+          g,
+          h('text', { x: x + 34, y: 428, fontFamily: KR, fontSize: 22, fill: MUT },
+            sub));
+      };
+      return svg(W, H, [
+        panel(20, '페이지 단위', '가장 쉽다 · 문맥이 끊길 수 있다', RED, '#FDF0F0',
+          [7, 14]),
+        panel(590, '문단 단위', '문맥이 살아 있다 · 조각이 많아진다', ACC, '#F7F8FF',
+          [3, 6, 9, 12]),
+        panel(1160, '목차 단위', '의미 단위로 묶인다 · 조각 크기가 들쭉날쭉', GRN,
+          '#EDF9F4', [5, 11]),
+      ]);
+    })();
+
+    // ── 저장 구조 ───────────────────────────────────────────────
+    const storeShape = (() => {
+      const W = 1720, H = 470;
+      const row = (y, id, vec, page, text) => h('g', { key: id },
+        h('rect', { x: 40, y: y, width: 1640, height: 88, rx: 12, fill: '#fff',
+          stroke: 'var(--border-1)', strokeWidth: 1.8 }),
+        h('text', { x: 72, y: y + 54, fontFamily: EN, fontSize: 23, fontWeight: 700,
+          fill: MUT }, id),
+        h('text', { x: 250, y: y + 54, fontFamily: EN, fontSize: 22, fill: ACC }, vec),
+        h('text', { x: 800, y: y + 54, fontFamily: EN, fontSize: 25, fontWeight: 800,
+          fill: GRN }, page),
+        h('text', { x: 940, y: y + 54, fontFamily: KR, fontSize: 23,
+          fill: 'var(--fg-2)' }, text));
+      return svg(W, H, [
+        h('text', { key: 'h1', x: 72, y: 62, fontFamily: KR, fontSize: 22,
+          fontWeight: 700, fill: MUT }, 'node id'),
+        h('text', { key: 'h2', x: 250, y: 62, fontFamily: KR, fontSize: 22,
+          fontWeight: 700, fill: ACC }, '벡터'),
+        h('text', { key: 'h3', x: 800, y: 62, fontFamily: KR, fontSize: 22,
+          fontWeight: 700, fill: GRN }, '페이지'),
+        h('text', { key: 'h4', x: 940, y: 62, fontFamily: KR, fontSize: 22,
+          fontWeight: 700, fill: INK }, '원문 텍스트'),
+        row(80, 'node_0116', '[0.31, −0.72, 0.08, … ]', 'p.116',
+          '“2020년 말 기준 인구는 약 15만 8천 명 …”'),
+        row(184, 'node_0148', '[−0.14, 0.55, 0.92, … ]', 'p.148',
+          '“1도심 1부심 5지역거점으로 구성되며 …”'),
+        row(288, 'node_0513', '[0.62, 0.11, −0.37, … ]', 'p.513',
+          '“코로나19 관련 현황을 고려하여 …”'),
+        h('text', { key: 'n', x: 40, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '벡터는 찾기 위한 것, 원문은 넣어 주기 위한 것, 페이지는 근거로 보여 주기 위한 것'),
+      ]);
+    })();
+
+    // ── 질의 쪽 ─────────────────────────────────────────────────
+    const querySide = (() => {
+      const W = 1720, H = 470;
+      const node = (x, y, w, hh, t, col, bg, fs) => h('g', { key: t + x },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 14, fill: bg, stroke: col,
+          strokeWidth: 2.5 }),
+        h('text', { x: x + w / 2, y: y + hh / 2 + 9, textAnchor: 'middle',
+          fontFamily: KR, fontSize: fs || 24, fontWeight: 700, fill: col }, t));
+      return svg(W, H, [
+        node(30, 60, 380, 90, '“안동시 인구는?”', INK, '#fff'),
+        node(30, 292, 380, 90, '577 페이지 조각들', MUT, 'var(--surface-app)'),
+        h('text', { key: 'a1', x: 448, y: 116, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 32, fill: AX }, '→'),
+        h('text', { key: 'a2', x: 448, y: 348, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 32, fill: AX }, '→'),
+        node(486, 172, 300, 106, '같은 임베딩 모델', VIO, '#F6F1FF', 25),
+        h('line', { key: 'j1', x1: 414, y1: 105, x2: 482, y2: 200, stroke: VIO,
+          strokeWidth: 3 }),
+        h('line', { key: 'j2', x1: 414, y1: 337, x2: 482, y2: 250, stroke: VIO,
+          strokeWidth: 3 }),
+        h('text', { key: 'a3', x: 824, y: 232, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 32, fill: AX }, '→'),
+        node(862, 172, 320, 106, '유사도 계산', GRN, '#EDF9F4'),
+        h('text', { key: 'a4', x: 1220, y: 232, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 32, fill: AX }, '→'),
+        node(1258, 150, 430, 150, '가장 가까운 조각의 원문', ACC, '#EEF0FE'),
+        h('text', { key: 'n', x: 30, y: 434, fontFamily: KR, fontSize: 23, fill: MUT },
+          '문서를 벡터로 만들 때 쓴 모델과 질문을 벡터로 만들 때 쓴 모델은 반드시 같아야 한다'),
+      ]);
+    })();
+
+    // ── 코사인 ──────────────────────────────────────────────────
+    const cosine = (() => {
+      const W = 1000, H = 760, cx = 200, cy = 560;
+      const vec = (dx, dy, col, lab, w) => h('g', { key: lab },
+        h('line', { x1: cx, y1: cy, x2: cx + dx, y2: cy - dy, stroke: col,
+          strokeWidth: w || 5 }),
+        h('circle', { cx: cx + dx, cy: cy - dy, r: 9, fill: col }),
+        h('text', { x: cx + dx + 16, y: cy - dy + 6, fontFamily: KR, fontSize: 23,
+          fontWeight: 700, fill: col }, lab));
+      const arc = (r, a1, a2, col) => {
+        const p = (a) => [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+        const s = p(a1), e = p(a2);
+        return h('path', { d: 'M' + s[0] + ' ' + s[1] + ' A' + r + ' ' + r
+          + ' 0 0 0 ' + e[0] + ' ' + e[1], fill: 'none', stroke: col,
+          strokeWidth: 2.5 });
+      };
+      return svg(W, H, [
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('line', { key: 'ax', x1: cx - 40, y1: cy, x2: 950, y2: cy, stroke: '#EEEDF3',
+          strokeWidth: 2 }),
+        h('line', { key: 'ay', x1: cx, y1: cy + 40, x2: cx, y2: 60, stroke: '#EEEDF3',
+          strokeWidth: 2 }),
+        vec(540, 400, ACC, '질문 벡터', 6),
+        vec(600, 330, GRN, 'p.116 — 가깝다'),
+        vec(180, 470, RED, 'p.402 — 멀다'),
+        arc(140, Math.atan2(400, 540), Math.atan2(470, 180), RED),
+        h('text', { key: 'th', x: cx + 128, y: cy - 168, fontFamily: EN, fontSize: 26,
+          fill: RED }, 'θ'),
+        h('text', { key: 'n1', x: 40, y: 62, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: INK }, '길이는 무시하고 각도만 본다'),
+        h('text', { key: 'n2', x: 40, y: 690, fontFamily: KR, fontSize: 23, fill: MUT },
+          '실제 벡터는 수백 차원이다 — 그림은 2차원으로 줄인 것'),
+        h('text', { key: 'n3', x: 40, y: 728, fontFamily: KR, fontSize: 23, fill: MUT },
+          '각도가 작을수록 cos 값이 1 에 가깝다'),
+      ]);
+    })();
+
+    // ── 검색 히트 ───────────────────────────────────────────────
+    const hitPages = (() => {
+      const W = 1720, H = 480;
+      const row = (y, q, page, snippet) => h('g', { key: q },
+        h('rect', { x: 30, y: y, width: 560, height: 96, rx: 14,
+          fill: 'rgba(255,255,255,.10)' }),
+        h('text', { x: 56, y: y + 58, fontFamily: KR, fontSize: 25, fill: '#fff' }, q),
+        h('text', { x: 624, y: y + 58, fontFamily: EN, fontSize: 30, fill: '#8E8AA5' },
+          '→'),
+        h('rect', { x: 690, y: y, width: 180, height: 96, rx: 14,
+          fill: 'rgba(0,228,155,.16)', stroke: '#00E49B', strokeWidth: 2.5 }),
+        h('text', { x: 780, y: y + 58, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: '#00E49B' }, page),
+        h('text', { x: 906, y: y + 58, fontFamily: KR, fontSize: 24,
+          fill: 'var(--neutral-lighter)' }, snippet));
+      return svg(W, H, [
+        row(30, '현재 안동시 인구는?', 'p.116', '“2020년 말 기준 약 15만 8천 명”'),
+        row(158, '기본계획의 핵심 골자는?', 'p.148', '“1도심 1부심 5지역거점 …”'),
+        row(286, '코로나 대응 방안은?', 'p.513', '“코로나19 관련 현황을 고려하여 …”'),
+        h('text', { key: 'n', x: 30, y: 440, fontFamily: KR, fontSize: 23,
+          fill: 'var(--neutral-medium)' },
+          '31 LLAMA INDEX.ipynb 실행 결과 — 질문마다 다른 페이지가 걸린다'),
+      ]);
+    })();
+
+    // ── 인용 ────────────────────────────────────────────────────
+    const citation = (() => {
+      const W = 1720, H = 300;
+      return svg(W, H, [
+        h('rect', { key: 'a', x: 20, y: 30, width: 1140, height: 230, rx: 18,
+          fill: 'var(--surface-app)' }),
+        h('text', { key: 'at', x: 56, y: 92, fontFamily: KR, fontSize: 27,
+          fill: 'var(--fg-2)' }, '“안동시 인구는 2020년 말 기준'),
+        h('text', { key: 'at2', x: 56, y: 140, fontFamily: KR, fontSize: 27,
+          fill: 'var(--fg-2)' }, ' 약 15만 8천 명으로 나타납니다.”'),
+        h('rect', { key: 'c', x: 56, y: 172, width: 420, height: 62, rx: 12,
+          fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }),
+        h('text', { key: 'ct', x: 82, y: 212, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: GRN }, '근거 — 116 페이지'),
+        h('text', { key: 'ar', x: 1210, y: 152, fontFamily: EN, fontSize: 36,
+          fill: AX }, '→'),
+        h('rect', { key: 'v', x: 1280, y: 60, width: 420, height: 170, rx: 18,
+          fill: '#fff', stroke: ACC, strokeWidth: 3 }),
+        h('text', { key: 'vt', x: 1490, y: 138, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: ACC }, '사람이 열어서'),
+        h('text', { key: 'vt2', x: 1490, y: 182, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 28, fontWeight: 800, fill: ACC }, '확인할 수 있다'),
+      ]);
+    })();
+
+    // ── 임계치 ──────────────────────────────────────────────────
+    const threshold = (() => {
+      const W = 1720, H = 470;
+      const panel = (x, thr, n, pages, col, bg, note) => {
+        const g = [];
+        for (let i = 0; i < 60; i++) {
+          const c = i % 12, r = Math.floor(i / 12);
+          const on = i < n;
+          g.push(h('rect', { key: i, x: x + 40 + c * 42, y: 190 + r * 34,
+            width: 34, height: 26, rx: 4, fill: on ? col : '#E4E2EC' }));
+        }
+        return h('g', { key: thr },
+          h('rect', { x: x, y: 40, width: 800, height: 350, rx: 18, fill: bg,
+            stroke: col, strokeWidth: 3 }),
+          h('text', { x: x + 40, y: 96, fontFamily: EN, fontSize: 32, fontWeight: 800,
+            fill: col }, 'threshold = ' + thr),
+          h('text', { x: x + 40, y: 148, fontFamily: KR, fontSize: 26,
+            fill: 'var(--fg-2)' }, pages),
+          g,
+          h('text', { x: x + 40, y: 428, fontFamily: KR, fontSize: 22, fill: MUT },
+            note));
+      };
+      return svg(W, H, [
+        panel(20, '0.85', 2, '가져온 페이지 — 408 · 413', ACC, '#F7F8FF',
+          '정확하지만 놓치는 내용이 있을 수 있다'),
+        panel(880, '0.50', 24, '가져온 페이지 — 400 페이지대 전체', AMB, '#FFF8EC',
+          '전부 관광 내용이지만 컨텍스트에 다 못 넣는다'),
+      ]);
+    })();
+
+    // ── 목차 먼저 ───────────────────────────────────────────────
+    const tocFirst = (() => {
+      const W = 620, H = 260;
+      const g = [];
+      ['1. 계획의 개요', '2. 현황과 여건', '3. 계획의 목표', '4. 부문별 계획'].forEach(
+        (t, i) => {
+          g.push(h('rect', { key: 'r' + i, x: 20, y: 20 + i * 58, width: 380, height: 44,
+            rx: 8, fill: '#fff', stroke: ACC, strokeWidth: 1.8 }));
+          g.push(h('text', { key: 't' + i, x: 40, y: 50 + i * 58, fontFamily: KR,
+            fontSize: 21, fill: 'var(--fg-2)' }, t));
+          g.push(h('line', { key: 'l' + i, x1: 404, y1: 42 + i * 58, x2: 470,
+            y2: 42 + i * 58, stroke: AX, strokeWidth: 2 }));
+          g.push(h('rect', { key: 'v' + i, x: 474, y: 26 + i * 58, width: 120,
+            height: 32, rx: 6, fill: ACC, opacity: 0.2 + i * 0.12 }));
+        });
+      return svg(W, H, g);
+    })();
+
+    // ── 그래프 DB ───────────────────────────────────────────────
+    const graphDb = (() => {
+      const W = 620, H = 260;
+      const N = [[100, 60, '광역도시계획'], [310, 130, '도시기본계획'],
+                 [130, 200, '도시관리계획'], [470, 60, '지구단위계획'],
+                 [480, 210, '조례·지침']];
+      const E = [[0, 1], [1, 2], [1, 3], [3, 4], [2, 4]];
+      return svg(W, H, [
+        E.map((e, i) => h('line', { key: 'e' + i, x1: N[e[0]][0], y1: N[e[0]][1],
+          x2: N[e[1]][0], y2: N[e[1]][1], stroke: VIO, strokeWidth: 2.4,
+          opacity: 0.6 })),
+        N.map((n, i) => h('g', { key: 'n' + i },
+          h('circle', { cx: n[0], cy: n[1], r: 16, fill: VIO }),
+          h('text', { x: n[0], y: n[1] + 40, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 19, fill: 'var(--fg-3)' }, n[2]))),
+      ]);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      vectorHistory, dbCompare, dbLandscape, pdfShape, pipeline, chunking, storeShape,
+      querySide, cosine, hitPages, citation, threshold, tocFirst, graphDb,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

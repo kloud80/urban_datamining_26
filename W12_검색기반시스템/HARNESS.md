@@ -6,12 +6,17 @@
 
 > 마지막 슬라이드(P8)가 이 질문에 답해야 한다. 답이 안 나오면 질문이 틀렸거나 슬라이드가 빈 것이다.
 
-**메모** — G2 — 그래프DB 도해와 RIG 가 신규. 벡터DB 유지 여부·그래프DB 제품을 먼저 결정.
+**메모** — G2 — 그래프DB 도해와 RIG 가 신규. 벡터DB 유지 여부·그래프DB 제품을 먼저 결정. 32 VLM 은 2교시(멀티모달) 실습이다 — ViTFeatureExtractor → ViTImageProcessor 갱신과 OpenAI 키가 필요하다.
 
 ## 이 주차의 자료
 
+강의안
+- `W12_검색기반시스템/slides/W12_멀티모달과_VLM.html`
+- `W12_검색기반시스템/slides/W12_벡터DB와_검색.html`
+
 노트북
 - `W12_검색기반시스템/notebooks/31 LLAMA INDEX.ipynb`
+- `W12_검색기반시스템/notebooks/32 VLM.ipynb`
 - `W12_검색기반시스템/notebooks/35 GCN.ipynb`
 
 ## 165분 배분 (가이드라인 6절)

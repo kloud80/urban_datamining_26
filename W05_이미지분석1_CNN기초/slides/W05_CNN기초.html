@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W05_CNN기초</title>
+
+<!-- design-system styles, same order as the deck's <helmet> -->
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/colors.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/typography.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/base.css">
+<link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/styles.css">
+
+<style>
+#stage > section[data-deck="0"] {
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
+}
+#stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+
+
+  /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
+  [data-dc-slot] { display: contents; }
+  /* <sc-if> became a real <div>; without display:contents it counts as an extra
+     flex item and its parent's `gap` pushes the slide past 1080px. Four
+     기계학습의 역사 slides clipped their footer exactly one gap short. */
+  [data-dc-if] { display: contents; }
+  [data-dc-if][data-dc-off] { display: none !important; }
+
+  /* ---- presenter shell ---- */
+  :root { --guide-h: 52px; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stagewrap {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    background: #0C0B17;
+    cursor: none;
+  }
+  body.ui-visible #stagewrap { cursor: default; }
+  #stage {
+    width: 1920px; height: 1080px;
+    /* centred explicitly rather than with grid/flex centring: when the item is
+       larger than its container (always, pre-scale) Chrome degrades
+       `place-items:center` to `start`, which shifted the stage off-screen. */
+    position: absolute; left: 50%; top: 50%;
+    transform-origin: center center;
+    background: #0C0B17;
+  }
+  #stage > section {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  /* the sections carry inline `display:flex`, so hiding needs !important */
+  #stage > section:not(.is-current) { display: none !important; }
+
+  body.blanked #stage { visibility: hidden; }
+
+  /* ---- image slots (the <image-slot> custom element, statically rendered) ---- */
+  .imgslot {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden; background: #15131F;
+  }
+  .imgslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .imgslot.fit-contain img { object-fit: contain; }
+  /* contain letterboxes: don't paint the bars with the dark empty-state
+     colour, let the slide background show through instead */
+  .imgslot.fit-contain { background: transparent; }
+  .imgslot.no-img img { display: none; }
+  .imgslot-ph { display: none; }
+  .imgslot.no-img .imgslot-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; box-sizing: border-box;
+    background:
+      repeating-linear-gradient(45deg, rgba(158,93,249,.07) 0 18px, transparent 18px 36px),
+      #15131F;
+    border: 2px dashed rgba(158,93,249,.42);
+    border-radius: inherit;
+  }
+  .imgslot.no-img .imgslot-ph span {
+    font-size: 30px; line-height: 1.55; color: #9E93BF;
+    text-align: center; word-break: keep-all; max-width: 80%;
+  }
+
+  /* ---- page guide ---- */
+  #guide {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: var(--guide-h);
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 26px;
+    box-sizing: border-box;
+    background: linear-gradient(to top, rgba(8,7,15,.95), rgba(8,7,15,.72));
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,.09);
+    color: #CFCBE0;
+    font-size: 14px;
+    opacity: 0; transform: translateY(100%);
+    transition: opacity .22s ease, transform .22s ease;
+    z-index: 40;
+  }
+  body.ui-visible #guide { opacity: 1; transform: none; }
+  #guide .deckname {
+    font-weight: 600; color: #8B86A6;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 22vw;
+  }
+  #guide .counter {
+    font-family: 'Mona Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  #guide .counter b { color: #00E49B; font-weight: 700; }
+  #guide .counter i { color: #5C5873; font-style: normal; margin: 0 6px; }
+  #guide .slidelabel {
+    flex: 1; min-width: 0;
+    color: #EDEBF5; font-weight: 600; font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #guide .keys { display: flex; gap: 7px; white-space: nowrap; }
+  #guide kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 11px;
+    padding: 3px 7px; border-radius: 5px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-bottom-width: 2px;
+    color: #B9B4CE;
+  }
+  #guide .keys span { color: #6E6987; font-size: 11px; align-self: center; }
+  #progress {
+    position: fixed; left: 0; bottom: var(--guide-h); height: 3px;
+    background: linear-gradient(90deg, #4434E2, #9E5DF9, #00E49B);
+    z-index: 41; transition: width .28s cubic-bezier(.4,0,.2,1);
+    opacity: 0;
+  }
+  body.ui-visible #progress { opacity: 1; }
+
+  /* jump-to-slide digit buffer */
+  #jump {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Mona Sans', sans-serif; font-size: 128px; font-weight: 800;
+    color: #fff; background: rgba(12,11,23,.86);
+    padding: 24px 52px; border-radius: 20px;
+    border: 2px solid rgba(0,228,155,.5);
+    z-index: 60; display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- speaker notes ---- */
+  #notes {
+    position: fixed; left: 0; right: 0; bottom: var(--guide-h);
+    max-height: 34vh; overflow-y: auto;
+    padding: 22px 30px 24px;
+    box-sizing: border-box;
+    background: rgba(8,7,15,.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(158,93,249,.34);
+    color: #D8D4E8; font-size: 19px; line-height: 1.65;
+    word-break: keep-all; text-wrap: pretty;
+    z-index: 39; display: none;
+  }
+  body.notes-on #notes { display: block; }
+  #notes .nlabel {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #00E49B; margin-bottom: 10px;
+  }
+  #notes .nempty { color: #6E6987; font-style: italic; }
+
+  /* ---- overview / page index ---- */
+  #overview {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(8,7,15,.97);
+    backdrop-filter: blur(20px);
+    display: none; flex-direction: column;
+  }
+  body.overview-on #overview { display: flex; }
+  #overview header {
+    padding: 26px 34px 18px;
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  #overview header h2 {
+    margin: 0; font-size: 22px; color: #EDEBF5; font-weight: 700;
+  }
+  #overview header p { margin: 0; color: #7B7694; font-size: 14px; }
+  #ovgrid {
+    flex: 1; overflow-y: auto;
+    padding: 26px 34px 40px;
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .ov-card {
+    all: unset; cursor: pointer; display: block;
+    border-radius: 10px; padding: 0;
+  }
+  .ov-thumb {
+    aspect-ratio: 16 / 9; border-radius: 10px;
+    background: #17152A;
+    border: 1px solid rgba(255,255,255,.1);
+    display: grid; place-items: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ov-num {
+    font-family: 'Mona Sans', sans-serif; font-size: 34px; font-weight: 700;
+    color: #4E4870; font-variant-numeric: tabular-nums;
+  }
+  .ov-label {
+    margin-top: 9px; font-size: 13px; line-height: 1.4; color: #A9A4C0;
+    word-break: keep-all;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ov-card:hover .ov-thumb { border-color: rgba(158,93,249,.7); background: #1E1B36; }
+  .ov-card:hover .ov-num { color: #9E5DF9; }
+  .ov-card.is-current .ov-thumb {
+    border-color: #00E49B; background: #16241F;
+    box-shadow: 0 0 0 1px #00E49B inset;
+  }
+  .ov-card.is-current .ov-num { color: #00E49B; }
+  .ov-card.is-current .ov-label { color: #EDEBF5; }
+
+  /* ---- help ---- */
+  #help {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(8,7,15,.93); backdrop-filter: blur(18px);
+    display: none; place-items: center;
+  }
+  body.help-on #help { display: grid; }
+  #help .panel {
+    background: #15132A; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px; padding: 34px 40px;
+    min-width: 440px; color: #D8D4E8;
+  }
+  #help h2 { margin: 0 0 22px; font-size: 20px; color: #fff; }
+  #help table { border-collapse: collapse; font-size: 15px; }
+  #help td { padding: 7px 0; }
+  #help td:first-child { padding-right: 26px; white-space: nowrap; }
+  #help kbd,
+  #overview header kbd {
+    font-family: 'Mona Sans', sans-serif; font-size: 12px;
+    padding: 3px 8px; border-radius: 5px; margin-right: 4px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px;
+    color: #EDEBF5;
+  }
+  #help .hint { margin: 24px 0 0; font-size: 13px; color: #6E6987; line-height: 1.6; }
+  #help .hint code {
+    background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="stagewrap">
+  <div id="stage">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.1 · 강의영상 CNN 00:00 · 11 ConvolutionLayer.ipynb — 5주차 1교시. 오늘부터 이미지다. 지난주까지 우리가 쓴 건 덴스 레이어 하나였다. 오늘은 그 말고 다른 구조가 왜 필요한지, 그리고 이미지가 왜 그 구조를 부르는지를 본다. 미리 말해 둘 것 — 오늘 제일 중요한 문장은 '이미지도 데이터다' 이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(68,52,226,.32),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">5주차 · 1교시</div>
+  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.12;letter-spacing:-0.03em">CNN 기초와 학습</h1>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">이미지를 픽셀 그대로 넣으면 왜 안 되는가</p>
+  <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">한양대학교 도시공학과 · 11 ConvolutionLayer · 12 이미지구조 · 13 Conv2D · 14 건물외벽학습 · 18 CNN_application</p>
+</section>
+
+<section data-deck="0" data-label="오늘의 흐름" data-screen-label="02" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.2 — 오늘 순서. 1차원 합성곱으로 원리를 잡고, 이미지가 무엇인지 숫자로 확인하고, 2차원 합성곱을 손으로 계산해 보고, 실제 건물 외벽으로 학습을 돌리고, 마지막에 이 계보가 어디까지 왔는지 훑는다. 실습은 세 번째와 네 번째 블록에 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 흐름</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">여섯 걸음</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="weekMap"></span></div>
+</section>
+
+<section data-deck="0" data-label="오늘의 질문" data-screen-label="03" data-speaker-notes="출처: 강의영상 CNN 이미지 01:00 — 오늘의 질문이다. 이미지를 픽셀 그대로 덴스 레이어에 넣으면 왜 안 되는가. 학생들에게 먼저 물어볼 것. 답을 미리 주지 말 것. 500 곱하기 500 짜리 사진 한 장이 입력 몇 개인지 다음 장에서 같이 세어 본다. 마지막 슬라이드가 이 질문에 답한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">오늘의 질문</div>
+  <h2 style="margin:0;font-size:72px;font-weight:800;line-height:1.2;letter-spacing:-0.025em;max-width:1620px">이미지를 픽셀 그대로 넣으면<br>왜 안 되는가?</h2>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1620px">지금까지 쓴 <b style="color:var(--fg-1)">덴스 레이어</b>는 모든 입력을 모든 뉴런에 이었다. 사진 한 장에 그대로 쓰면 무슨 일이 생기나.</p>
+</section>
+
+<section data-deck="0" data-label="되짚기 — 덴스 레이어" data-screen-label="04" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.3 · 강의영상 CNN 00:00–02:00 · 4주차 심층신경망 — 되짚기. 덴스 레이어는 풀리 커넥티드다. 왼쪽 V1부터 V5까지가 독립변수 하나하나이고, 엑셀로 치면 필드 개수다. 그림에서 선을 세어 보게 할 것 — 입력 하나가 다음 층의 다섯 노드에 전부 이어지므로 선이 스물다섯 개다. 히든 노드 하나 입장에서 보면 들어온 값들이 가중치와 곱해져 합쳐지고, 활성화 함수를 지나 스위치처럼 켜지거나 꺼진다. 핵심은 모든 데이터의 의미가 다음 레이어에 100퍼센트 전달된다는 것이다. 절편 다섯 개를 더하면 서른 개. 지난주 생활인구 회귀 모델은 이런 층을 몇 겹 쌓아 파라미터가 1,185개였다. 이 숫자를 기억시켜 둘 것 — 다음 장에서 사진을 넣으면 어떻게 되는지 바로 비교한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">덴스 레이어는 <span style="color:var(--primary-main)">전부 잇는다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Fully Connected</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="denseAll"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">입력 하나가 <b style="color:var(--fg-1)">다음 층의 모든 노드</b>에 연결된다. 지난주 생활인구 모델은 이 층을 몇 겹 쌓아 <b style="color:var(--fg-1)">파라미터 1,185개</b>였다.</p>
+</section>
+
+<section data-deck="0" data-label="사진 한 장의 크기" data-screen-label="05" data-speaker-notes="출처: 강의영상 CNN 이미지 01:00 — 여기서 학생들이 놀라야 한다. 500 곱하기 500 짜리 사진 한 장에 RGB 와 투명도까지 네 개 층이면 입력이 100만 개다. 앉은 자리에서 이미지 하나 넣었을 뿐인데 100만 개의 입력이 생긴 것이다. 이걸 덴스 레이어로 받으면 어떻게 되는지 오른쪽에서 세어 본다. 첫 층 노드를 100개만 둬도 가중치가 1억 개다. 학습은커녕 메모리에 올라가지도 않는다. 이것이 오늘의 질문에 대한 첫 번째 답이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">사진 한 장이 입력 <span style="color:#FF7AA2">100만 개</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">500 × 500 × 4</span>
+  </div>
+  <div style="height:250px;border-radius:18px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/cn_weight_blowup.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>사진 한 장이 셀 수 없는 연결선으로 부풀어 덴스 레이어를 덮치는 그림</span></div></div></div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="blowUp"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">앉은 자리에서 <b style="color:#fff">사진 하나 넣었을 뿐</b>인데 이렇게 된다. 덴스 레이어로는 시작조차 못 한다.</p>
+</section>
+
+<section data-deck="0" data-label="합성곱의 발상" data-screen-label="06" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.4 · 강의영상 CNN 04:00–07:00 · 11 ConvolutionLayer.ipynb — 합성곱의 발상이다. 먼저 1차원으로 본다. 입력이 다섯 개인데 필터 1개, 커널 사이즈 2로 연결하면 이렇게 된다. V1과 V2가 H1 하나로, V2와 V3가 H2로, 이렇게 두 개씩만 묶여 간다. 여기서 반드시 짚을 것 두 가지. 첫째, 연결은 네 번 일어나는데 가중치는 W1, W2, b 세 개뿐이다. 같은 가중치가 네 번 재사용된다. 둘째, H1은 V1과 V2 말고는 아무 정보도 받지 않는다. 멀리 있는 값과의 관계를 애초에 잘라 버린 것이다. 학생들에게 물어볼 것 — 이게 왜 장점인가." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">가까운 것끼리만 잇는다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Conv1D · filters=1 · kernel_size=2</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="conv1d"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">연결은 <b style="color:var(--fg-1)">네 번</b>인데 가중치는 <b style="color:var(--fg-1)">세 개</b>뿐이다. 같은 가중치가 옆으로 밀려 가며 재사용된다.</p>
+</section>
+
+<section data-deck="0" data-label="장점 둘" data-screen-label="07" data-speaker-notes="출처: 강의영상 CNN 07:00–09:00 — 장점 두 가지다. 첫째는 학생들이 바로 맞힌다 — 파라미터가 압도적으로 적다. 30개 대 3개, 열 배 차이다. 그래서 속도가 빠르다. 둘째가 더 중요한데 잘 안 나온다. 지금까지 우리가 쓰던 데이터는 대지 비율, 도로 비율을 아무 순서로나 놓아도 상관없었다. 알아서 중요한 피처를 가려냈다. 그런데 합성곱은 앞에서부터 잘라 버렸다. V1과 V2가 가깝다는 것을 구조로 못 박은 것이다. 그래서 입력 순서가 결과에 결정적으로 영향을 준다. 인접한 데이터에 가치를 크게 부여한 구조다. 그럼 어떤 데이터가 맞을까 — 시계열, 그리고 이미지다. 9주차 시계열에서 이 이야기가 그대로 다시 나온다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">덴스와 무엇이 다른가</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">장점은 둘이다</h2>
+  <div style="height:340px;background:#fff;border-radius:18px;padding:20px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/cn_adjacency.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>전부와 이어진 엉킨 그물과, 옆자리끼리만 이어진 깔끔한 사슬</span></div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:38px">
+    <div style="background:#fff;border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-main)">가중치가 적다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">같은 입력에 덴스는 <b style="color:var(--fg-1)">30개</b>, 합성곱은 <b style="color:var(--fg-1)">3개</b>. 열 배 차이고, 그만큼 빠르다.</p>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-top:8px solid var(--primary-main)">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-main)">인접성을 구조로 못 박는다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">“멀리 있는 애들하고 사귀지 마.” <b style="color:var(--fg-1)">입력 순서가 결과에 영향을 준다.</b></p>
+    </div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">그럼 어떤 데이터에 맞을까 — <b style="color:#00E49B">옆자리가 의미 있는 데이터</b>다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">시계열(어제와 오늘), 그리고 이미지(옆 픽셀). 9주차 시계열에서 같은 이야기가 다시 나온다.</span></div>
+</section>
+
+<section data-deck="0" data-label="필터 개수가 뜻하는 것" data-screen-label="08" data-speaker-notes="출처: 강의영상 CNN 09:00–11:00 · 011 CNN(합성곱신경망).pptx p.6 — 필터 개수가 왜 중요한가. 필터가 하나면 V1과 V2의 관계를 설명하는 가중치와 V2와 V3의 관계를 설명하는 가중치가 똑같다. 같은 것이 움직인다. 그러면 이 인접 관계를 오직 한 가지 방식으로만 전달할 수 있다. 예를 들어 어떤 날은 올라간 것을 전달하고 싶고 어떤 날은 내려간 것을 전달하고 싶은데, 필터가 하나면 불가능하다. 필터를 늘리면 인접성에 대해 서로 다른 관계를 여러 개 동시에 전달할 수 있다. 대신 가중치가 늘어난다. 이 맞바꿈을 학생들이 느껴야 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">필터 하나 = 관계 하나</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">필터를 늘리면 다른 관계를 같이 실어 보낸다</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_p06_filters.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>입력 5개에 Conv1D 필터를 1개·3개·5개로 늘렸을 때 만들어지는 노드</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="padding:20px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">필터 1개</b> — 관계를 설명하는 방식이 하나뿐이다</div>
+    <div style="padding:20px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">필터 3개</b> — 같은 자리에 세 줄이 동시에 생긴다</div>
+    <div style="padding:20px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-dark)">필터 5개</b> — 5 × 5 = 25칸, 이걸 펴서 덴스로 보낸다</div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">“오른 것”과 “내린 것”을 <b style="color:var(--fg-1)">동시에</b> 전달하고 싶으면 필터가 둘 이상이어야 한다.</p>
+</section>
+
+<section data-deck="0" data-label="커널 · 패딩 · 스트라이드" data-screen-label="09" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.5 · 강의영상 CNN 10:30–12:30 — 하이퍼파라미터 셋. 커널 사이즈는 한 번에 몇 개를 묶을지다. 패딩은 이렇게 생각하면 된다 — 입력을 다섯 개 넣었는데 출력이 네 개가 나왔다. V1과 V5 입장에서는 억울하다. 한 번씩만 불려 갔다. 그래서 양쪽에 0을 하나씩 붙여 주면 모두가 같은 횟수로 불려 간다. 그게 패딩 same 이다. 스트라이드는 몇 칸씩 건너뛸지다. 여기서 실무 조언 하나 — 이 하이퍼파라미터를 정답처럼 고민하지 말라. 경사하강이 알아서 뭉개 버린다. 대신 에러를 잡을 때는 이 구조에 대한 이해가 높을수록 좋다. 두 데이터의 관계를 이 구조가 아예 안 보고 있구나를 알아야 고칠 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">손잡이 세 개</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">kernel_size · padding · strides</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="knobs"></span></div>
+  <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55;max-width:1700px">정답을 고민하지 말 것 — <b style="color:var(--fg-1)">경사하강이 뭉개 버린다.</b> 대신 에러를 잡을 때 이 구조를 알면 “이 관계를 아예 안 보고 있구나”가 보인다.</div>
+</section>
+
+<section data-deck="0" data-label="쌓으면 차원이 늘어난다" data-screen-label="10" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.7 · 강의영상 CNN 13:00–15:00 · 11 ConvolutionLayer.ipynb — 필터를 쌓으면 어떻게 되는지. 입력 다섯 개에 필터 1개면 한 줄이 나온다. 필터 3개면 세 줄이 된다. 데이터가 갑자기 2차원이 되는 것이다. 그다음 층에서 필터 5개를 쓰면, 그 세 줄을 통째로 하나로 보고 가져간다. 그래서 필터 하나가 한 번에 여섯 개 값을 받는다. 여기서 중요한 결론 — 합성곱을 지날 때마다 필터 개수만큼 차원이 늘어난다. 그런데 우리가 원하는 답은 0이냐 1이냐 하나다. 그래서 마지막에 플래튼으로 한 줄로 펴고 덴스 레이어를 붙인다. 이 패턴이 오늘 끝까지 반복된다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">쌓으면 차원이 늘어난다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">그래서 마지막에 Flatten 이 필요하다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="stacking"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">우리가 원하는 답은 <b style="color:var(--fg-1)">숫자 하나</b>다. 그래서 끝에서 한 줄로 펴고 덴스를 붙인다.</p>
+</section>
+
+<section data-deck="0" data-label="Conv1D 를 실제 데이터에" data-screen-label="11" data-speaker-notes="출처: 강의영상 CNN 15:00–16:30 · 11 ConvolutionLayer.ipynb — 지난주에 덴스 레이어로 돌렸던 그 데이터를 Conv1D 로 바꿔 본 결과다. 가중치가 몇만 개에서 3,900개로 확 줄었다. 그런데 정확도는 떨어졌다. 이 데이터는 필드 순서에 의미가 없기 때문이다. 대지 비율 옆에 도로 비율이 있는 게 아무 뜻도 아니다. 여기서 반드시 짚을 것 — 합성곱이 만능이 아니다. 옆자리가 의미 있는 데이터일 때만 이긴다. 그러니 다음 순서는 자연스럽다. 옆자리가 정말 의미 있는 데이터, 이미지로 간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계를 먼저 본다</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">가볍지만 <span style="color:#D93636">성능을 보장하지는 않는다</span></h2>
+  <div style="flex:1;min-height:0;max-height:420px"><span data-dc-slot="conv1dResult"></span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">이 데이터는 <b style="color:#FF7AA2">필드 순서에 의미가 없다.</b> 대지 비율 옆에 도로 비율이 있는 게 아무 뜻도 아니다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">그럼 옆자리가 정말 의미 있는 데이터는 무엇인가 — 이미지다.</span></div>
+</section>
+
+<section data-deck="0" data-label="오늘의 주인공" data-screen-label="12" data-speaker-notes="출처: 강의영상 이미지데이터 00:00–02:00 · 12 이미지구조.ipynb — 2부다. 오늘의 주인공은 이미지 데이터다. 실습 파일에 올려 둔 이미지는 송파 빌라들의 주소를 뽑아 로드뷰로 바라보고 같은 크기로 크롭한 것이다. 그리고 라벨링을 해 뒀다. 여기서 관점을 하나 바꿔 줘야 한다. 지금까지 입력은 독립변수였고 출력은 종속변수였다. 지금부터 입력이 전부 이미지로 바뀐다. 출력은 그대로다. 뉴럴 네트워크가 다룰 수 있는 데이터의 범위에는 한계가 없다 — 우리가 취급해야 할 모든 것을 데이터로 환원할 수만 있으면 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 80% 28%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">2부 · 이미지 데이터</div>
+  <h2 style="margin:0;font-size:66px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">입력만 바뀐다.<br>출력은 <span style="color:var(--accent-green)">그대로</span>다</h2>
+  <div style="height:320px;border-radius:18px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/cn_input_swap.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>숫자 줄과 건물 사진이 같은 관으로 들어가 같은 출력 하나로 나오는 그림</span></div></div></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1700px">지금까지 입력은 독립변수였다. 지금부터 그 자리에 <b style="color:#fff">사진</b>이 들어간다. 맞혀야 할 답은 달라지지 않는다.</p>
+  <div style="padding:28px 34px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.6;max-width:1700px">뉴럴 네트워크가 다룰 수 있는 데이터에는 <b style="color:#fff">한계가 없다.</b> 우리가 취급할 것을 <b style="color:#fff">숫자로 환원</b>할 수만 있으면 된다.</div>
+</section>
+
+<section data-deck="0" data-label="이미지는 숫자다" data-screen-label="13" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.8 · 강의영상 이미지데이터 02:00–04:00 · 12 이미지구조.ipynb — 이미지가 컴퓨터에 어떻게 저장되는가. RGB 세 가지 색이 얼마나 진한지만 가지고 있고, 그 진하기를 0에서 255 숫자로 적는다. 이 세 개만 있으면 어떤 색이든 표현된다. 그 숫자가 점 하나마다 저장된다. 그래서 500 곱하기 500 이미지는 빨강 25만 개, 초록 25만 개, 파랑 25만 개를 들고 있다. 여기에 투명도까지 있으면 네 개 층이다. 오른쪽 그림이 그 층 구조다. 이걸 파이썬 이미지 라이브러리로 열면 그냥 넘파이 배열로 들어온다 — 전부 숫자로." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">관점을 바꾸는 한 장</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이미지도<br>데이터다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">RGB 세 색이 <b style="color:var(--fg-1)">얼마나 진한지</b>만 들고 있다. 그 진하기를 <b style="color:var(--fg-1)">0~255</b> 숫자로 적는다.</p>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">500 × 500 이면 빨강 25만 개, 초록 25만 개, 파랑 25만 개. 투명도까지 <b style="color:var(--fg-1)">네 층</b>이다.</div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">파이썬 이미지 라이브러리로 열면 그냥 <b style="color:var(--fg-1)">넘파이 배열</b>로 들어온다.</p>
+  </div>
+  <div style="height:720px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s01_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Red · Green · Blue · Transparency 네 개의 숫자 층</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="채널을 만져 본다" data-screen-label="14" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.12 · 강의영상 이미지데이터 05:00–09:00 · 12 이미지구조.ipynb — 숫자라는 것을 확인하는 가장 빠른 방법은 만져 보는 것이다. 왼쪽은 초록 채널만 꺼내 본 것이다. 가운데는 빨강 채널 앞쪽 200줄을 전부 255로 채운 것 — 위쪽이 시뻘겋게 된다. 그래도 모양은 보인다. 초록과 파랑이 아직 음영을 만들고 있기 때문이다. 오른쪽은 빨강 채널과 파랑 채널을 통째로 맞바꾼 것이다. 원래 이 건물은 붉은 기가 강했는데, 그 값이 파랑 자리로 가면서 보기 싫은 파란 건물이 됐다. 여기서 학생들이 얻어야 할 것은 하나다 — 숫자를 바꾸면 이미지가 바뀐다. 이미지는 데이터다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">숫자를 바꾸면 그림이 바뀐다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">12 이미지구조.ipynb</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:30px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#00B37A">초록 채널만</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/cn_s08_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>초록 채널만 꺼내 출력</span></div></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#D93636">빨강을 255로</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/cn_s08_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>빨강 채널 앞 200줄을 255로 채운 결과</span></div></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">빨강 ↔ 파랑</div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/cn_s08_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>빨강 채널과 파랑 채널을 맞바꾼 결과</span></div></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">세 장 모두 <b style="color:var(--fg-1)">같은 사진</b>이다. 배열 안의 숫자만 건드렸다.</p>
+</section>
+
+<section data-deck="0" data-label="세 층을 한 층으로" data-screen-label="15" data-speaker-notes="출처: 강의영상 이미지데이터 10:00 · 12 이미지구조.ipynb — 회색조로 바꾸는 것도 같은 이야기다. RGB 세 층을 정해진 비율로 섞어 한 층으로 줄인다. 계수 셋을 더하면 1이 된다. 초록에 가장 큰 값이 붙는 이유는 사람 눈이 초록에 제일 민감하기 때문이다. 여기서 짚을 것 — 이건 차원 축소다. 네 개 층을 한 개 층으로 줄였다. 정보를 잃는 대신 데이터가 4분의 1이 된다. 뒤에 나올 MNIST 가 바로 한 층짜리 흑백 데이터다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">회색조</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">세 층을 한 층으로</h2>
+  <div style="height:370px;background:#fff;border-radius:18px;padding:20px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/cn_grayscale.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>빨강·초록·파랑 세 장이 회색 한 장으로 합쳐지는 그림</span></div></div></div>
+  <div style="padding:40px 46px;background:#fff;border-radius:18px;font-family:var(--font-display);font-size:var(--type-formula);font-weight:700;color:var(--fg-1);text-align:center;letter-spacing:-0.01em">회색 = <span style="color:#D93636">0.2989</span> R &nbsp;+&nbsp; <span style="color:#00B37A">0.5870</span> G &nbsp;+&nbsp; <span style="color:var(--primary-main)">0.1140</span> B</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="padding:26px 32px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">계수 셋을 더하면 <b style="color:var(--fg-1)">1</b>이 된다. 초록이 가장 큰 이유는 사람 눈이 초록에 제일 민감해서다.</div>
+    <div style="padding:26px 32px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">이것도 <b style="color:var(--primary-dark)">차원 축소</b>다 — 네 층을 한 층으로. 뒤에 나올 MNIST 가 바로 한 층짜리다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="숫자로 그림을 만든다" data-screen-label="16" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.9 · 강의영상 이미지데이터 10:30–13:00 · 12 이미지구조.ipynb — 반대로도 된다. 넘파이 배열에 숫자를 직접 적어서 이미지를 만들어 본다. 빨강 층에는 위쪽 줄을 비우고 아래로 갈수록 값을 키워 그라데이션을 주고, 초록은 두 번째 줄만 채우고, 파랑은 세 번째 줄에, 투명도는 왼쪽에서 오른쪽으로 점점 투명해지게 적는다. 그 배열을 합쳐 출력하면 우리가 적은 그대로 나온다. 학생들에게 시킬 것 — 실습에서 이 배열 값을 마음대로 바꿔 보고 결과를 확인하게 할 것. 숫자와 그림이 서로 치환된다는 감각이 오늘 2부의 목표다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:700px"><span data-dc-slot="makeImage"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">반대로도 된다</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">숫자를 적어<br>그림을 만든다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">배열에 값을 직접 써 넣고 합쳐서 출력하면 <b style="color:var(--fg-1)">적은 그대로</b> 나온다.</p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">실습에서 이 값을 <b style="color:var(--fg-1)">직접 바꿔 볼 것.</b> 숫자와 그림이 서로 치환된다는 감각이 오늘 2부의 목표다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Conv2D 로 넘어간다" data-screen-label="17" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.11 · 강의영상 CNN 이미지 00:00–04:00 · 13 Conv2D.ipynb — 3부다. Conv1D 가 한 줄이었다면 Conv2D 는 2차원을 통째로 퍼 간다. 여기서 학생들이 제일 자주 틀리는 것을 못 박아야 한다. 커널 사이즈 3은 3 곱하기 3 짜리 아홉 칸이 아니다. 그 아홉 칸 아래에 깔린 채널을 전부 같이 퍼 온다. 채널이 네 개면 9 곱하기 4로 36개 값을 한 번에 모아 히든 노드 하나로 보낸다. 필터가 하나면 가중치는 36개에 절편 하나를 더해 37개가 전부다. 그림으로 반드시 짚어 줄 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">커널 3은 <span style="color:var(--primary-main)">9칸이 아니다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Conv2D · 채널까지 통째로 퍼 간다</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_p11_filter3d.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>RGBT 네 층으로 쌓인 입력 데이터와, 그 깊이만큼 두꺼운 3×3 커널</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px">
+    <div style="padding:22px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">커널의 <b style="color:var(--fg-1)">깊이는 고르는 게 아니다</b> — 입력 채널 수에서 이미 정해진다.</div>
+    <div style="padding:22px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">채널이 넷이면 <b style="color:var(--primary-dark)">9 × 4 = 36개</b> 값이 한 번에 모인다. 절편을 더해 <b style="color:var(--primary-dark)">37개</b>.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="손으로 계산해 본다" data-screen-label="18" data-speaker-notes="출처: 강의영상 CNN 이미지 05:00–10:00 · 13 Conv2D.ipynb — 실습의 핵심 장면이다. 가중치를 랜덤으로 두면 결과를 예측할 수 없으니, set_weights 로 직접 박아 넣는다. 빨강에 곱할 가중치는 전부 0.1, 초록은 0.2, 파랑은 0.4, 투명도는 0. 그리고 입력 이미지도 우리가 만든다 — 위 세 줄은 R 200 G 100 B 50, 아래 두 줄은 전부 0. 그러면 필터가 위에서부터 한 칸씩 내려오며 계산한 값이 얼마가 나와야 하는지 머릿속에서 계산이 된다. 첫 줄은 세 색이 다 차 있으니 540, 두 번째 줄은 아래 한 줄이 비어 360, 세 번째 줄은 한 줄만 살아 180. 실제로 돌리면 정확히 그 값이 나온다. 여기서 학생들이 느껴야 하는 것 — 하이퍼파라미터로 외우는 게 아니라, 값이 어떻게 흘러가는지가 머릿속에 있어야 중간에서 자르고 붙이고 할 수 있다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">답을 <span style="color:var(--accent-green)">미리 알고</span> 돌려 본다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">set_weights 로 가중치를 박아 넣는다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="convDemo"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">실제로 돌리면 <b style="color:var(--accent-green)">540 · 360 · 180</b> 이 그대로 나온다. 값이 어떻게 흐르는지 머릿속에 있어야 중간에서 자르고 붙일 수 있다.</p>
+</section>
+
+<section data-deck="0" data-label="필터는 원래 사람이 정했다" data-screen-label="19" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.14 · 강의영상 CNN 이미지 11:00–15:00 · 13 Conv2D.ipynb — 왜 하필 이런 구조를 생각해 냈을까. 뉴럴 네트워크가 나오기 한참 전부터 이미지 쪽에서는 필터를 곱해 합하는 작업이 있었다. 포토샵에서 필터 씌우면 이미지가 달라지는 그것이다. 표를 보면 아이덴티티, 엣지 디텍션, 샤픈, 블러가 전부 3 곱하기 3 숫자판 하나다. 그 숫자판이 어떤 숫자냐에 따라 경계가 살아나기도 하고 흐려지기도 한다. 그러니 필터를 지나 나온 결과물은 무언가 의미를 가진다고 볼 수 있다. 여기서 핵심 문장 — 기존에는 사람이 이 숫자를 정해 줬는데, 뉴럴 네트워크가 나오면서 아예 맡겨 버렸다. 어떤 필터를 쓰면 더 좋은 정보가 나오는지 네가 스스로 찾아봐라. 그 찾아가는 과정이 CNN 의 학습이다. 실습에서 가우시안 블러, 샤프닝, 엠보싱, 엣지를 직접 씌워 볼 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">왜 이런 발상이 나왔나</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">필터는 원래<br>사람이 정했다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">포토샵의 그 필터다. 전부 <b style="color:var(--fg-1)">3 × 3 숫자판</b> 하나다.</p>
+    <div style="padding:24px 28px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">CNN 이 한 일은 그 숫자를 <b style="color:var(--primary-dark)">학습으로 찾게 한 것</b>이다.<br>“어떤 필터를 쓰면 더 좋은 정보가 나오는지 네가 찾아봐.”</div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">실습에서 가우시안 블러 · 샤프닝 · 엠보싱 · 엣지를 직접 씌워 볼 것.</p>
+  </div>
+  <div style="height:800px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s14_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Identity · Edge detection · Sharpen · Box blur 필터와 그 결과</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="풀링 — 무엇을 남길 것인가" data-screen-label="20" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.18 · 강의영상 건물외벽 07:00–09:00 · 14 건물외벽학습.ipynb — 풀링이다. 정해 둔 크기 안에서 값을 하나로 줄인다. 맥스 풀링은 그중 제일 큰 값, 에버리지 풀링은 평균이다. 여기서 의미를 짚어 줄 것. 우리는 이미 필터를 한 번 거쳤다. 엣지 디텍션 같은 필터를 지났다면 경계에만 값이 있고 나머지는 비어 있다. 그 네 칸을 하나로 뭉갤 때 평균을 내면 경계가 흐려진다. 최댓값을 가져가면 경계가 살아남는다. 그래서 보통 맥스 풀링을 쓴다 — 가장 정보력이 센 것을 넘겨 주겠다는 뜻이다. 그리고 풀링을 지나면 데이터가 확 줄어든다. 이게 차원을 계단식으로 내리는 장치다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">Pooling</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">뭉갤 때<br>무엇을 남길까</h2>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">Max</b> — 제일 큰 값. 필터가 찾아낸 <b style="color:var(--fg-1)">경계가 살아남는다.</b></div>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6"><b style="color:var(--fg-1)">Average</b> — 평균. 고르게 가져가지만 <b style="color:var(--fg-1)">경계가 흐려진다.</b></div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">그리고 풀링을 지나면 <b style="color:var(--fg-1)">크기가 확 줄어든다</b> — 차원을 계단식으로 내리는 장치다.</p>
+  </div>
+  <div style="height:520px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s18_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>4칸을 하나로 줄이는 풀링 도해</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="건물 외벽을 맞혀 본다" data-screen-label="21" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.16 · 강의영상 건물외벽 00:00–02:00 · 14 건물외벽학습.ipynb — 4부, 실제 도시 데이터다. 송파 빌라 주소를 뽑아 로드뷰로 바라보고 같은 크기로 크롭한 외벽 이미지 138장이다. 그리고 하나하나 열어서 대리석인지 벽돌인지 손으로 적었다. 이걸 라벨링이라고 하고, 솔직히 말해 제일 힘든 일이다. 여기서 중요한 말을 해 줄 것 — 건물 외벽이 무엇으로 되어 있는지는 어떤 공적 데이터에도 나오지 않는다. 그래서 우리가 만들어야 한다. 이것이 도시 데이터에서 이미지가 갖는 값어치다. 목표는 대리석을 맞히는 것, y가 1이면 대리석이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:800px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s34_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>송파 빌라 외벽 로드뷰 크롭 이미지 모음</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">4부 · 도시 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">외벽이 벽돌인가<br>대리석인가</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">송파 빌라 주소를 뽑아 로드뷰로 바라보고 같은 크기로 자른 <b style="color:var(--fg-1)">138장</b>.</p>
+    <div style="padding:24px 28px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.6">건물 외벽 재료는 <b style="color:#00E49B">어떤 공적 데이터에도 없다.</b><br><span style="color:var(--neutral-lighter)">그래서 우리가 만든다 — 이것이 도시 분야에서 이미지가 갖는 값어치다.</span></div>
+  <a href="https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W05_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1_CNN%EA%B8%B0%EC%B4%88/notebooks/14%20%EA%B1%B4%EB%AC%BC%EC%99%B8%EB%B2%BD%ED%95%99%EC%8A%B5.ipynb" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:14px;align-self:flex-start;text-decoration:none;background:#00B37A;color:#fff;border-radius:999px;padding:16px 30px;font-family:var(--font-display);font-size:25px;font-weight:800;letter-spacing:-0.01em">Colab 에서 열기 &nbsp;·&nbsp; 14 건물외벽학습.ipynb &nbsp;→</a>
+  </div>
+</section>
+
+<section data-deck="0" data-label="라벨링 노가다" data-screen-label="22" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.16 · 강의영상 건물외벽 00:30–03:00 · 14 건물외벽학습.ipynb — 라벨 테이블이다. 파일명, 타입, 값 세 필드뿐이다. 벽돌이 0, 대리석이 1. 138장을 하나하나 열어서 한땀한땀 집어넣었다. 학생들이 여기서 현실을 알아야 한다 — 모델을 만드는 시간보다 이 일이 훨씬 오래 걸린다. 그리고 이 노동이 곧 데이터의 값어치가 된다. 이어서 138장을 학습 100장과 검증 38장으로 나눈다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:.85fr 1.15fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">제일 힘든 일</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">라벨링</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">필드는 셋뿐이다 — 파일명, 타입, 값. <b style="color:var(--fg-1)">벽돌 0 · 대리석 1</b>.</p>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">138장을 <b style="color:var(--fg-1)">하나하나 열어서 한땀한땀</b> 집어넣었다. 모델 만드는 시간보다 이게 훨씬 오래 걸린다.</div>
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:6px">
+      <span style="background:#fff;border-radius:999px;padding:14px 26px;font-size:24px">학습 <b>100장</b></span>
+      <span style="background:#fff;border-radius:999px;padding:14px 26px;font-size:24px">검증 <b>38장</b></span>
+    </div>
+  </div>
+  <div style="height:800px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s16_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>파일명 · 타입 · 값 세 필드로 된 라벨 테이블</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="255로 나눈다" data-screen-label="23" data-speaker-notes="출처: 강의영상 건물외벽 04:30–06:00 · 14 건물외벽학습.ipynb — 학습 전에 정규화를 한다. 이미지 숫자는 0에서 255다. 그런데 활성화 함수, 특히 시그모이드나 탄젠트는 입력이 0 근처일 때만 기울기가 살아 있다. 숫자가 너무 크면 기울기가 사라져서 학습이 한없이 느려진다. 그래서 255로 나눠 0에서 1 사이로 만든다. 정수를 실수로 바꾸는 것이기도 하다. 정규화 레이어를 써도 되지만 여기서는 그냥 나눴다. 오른쪽 그래프로 왜 그런지 눈으로 보여 줄 것 — 시그모이드와 탄젠트는 양끝이 평평하다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.2fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">학습 전에</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">왜 255로<br>나누나</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">활성화 함수는 입력이 <b style="color:var(--fg-1)">0 근처일 때만</b> 기울기가 살아 있다.</p>
+    <div style="padding:24px 28px;background:#FDF0F0;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">숫자가 크면 <b style="color:#D93636">기울기가 사라져</b> 학습이 한없이 느려진다. 그래서 0~1 사이로 눌러 놓는다.</div>
+    <p style="margin:0;font-size:var(--type-note);color:var(--neutral-medium);line-height:1.5">정규화 레이어를 써도 된다 — 여기서는 그냥 255로 나눴다.</p>
+  </div>
+  <div style="height:520px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s44_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Sigmoid · TanH · ReLU 의 모양 — 양끝이 평평하다</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="모델 한 장으로" data-screen-label="24" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.17 · 강의영상 건물외벽 09:00–15:00 · 14 건물외벽학습.ipynb — 오늘 4부의 중심 슬라이드다. 이 그림을 왜 그리느냐 — 지금까지는 노드와 엣지로 뉴럴넷을 봤는데, 2차원 합성곱은 그렇게 그리면 너무 복잡하다. 그래서 이 상자 그림을 쓴다. 앞으로 논문에서 이 그림을 끝없이 보게 된다. 읽는 법을 여기서 익혀 두면 된다. 왼쪽부터 순서대로 짚을 것. 500 곱하기 500 곱하기 4 이미지가 들어가고, 필터 10개 커널 5로 합성곱을 지나면 500 곱하기 500 짜리 피처맵이 10장 생긴다. 합성곱 레이어 자체에는 활성화가 없으므로 리키렐루를 따로 붙인다. 맥스풀링 5로 100으로 줄이고, 다시 합성곱과 풀링을 거치며 20으로, 4로, 마지막에 1로 줄인다. 필터는 10개에서 20개, 25개로 늘어난다. 크기는 줄고 피처 수는 늘어나는 이 모양이 CNN 의 전형이다. 마지막에 1 곱하기 1 곱하기 25 가 남는다. 그리고 덧붙일 것 — 이 구조는 정답이 아니다. 수업을 위해 그냥 만든 것이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">크기는 줄고, <span style="color:var(--accent-green)">피처는 늘어난다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">앞으로 논문에서 끝없이 보게 될 그림</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:18px;padding:18px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_p19_convnet.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>500×500×4 입력에서 25@1×1 까지 줄어드는 외벽 학습 ConvNet 도식</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">합성곱 레이어에는 <b style="color:#fff">활성화가 없다</b> — 그래서 뒤에 LeakyReLU 를 따로 붙인다.</p>
+</section>
+
+<section data-deck="0" data-label="가중치를 세어 보자" data-screen-label="25" data-speaker-notes="출처: 강의영상 건물외벽 18:00–19:30 · 14 건물외벽학습.ipynb — 세어 본다. 첫 합성곱은 커널 5 곱하기 5에 입력 채널 4니까 100개, 절편 하나를 더해 필터 하나당 101개. 필터가 10개니 1,010개다. 이렇게 끝까지 세면 전체가 7,636개다. 여기서 학생들이 놀라야 한다 — 지난주 덴스 레이어는 입력 110개에 층 두세 개만 쌓았는데도 가중치가 7만 개가 넘었다. 이번엔 500 곱하기 500 이미지를 넣었는데 7,636개다. 필터를 잔뜩 넣은 것 같은데도 그렇다. 학습이 훨씬 쉽다. 그러면서도 인접성을 살리니 이미지에는 특효약이다. 이것이 오늘의 질문에 대한 답이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사진을 넣었는데 가중치가 <span style="color:var(--primary-main)">7,636개</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">지난주 표 데이터 모델은 7만 개가 넘었다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="paramCount"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">필터를 잔뜩 넣은 것 같은데도 <b style="color:var(--fg-1)">열 배 가볍다.</b> 그러면서 인접성을 살린다 — 이미지에는 특효약이다.</p>
+</section>
+
+<section data-deck="0" data-label="학습 결과" data-screen-label="26" data-speaker-notes="출처: 강의영상 건물외벽 20:00–22:00 · 14 건물외벽학습.ipynb — 100 에폭 돌린 결과다. 정확도 0.9131, 손실 0.1927. 시작할 때 손실이 0.7959였으니 많이 내려왔다. 예측값을 열어 보면 1이어야 할 것은 0.999, 0이어야 할 것은 0.004 정도로 떨어진다. 딱 1이나 0이 되지는 않는다. 한 가지 꼭 말해 줄 것 — GPU 와 CPU 속도 차이를 이미지 학습에서 피부로 느낄 수 있다. 런타임을 CPU 로 두고 한 번 돌려 보게 할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px"><span data-dc-slot="trainCurve"></span></div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">100 epoch</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정확도 91%</h2>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">예측값은 딱 1이 되지 않는다. <b style="color:var(--fg-1)">0.999 · 0.004</b> 처럼 가까이 갈 뿐이다.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">이미지 학습은 <b style="color:var(--primary-dark)">GPU 와 CPU 차이를 피부로</b> 느낄 수 있다. 런타임을 바꿔 한 번 돌려 볼 것.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="틀린 것들" data-screen-label="27" data-speaker-notes="출처: 강의영상 건물외벽 23:00–24:00 · 14 건물외벽학습.ipynb — 한계를 말하는 슬라이드다. 검증 데이터에서 틀린 것들을 열어 보면 흰색 벽돌을 벽돌로 인식하지 못했다. 모델이 벽돌의 결을 본 것인지 색을 본 것인지 우리는 알 수 없다. 학습을 100장만 했으니 이런 착각이 생긴다. 그럼 어떻게 해야 하나 — 더 많은 패턴을 학습시키거나, 데이터를 만들어 내거나, 샘플링을 바꾸거나, 일반화를 더 세게 걸거나. 6주차와 7주차가 그 이야기로 이어진다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">흰 벽돌을<br>못 맞혔다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">모델이 <b style="color:var(--fg-1)">결을 본 것인지 색을 본 것인지</b> 우리는 알 수 없다.</p>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">100장으로 학습했으니 이런 착각이 생긴다. 더 많은 패턴, 데이터 증강, 샘플링, 더 센 일반화 — <b style="color:var(--fg-1)">6·7주차가 그 이야기</b>다.</div>
+  </div>
+  <div style="height:720px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s33_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>검증에서 틀린 외벽 이미지</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="중간을 열어 본다" data-screen-label="28" data-speaker-notes="출처: 강의영상 건물외벽 24:00–26:00 · 14 건물외벽학습.ipynb — 학습된 모델의 중간을 층마다 열어 본 것이다. 첫 합성곱을 지난 10장의 피처맵이 서로 전혀 다른 그림을 내놓는다. 같은 사진인데 필터마다 잡아낸 것이 다르다는 뜻이다. 리키렐루를 지나고 맥스풀링을 지나면 가까운 것들이 하나로 뭉개지는데, 피처맵의 성격 자체는 그대로 따라간다. 그리고 다음 합성곱에서 또 새로운 피처가 만들어진다. 학생들에게 이 화면을 직접 띄우게 할 것 — CNN 이 무엇을 보고 있는지 눈으로 확인하는 유일한 방법이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">필터마다 다른 것을 본다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">층마다 중간 출력을 꺼내 본 것</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="featureMaps"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">같은 사진인데 <b style="color:var(--fg-1)">필터마다 잡아낸 것이 다르다.</b> 풀링을 지나면 뭉개지지만 성격은 그대로 따라간다.</p>
+</section>
+
+<section data-deck="0" data-label="25개 숫자로 요약된다" data-screen-label="29" data-speaker-notes="출처: 강의영상 건물외벽 26:00–29:00 · 14 건물외벽학습.ipynb — 오늘 가장 값진 대목이다. 모델의 15번 레이어에서 잘라 보면 25개 숫자가 남는다. 이미지 한 장이 25개 숫자로 표현된 것이다. 우리는 그 25개가 각각 무슨 뜻인지 모른다. 하지만 서로 다른 길을 걸어왔으니 다른 정보를 담고 있는 것은 분명하다. 그다음이 재미있다 — 이 25차원 공간 안에 100개의 점이 찍혀 있는 셈이니, 2주차에 배운 K-평균 클러스터링을 걸 수 있다. 가까이 있는 것끼리 묶으면 비슷한 외벽끼리 묶인다. 여기서 중요한 전환을 말해 줄 것 — CNN 은 분류기이기 전에 요약기다. 이 이야기가 9주차 컨텍스트 벡터에서 그대로 다시 나온다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 82% 24%,rgba(0,228,155,.22),transparent 62%)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">사진 한 장이 <span style="color:var(--accent-green)">숫자 25개</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">모델 15번 레이어에서 잘라낸 값</span>
+  </div>
+  <div style="height:290px;background:#fff;border-radius:18px;padding:14px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_p19_flatten.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>ConvNet 전체 도식에서 flatten 구간만 밝게 강조한 그림</span></div></div>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="featureVec"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">CNN 은 분류기이기 전에 <b style="color:var(--accent-green)">요약기</b>다. 이 이야기가 9주차 컨텍스트 벡터에서 그대로 다시 나온다.</p>
+</section>
+
+<section data-deck="0" data-label="지도 위에 격자를 올린다" data-screen-label="30" data-speaker-notes="출처: 강의영상 상권격자 00:00–02:00 · 18 CNN_application.ipynb — 5부다. 지금까지 배운 합성곱을 이미지가 아닌 데이터에 써 본다. 공간 분석에서 포인트나 폴리곤 대신 격자를 쓰는 이유는 간격이 균질하기 때문이다. 단점은 그 균질한 데이터를 만들기가 아주 어렵다는 것이다. 그림을 짚어 줄 것 — 맨 아래가 실제 지도이고 그 위에 100미터 곱하기 100미터 격자를 씌웠다. 그리고 그 격자 한 칸마다 주택 수, 거주인구 수, 직장인구 수, 거주자 추정소득이 층층이 쌓인다. 가운데 기둥을 따라가면 한 자리가 네 개의 값을 갖는다는 것이 보인다. 여기서 결정적인 한마디 — 격자 한 칸이 곧 픽셀 한 칸이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">5부 · 격자 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">한 칸에 네 가지가 쌓인다</h2>
+  </div>
+  <div style="flex:1;min-height:0;border-radius:18px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_grid_stack.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>지도 위에 씌운 100m 격자와 그 위로 쌓인 네 장의 데이터 층</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px">
+    <div style="padding:18px 24px;background:rgba(255,184,107,.14);border-radius:12px;font-size:var(--type-small);color:#FFB86B;font-weight:700">주택 수</div>
+    <div style="padding:18px 24px;background:rgba(0,228,155,.14);border-radius:12px;font-size:var(--type-small);color:#00E49B;font-weight:700">거주인구 수</div>
+    <div style="padding:18px 24px;background:rgba(255,122,162,.14);border-radius:12px;font-size:var(--type-small);color:#FF7AA2;font-weight:700">직장인구 수</div>
+    <div style="padding:18px 24px;background:rgba(123,140,255,.14);border-radius:12px;font-size:var(--type-small);color:#7B8CFF;font-weight:700">거주자 추정소득</div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">격자를 쓰는 이유는 <b style="color:#fff">간격이 균질하기 때문</b>이다. 단점은 그 균질한 데이터를 만들기가 아주 어렵다는 것.</p>
+</section>
+
+<section data-deck="0" data-label="그럼 이미지랑 뭐가 다른가" data-screen-label="31" data-speaker-notes="출처: 강의영상 상권격자 02:00 · 18 CNN_application.ipynb — 여기서 학생들에게 먼저 물어볼 것. 이렇게 쌓아 놓고 보면 이게 이미지랑 뭐가 다릅니까. 왼쪽은 격자 네 층, 오른쪽은 이미지 RGBA 네 층이다. 모양이 완전히 같다. 다른 것은 칸에 든 숫자의 뜻뿐이다. 이미지는 0에서 255 사이의 밝기이고, 격자는 인구수와 금액이다. 그리고 층 수도 마음대로다 — 이미지는 넷으로 정해져 있지만 격자는 열 층도 스무 층도 만들 수 있다. 그러니 지난주에 배운 합성곱을 그대로 얹을 수 있다. 이것이 오늘 5부의 출발점이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">격자 한 칸이 <span style="color:var(--primary-main)">픽셀 한 칸</span>이다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">100m × 100m</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="gridAsImage"></span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">다른 것은 <b style="color:#00E49B">칸에 든 숫자의 뜻</b>뿐이다. 층 수도 넷일 필요가 없다 — 열 층도 스무 층도 된다.</div>
+</section>
+
+<section data-deck="0" data-label="가운데 매장의 매출" data-screen-label="32" data-speaker-notes="출처: 강의영상 상권격자 02:00–05:00 · 18 CNN_application.ipynb — 문제를 세운다. 어떤 브랜드의 서울 355개 매장, 2023년 12월 말 기준 월 매출액이 목표값이다. 각 매장을 한가운데 놓고 가로 1.1킬로미터 세로 1.1킬로미터 정사각형을 잘라 왔다. 100미터 격자니까 11 곱하기 11 이다. 가운데 빨간 칸이 매장 자리이고, 그 둘레 120칸이 이 매장의 배후지다. 그래서 X 의 모양이 355 곱하기 11 곱하기 11 곱하기 4 다. 지난주 외벽 데이터가 138 곱하기 500 곱하기 500 곱하기 4 였던 것과 똑같이 읽으면 된다. 네 장을 같이 볼 것 — 거주인구는 가운데에 몰려 있고, 직장인구는 아래쪽, 소득은 오른쪽이 높고, 주택은 왼쪽에 많다. 배후지의 생김새가 그대로 그림이 된다. 이 그림을 보고 매출을 맞히자는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">배후지를 보고 <span style="color:var(--primary-main)">가운데 매장의 매출</span>을 맞힌다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">서울 355개 매장 · 1.1km × 1.1km · 2023.12</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="gridSample"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">X 의 모양은 <b style="color:var(--fg-1)">355 × 11 × 11 × 4</b>. 지난주 외벽이 <b style="color:var(--fg-1)">138 × 500 × 500 × 4</b> 였던 것과 똑같이 읽으면 된다.</p>
+</section>
+
+<section data-deck="0" data-label="층마다 단위가 다르다" data-screen-label="33" data-speaker-notes="출처: 강의영상 상권격자 06:00–08:00 · 18 CNN_application.ipynb — 여기서 이미지와 다른 점이 하나 나온다. 이미지는 네 층이 전부 0에서 255였다. 균질했다. 그런데 이 격자는 층마다 단위가 다르다. 인구수는 수천, 추정소득은 수백만, 주택 수는 수십이다. 그대로 넣으면 큰 숫자를 가진 층이 학습을 지배해 버린다. 그래서 맨 앞에 배치 정규화 레이어를 하나 넣었다. 배치 단위로 각 층을 표준화해 준다. 목표값인 매출액에는 MinMax 스케일러를 미리 걸었다. 그리고 마지막 활성화가 시그모이드가 아니라 리니어인 이유도 짚을 것 — 우리가 맞히려는 것이 0이냐 1이냐가 아니라 금액이기 때문이다. 손실도 MSE, 지표도 정확도가 아니라 MAE 를 쓴다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">층마다 단위가 다르다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">이미지는 전부 0~255 였다</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="normNeed"></span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px">
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">맨 앞에 <b style="color:var(--fg-1)">BatchNormalization</b> 을 한 장 넣어 층을 맞춘다.</div>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">목표값 매출액에는 <b style="color:var(--fg-1)">MinMax 스케일러</b>를 미리 건다.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">맞히려는 게 금액이므로 마지막 활성화는 <b style="color:var(--primary-dark)">linear</b>, 손실은 <b style="color:var(--primary-dark)">MSE</b>, 지표는 <b style="color:var(--primary-dark)">MAE</b>.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="배후지가 CNN 을 지나 매출로" data-screen-label="34" data-speaker-notes="출처: 강의영상 상권격자 07:00–10:00 · 18 CNN_application.ipynb — 모델을 보면 오늘 4부와 똑같이 읽힌다. 11 곱하기 11 곱하기 4 로 들어가, 배치 정규화를 지나고, 커널 2로 필터 10개, 렐루, 맥스풀링으로 반씩 줄어든다. 필터는 10개에서 20개로 늘었다가 다시 10개로. 마지막에 플래튼하면 피처 벡터가 10개 남는다. 그 10개로 매출을 예측한다. 외벽 모델과 다른 곳은 딱 두 군데다 — 맨 앞의 배치 정규화, 그리고 마지막 활성화가 리니어라는 것. 여기서 오늘의 큰 메시지를 던질 것 — 이 자리에 들어갈 수 있는 것은 브랜드 매출만이 아니다. 아파트 시세도, 유동인구도 된다. 조건은 하나, 공간의 정보를 최대한 담아 줘야 한다는 것. 합성곱은 이미지 전용 도구가 아니라 옆자리가 의미 있는 모든 데이터의 도구다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">읽는 법이 <span style="color:var(--primary-main)">외벽 모델과 똑같다</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">11×11×4 → 피처 10개 → 매출액</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="gridModel"></span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">이 자리에 들어갈 수 있는 건 브랜드 매출만이 아니다 — <b style="color:#00E49B">아파트 시세도, 유동인구도</b> 된다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">조건은 하나 — 공간의 정보를 최대한 담아 줄 것. 합성곱은 이미지 전용 도구가 아니다.</span></div>
+</section>
+
+<section data-deck="0" data-label="SOTA 라는 말" data-screen-label="35" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.37 · 강의영상 CNN SOTA 00:00–01:00 · 17 CNN_SOTA.ipynb — 5부다. SOTA 는 State of the Art, 그 시점에 가장 성능이 좋은 모델을 말한다. paperswithcode 에 가면 ImageNet 분류 리더보드가 정리돼 있고 논문 링크와 데이터까지 붙어 있다. 논문 쓸 때 이론적 배경 잡기 아주 좋으니 반드시 소개해 줄 것. 여기서 중요한 감각 하나 — 무조건 크게 만든다고 SOTA 가 되지 않는다. 가중치도 적고, 성능도 좋고, 속도도 빠른 효율이 있어야 올라간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">6부 · 계보</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">SOTA — 그 시점의 최고</h2>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s37_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>paperswithcode 의 ImageNet 분류 리더보드</span></div></div>
+  </div>
+  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">크게 만든다고 올라가지 않는다 — <b style="color:#00E49B">가중치는 적게, 성능은 높게, 속도는 빠르게.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">paperswithcode.com — 리더보드와 논문 링크가 같이 있다. 이론적 배경 잡을 때 쓸 것.</span></div>
+</section>
+
+<section data-deck="0" data-label="LeNet (1998)" data-screen-label="36" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.39 · 강의영상 CNN SOTA 01:00–09:00 · 17 CNN_SOTA.ipynb — LeNet 이다. 1998년 논문 그대로 구현했다. 이 그림을 우리가 방금 배운 방식으로 읽어 보게 할 것. 28 곱하기 28 필기체를 32로 패딩해서 넣고, 필터 6개로 28이 되고, 서브샘플링으로 14, 다시 합성곱으로 16개 피처맵에 10, 서브샘플링으로 5, 플래튼하면 120개 피처 벡터. 덴스를 지나 출력이 10개다. 왜 10개인가 — 0부터 9까지 맞혀야 하니까. 여기서 더미 변수화를 반드시 설명할 것. 라벨을 0부터 9 숫자 그대로 주면 안 된다. 숫자형 데이터는 0과 1의 간격이 1과 2의 간격과 같다고 가정하는데, 손글씨 0과 1 사이에는 그런 관계가 없다. 그래서 원핫으로 바꿔 간격을 없앤다. 이 판단을 잘못하면 학습이 계속 빙글빙글 돈다. 결과는 파라미터 6만여 개로 학습 99.7%, 테스트 98.8%. 못 맞힌 것을 열어 보면 사람이 봐도 8인지 9인지 모를 악필이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">LeNet — 1998</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">MNIST 필기체 · 테스트 98.8%</span>
+  </div>
+  <div style="height:360px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s39_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>LeNet-5 구조 — 32×32 에서 120 피처 벡터까지</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1.15fr;gap:34px">
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">우리가 방금 배운 방식으로 <b style="color:var(--fg-1)">그대로 읽힌다</b> — 합성곱, 서브샘플링, 합성곱, 서브샘플링, 플래튼, 덴스.</div>
+    <div style="padding:26px 32px;background:#FDF0F0;border:2px solid #D93636;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">라벨을 0~9 <b style="color:#D93636">숫자 그대로 주면 안 된다.</b> 0과 1의 간격이 1과 2의 간격과 같다고 가정해 버린다 — 원핫으로 바꿔 간격을 없앤다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="AlexNet (2012)" data-screen-label="37" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.45 · 강의영상 CNN SOTA 12:00–15:00 · 16 AlexNet(2012).ipynb — AlexNet 이다. GPU 딥러닝의 길을 연 모델이고, 이미 여러 번 나온 이름이다. 읽는 연습을 그대로 하면 된다. 227 곱하기 227 곱하기 3 입력, 커널 11로 필터 96개, 55로 줄고, 27, 13으로 내려가며 필터가 384까지 늘었다가 256으로 줄고, 플래튼 뒤 덴스 4096이 두 번, 마지막 출력이 1000개다. 왜 1000인가 물어볼 것 — ImageNet 의 카테고리가 1000개다. 가중치는 5천만 개다. 여기서 실무 감각 하나 — 필터를 늘리면 더 다양한 관계를 담을 수 있지만 학습 속도가 떨어진다. 어디까지 늘릴지는 감이다. 실습에서는 CIFAR 32 곱하기 32 데이터에 맞춰 절반 크기로 줄여 돌린다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">AlexNet — 2012</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">가중치 5천만 개 · 출력 1000개</span>
+  </div>
+  <div style="height:400px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s45_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>AlexNet 구조 — 227×227×3 에서 출력 1000까지</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">출력이 <b style="color:var(--fg-1)">1000개</b>인 이유 — ImageNet 의 카테고리가 1000개다.</div>
+    <div style="padding:26px 32px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">필터를 늘리면 <b style="color:var(--primary-dark)">담을 수 있는 관계</b>가 늘지만 학습이 느려진다. 어디까지 늘릴지는 감이다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Dropout" data-screen-label="38" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.47 · 강의영상 건물외벽 17:00 · 16 AlexNet(2012).ipynb — AlexNet 이 가져온 것 중 오늘 우리가 실제로 쓴 것이 드롭아웃이다. 학습할 때마다 일부 노드를 무작위로 꺼 버린다. 특정 경로에만 의존하지 못하게 만들어 일반화를 시킨다. 여기서 우리 모델의 설계 선택을 짚어 줄 것 — 합성곱 구간에는 드롭아웃을 걸지 않았다. 피처를 뽑는 데는 모두가 참여하라는 뜻이다. 덴스 레이어, 즉 그 피처로 0인지 1인지 판단하는 구간에만 걸었다. 어디에 거느냐가 설계다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:520px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s47_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Standard Neural Net 과 After applying dropout 비교</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">AlexNet 이 가져온 것</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">일부러<br>꺼 버린다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">학습할 때마다 노드 일부를 무작위로 끈다. <b style="color:var(--fg-1)">한 경로에만 의존하지 못하게</b> 만든다.</p>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">우리 모델은 <b style="color:var(--fg-1)">합성곱 구간에는 걸지 않았다.</b> 피처 뽑는 데는 모두 참여하고, 판단하는 덴스 구간에만 걸었다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="그 뒤의 계보" data-screen-label="39" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.51–54 · 강의영상 CNN SOTA 후반 · 17 CNN_SOTA.ipynb — AlexNet 뒤의 흐름을 한 장으로 압축한다. VGG 는 3 곱하기 3 작은 커널만 깊게 쌓았다. ResNet 은 층이 깊어질수록 오히려 나빠지는 문제를 건너뛰는 연결로 풀었다 — 오른쪽 곡선에서 얇은 선이 깊은 평범한 망, 굵은 선이 ResNet 이다. DenseNet 은 앞의 모든 층을 뒤로 이어 붙여 더 적은 파라미터로 같은 성능을 냈다. EfficientNet 은 깊이, 너비, 해상도를 따로 키우지 말고 정해진 비율로 같이 키우자는 것이다. 한 문장으로 묶어 줄 것 — 이 계보 전체가 같은 질문에 답해 왔다. 어떻게 하면 더 적은 가중치로 더 좋은 피처를 뽑을까." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그 뒤의 계보</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">VGG · ResNet · DenseNet · EfficientNet</span>
+  </div>
+  <div style="flex:1;min-height:0"><span data-dc-slot="lineage"></span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">계보 전체가 <b style="color:#00E49B">같은 질문 하나</b>에 답해 왔다 — 어떻게 하면 더 적은 가중치로 더 좋은 피처를 뽑을까.</div>
+</section>
+
+<section data-deck="0" data-label="가져다 쓴다" data-screen-label="40" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.50 · 강의영상 CNN SOTA 후반 · 17 CNN_SOTA.ipynb — 실무에서 중요한 이야기다. 이 모델들을 우리가 다시 만들 일은 거의 없다. 케라스가 학습된 가중치까지 같이 제공한다. 표에는 모델별 용량, 정확도, 파라미터 수, 깊이, 추론 시간이 다 적혀 있다. 여기서 고르는 법을 알려 줄 것 — 정확도만 보지 말고 파라미터 수와 추론 시간을 같이 봐야 한다. 연구실 GPU 에서 돌릴 것인지, 현장 기기에서 돌릴 것인지에 따라 답이 달라진다. 그리고 다음 주 예고 — 6주차에는 이 뽑아낸 피처로 무엇이 어디에 있는지까지 알아낸다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실무</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">다시 만들지<br>않는다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">케라스가 <b style="color:var(--fg-1)">학습된 가중치까지</b> 같이 준다. 한 줄이면 불러온다.</p>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">고를 때 <b style="color:var(--fg-1)">정확도만 보지 말 것.</b> 파라미터 수와 추론 시간을 같이 본다 — 연구실 GPU 냐 현장 기기냐에 따라 답이 다르다.</div>
+  </div>
+  <div style="height:800px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s50_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>케라스가 제공하는 학습 모델 목록 — 용량·정확도·파라미터·깊이·추론 시간</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="41" data-speaker-notes="출처: 신규 — 학습참여도 평가에 쓸 토론 슬라이드. 3분 주고 옆 사람과 하나만 골라 이야기하게 한다. 세 질문 모두 정답이 없다. 두 번째 질문이 특히 중요한데, 외벽 재료 말고도 로드뷰 이미지에서 라벨링해 낼 수 있는 것이 무엇인지를 학생들이 스스로 떠올려야 기말 발표 주제로 이어진다. 나온 답을 칠판에 적어 둘 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3분 · 옆 사람과</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">하나만 골라 이야기해 보자</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q1</b> &nbsp; 우리 모델이 외벽의 <b style="color:var(--fg-1)">결</b>을 본 것인지 <b style="color:var(--fg-1)">색</b>을 본 것인지, 어떻게 확인하겠는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q2</b> &nbsp; 로드뷰 이미지에서 외벽 재료 말고 <b style="color:var(--fg-1)">또 무엇을 라벨링</b>할 수 있겠는가? 그게 어떤 도시 문제에 쓰이겠는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q3</b> &nbsp; 25개 피처 벡터로 클러스터링을 했을 때, 묶인 그룹에 <b style="color:var(--fg-1)">이름을 붙이려면</b> 무엇을 더 봐야 하는가?</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="정리" data-screen-label="42" data-speaker-notes="출처: 신규 — 오늘의 질문에 답하는 마지막 장. 이미지를 픽셀 그대로 넣으면 왜 안 되는가. 첫째, 500 곱하기 500 사진 한 장이 입력 100만 개다. 덴스로 받으면 가중치가 억 단위로 터진다. 둘째, 덴스는 픽셀의 위치를 모른다. 옆에 붙어 있다는 사실을 구조가 알지 못한다. 합성곱은 그 둘을 동시에 푼다 — 가중치를 재사용해 가볍게 만들고, 인접성을 구조로 못 박는다. 그리고 그 결과로 얻는 것이 피처 벡터다. 사진 한 장을 숫자 몇 개로 요약해 준다. 다음 주 예고 — 무엇이 있다까지 왔으니, 이제 어디에 있다로 간다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 24% 78%,rgba(0,228,155,.22),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">오늘의 질문에 답한다</div>
+  <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">픽셀 그대로 넣으면<br><span style="color:var(--accent-green)">너무 많고, 너무 모른다</span></h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:32px 36px;display:flex;flex-direction:column;gap:12px"><div style="font-size:30px;font-weight:800;color:#fff">너무 많다</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">사진 한 장이 입력 <b style="color:#fff">100만 개</b>. 덴스로 받으면 가중치가 억 단위로 터진다.</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:18px;padding:32px 36px;display:flex;flex-direction:column;gap:12px"><div style="font-size:30px;font-weight:800;color:#fff">너무 모른다</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55">덴스는 두 픽셀이 <b style="color:#fff">옆에 붙어 있다는 사실</b>을 구조적으로 모른다.</p></div>
+  </div>
+  <div style="padding:30px 36px;background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:16px;font-size:var(--type-body);line-height:1.5">합성곱은 <b style="color:#00E49B">가중치를 재사용해 가볍게</b> 만들고 <b style="color:#00E49B">인접성을 구조로 못 박는다.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">그 결과로 얻는 것이 피처 벡터다 — 사진 한 장을 숫자 몇 개로 요약한다.<br>그리고 5부에서 본 것 — <b style="color:#00E49B">이미지가 아니어도 된다.</b> 옆자리가 의미 있으면 격자 데이터에도 그대로 쓴다.</span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">다음 주 — <b style="color:#fff">‘무엇이 있다’</b> 까지 왔다. 이제 <b style="color:#fff">‘어디에 있다’</b> 로 간다. &nbsp;<span style="color:var(--neutral-medium);font-size:var(--type-small)">예습: 19 YOLO.ipynb · 20 Unet.ipynb</span></p>
+</section>
+  </div>
+</div>
+
+<div id="progress"></div>
+
+<div id="guide">
+  <div class="deckname">W05_CNN기초</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">42</span></div>
+  <div class="slidelabel" id="g-label"></div>
+  <div class="keys">
+    <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
+    <kbd>O</kbd><span>목차</span>
+    <kbd>N</kbd><span>노트</span>
+    <kbd>F</kbd><span>전체화면</span>
+    <kbd>?</kbd><span>도움말</span>
+  </div>
+</div>
+
+<div id="jump"></div>
+
+<div id="notes">
+  <div class="nlabel">Speaker notes &mdash; <span id="n-num"></span></div>
+  <div id="n-body"></div>
+</div>
+
+<div id="overview">
+  <header>
+    <h2>목차</h2>
+    <p>클릭하거나 번호를 입력해 이동 &middot; <kbd>O</kbd> / <kbd>Esc</kbd> 닫기</p>
+  </header>
+  <div id="ovgrid">
+<button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">오늘의 흐름</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">오늘의 질문</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">되짚기 — 덴스 레이어</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">사진 한 장의 크기</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">합성곱의 발상</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">장점 둘</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">필터 개수가 뜻하는 것</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">커널 · 패딩 · 스트라이드</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">쌓으면 차원이 늘어난다</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">Conv1D 를 실제 데이터에</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">오늘의 주인공</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">이미지는 숫자다</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">채널을 만져 본다</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">세 층을 한 층으로</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">숫자로 그림을 만든다</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">Conv2D 로 넘어간다</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">손으로 계산해 본다</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">필터는 원래 사람이 정했다</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">풀링 — 무엇을 남길 것인가</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">건물 외벽을 맞혀 본다</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">라벨링 노가다</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">255로 나눈다</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">모델 한 장으로</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">가중치를 세어 보자</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">학습 결과</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">틀린 것들</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">중간을 열어 본다</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">25개 숫자로 요약된다</div></button>
+<button class="ov-card" data-go="29"><div class="ov-thumb"><div class="ov-num">30</div></div><div class="ov-label">지도 위에 격자를 올린다</div></button>
+<button class="ov-card" data-go="30"><div class="ov-thumb"><div class="ov-num">31</div></div><div class="ov-label">그럼 이미지랑 뭐가 다른가</div></button>
+<button class="ov-card" data-go="31"><div class="ov-thumb"><div class="ov-num">32</div></div><div class="ov-label">가운데 매장의 매출</div></button>
+<button class="ov-card" data-go="32"><div class="ov-thumb"><div class="ov-num">33</div></div><div class="ov-label">층마다 단위가 다르다</div></button>
+<button class="ov-card" data-go="33"><div class="ov-thumb"><div class="ov-num">34</div></div><div class="ov-label">배후지가 CNN 을 지나 매출로</div></button>
+<button class="ov-card" data-go="34"><div class="ov-thumb"><div class="ov-num">35</div></div><div class="ov-label">SOTA 라는 말</div></button>
+<button class="ov-card" data-go="35"><div class="ov-thumb"><div class="ov-num">36</div></div><div class="ov-label">LeNet (1998)</div></button>
+<button class="ov-card" data-go="36"><div class="ov-thumb"><div class="ov-num">37</div></div><div class="ov-label">AlexNet (2012)</div></button>
+<button class="ov-card" data-go="37"><div class="ov-thumb"><div class="ov-num">38</div></div><div class="ov-label">Dropout</div></button>
+<button class="ov-card" data-go="38"><div class="ov-thumb"><div class="ov-num">39</div></div><div class="ov-label">그 뒤의 계보</div></button>
+<button class="ov-card" data-go="39"><div class="ov-thumb"><div class="ov-num">40</div></div><div class="ov-label">가져다 쓴다</div></button>
+<button class="ov-card" data-go="40"><div class="ov-thumb"><div class="ov-num">41</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
+<button class="ov-card" data-go="41"><div class="ov-thumb"><div class="ov-num">42</div></div><div class="ov-label">정리</div></button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="panel">
+    <h2>키보드 조작</h2>
+    <table>
+      <tr><td><kbd>&rarr;</kbd><kbd>&darr;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>PgUp</kbd><kbd>Backspace</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd><kbd>End</kbd></td><td>처음 / 마지막</td></tr>
+      <tr><td><kbd>1</kbd> &hellip; <kbd>9</kbd><kbd>Enter</kbd></td><td>번호로 이동</td></tr>
+      <tr><td><kbd>O</kbd></td><td>목차 열기 / 닫기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>발표자 노트</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면</td></tr>
+      <tr><td><kbd>B</kbd></td><td>화면 가리기</td></tr>
+      <tr><td><kbd>?</kbd><kbd>H</kbd></td><td>이 도움말</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>닫기</td></tr>
+    </table>
+    <p class="hint">스테이지 좌 / 우 클릭, 터치 스와이프로도 넘길 수 있습니다.<br>
+    현재 위치는 주소창 <code>#12</code> 로 유지되므로 새로 고쳐도 그 자리에서 이어집니다.</p>
+  </div>
+</div>
+
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/dc-runtime.js"></script>
+<script>
+(function () {
+class Component extends DCLogic {
+  state = { cstep: 0 };
+
+  renderVals() {
+    const h = React.createElement;
+    const KR = 'var(--font-sans)', EN = 'var(--font-display)';
+    const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', VIO = '#9E5DF9';
+    const svg = (W, H, kids) => h('svg', { viewBox: '0 0 ' + W + ' ' + H,
+      preserveAspectRatio: 'xMidYMid meet',
+      style: { width: '100%', height: '100%', display: 'block' } }, kids);
+
+    // ── 덴스 레이어 전결합 ──────────────────────────────────────
+    const denseAll = (() => {
+      const W = 1720, H = 470;
+      const g = [];
+      const VX = 300, HX = 900, R = 36, DY = 78, VY = 84;
+      // 25개 선을 먼저 깔고 노드를 위에 얹는다
+      for (let i = 0; i < 5; i++)
+        for (let j = 0; j < 5; j++)
+          g.push(h('line', { key: 'e' + i + j, x1: VX + R, y1: VY + i * DY,
+            x2: HX - R, y2: VY + j * DY, stroke: ACC, strokeWidth: 2,
+            opacity: 0.30 }));
+      for (let i = 0; i < 5; i++) {
+        g.push(h('circle', { key: 'v' + i, cx: VX, cy: VY + i * DY, r: R, fill: '#fff',
+          stroke: MUT, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'vt' + i, x: VX, y: VY + i * DY + 9,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 22, fontWeight: 700,
+          fill: INK }, 'V' + (i + 1)));
+        g.push(h('circle', { key: 'h' + i, cx: HX, cy: VY + i * DY, r: R,
+          fill: '#EEF0FE', stroke: ACC, strokeWidth: 3 }));
+        g.push(h('text', { key: 'ht' + i, x: HX, y: VY + i * DY + 9,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 22, fontWeight: 700,
+          fill: ACC }, 'H' + (i + 1)));
+      }
+      g.push(h('text', { key: 'vl', x: VX, y: 36, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 24, fontWeight: 700, fill: MUT }, '입력 5개'));
+      g.push(h('text', { key: 'hl', x: HX, y: 36, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 24, fontWeight: 700, fill: ACC }, '다음 층 5개'));
+      // 세어 보기
+      g.push(h('rect', { key: 'cb', x: 1130, y: 96, width: 550, height: 300, rx: 20,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'ct', x: 1166, y: 152, fontFamily: KR, fontSize: 25,
+        fontWeight: 800, fill: INK }, '선을 세어 보면'));
+      [['가중치  5 × 5', '25', MUT], ['절편', '5', MUT],
+       ['이 한 층에만', '30', ACC]].forEach((r, i) => {
+        if (i === 2)
+          g.push(h('line', { key: 'ln', x1: 1166, y1: 296, x2: 1644, y2: 296,
+            stroke: '#D9D7E6', strokeWidth: 2 }));
+        g.push(h('text', { key: 'rl' + i, x: 1166, y: 214 + i * 62, fontFamily: KR,
+          fontSize: 24, fill: 'var(--fg-3)' }, r[0]));
+        g.push(h('text', { key: 'rv' + i, x: 1644, y: 214 + i * 62, textAnchor: 'end',
+          fontFamily: EN, fontSize: i === 2 ? 40 : 30, fontWeight: 800,
+          fill: r[2] }, r[1]));
+      });
+      g.push(h('text', { key: 'cap', x: 300, y: 452, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '빠진 선이 하나도 없다 — 모든 의미가 다음 층에 그대로 간다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 5주차 지도 ──────────────────────────────────────────────
+    const weekMap = (() => {
+      const W = 1720, H = 420;
+      const C = [
+        ['1', 'Conv1D 로 원리', ['가까운 것끼리만 잇는다', '가중치 재사용'], ACC],
+        ['2', '이미지는 데이터', ['RGB 0~255', '숫자가 곧 그림이다'], VIO],
+        ['3', 'Conv2D 손계산', ['채널까지 통째로', '540 · 360 · 180'], GRN],
+        ['4', '건물 외벽 학습', ['138장 · 정확도 91%', '피처 벡터 25개'], '#E8873A'],
+        ['5', '격자도 그림이다', ['상권 배후지 11×11×4', '매출액을 맞힌다'], '#00B37A'],
+        ['6', 'CNN 의 계보', ['LeNet → AlexNet', 'ResNet → EfficientNet'], RED],
+      ];
+      const g = [];
+      const CW = 256, GAP = 22, X0 = 30;
+      C.forEach((c, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 40, width: CW, height: 300, rx: 20,
+          fill: '#fff', stroke: c[3], strokeWidth: i === 0 ? 4 : 2.5 }));
+        g.push(h('circle', { key: 'c' + i, cx: x + 46, cy: 96, r: 26, fill: c[3] }));
+        g.push(h('text', { key: 'n' + i, x: x + 46, y: 106, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 25, fontWeight: 800, fill: '#fff' }, c[0]));
+        g.push(h('text', { key: 't' + i, x: x + 30, y: 162, fontFamily: KR,
+          fontSize: 25, fontWeight: 800, fill: c[3] }, c[1]));
+        c[2].forEach((s, j) => g.push(h('text', { key: 's' + i + j, x: x + 30,
+          y: 222 + j * 42, fontFamily: KR, fontSize: 20, fill: 'var(--fg-3)' }, s)));
+        if (i < 5) g.push(h('text', { key: 'a' + i, x: x + CW + GAP / 2, y: 200,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 30, fill: AX }, '→'));
+      });
+      g.push(h('text', { key: 'cap', x: 30, y: 396, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '실습 — 11·12·13·14·15·16·17 노트북, 그리고 18 CNN_application'));
+      return svg(W, H, g);
+    })();
+
+    // ── 입력이 100만 개 ─────────────────────────────────────────
+    const blowUp = (() => {
+      const W = 1720, H = 520;
+      const g = [];
+      const step = (key, x, w, lab, val, sub, col) => {
+        g.push(h('rect', { key: key + 'b', x: x, y: 70, width: w, height: 260, rx: 20,
+          fill: 'rgba(255,255,255,.07)', stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 'l', x: x + 30, y: 126, fontFamily: KR,
+          fontSize: 24, fill: 'var(--neutral-lighter)' }, lab));
+        g.push(h('text', { key: key + 'v', x: x + 30, y: 216, fontFamily: EN,
+          fontSize: 62, fontWeight: 800, fill: col }, val));
+        g.push(h('text', { key: key + 's', x: x + 30, y: 274, fontFamily: KR,
+          fontSize: 22, fill: MUT }, sub));
+      };
+      step('a', 30, 480, '사진 한 장', '1,000,000', '500 × 500 × 4', '#7B8CFF');
+      g.push(h('text', { key: 'x1', x: 546, y: 214, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fill: AX }, '→'));
+      step('b', 600, 480, '덴스 첫 층 노드 100개면', '100,000,000', '가중치 1억 개',
+        '#FF7AA2');
+      g.push(h('text', { key: 'x2', x: 1116, y: 214, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fill: AX }, '→'));
+      step('c', 1170, 520, '지난주 표 데이터 모델은', '1,185', '입력 11개 · 층 3개',
+        '#00E49B');
+      g.push(h('text', { key: 'cap', x: 30, y: 420, fontFamily: KR, fontSize: 24,
+        fill: 'var(--neutral-lighter)' },
+        '같은 방식으로는 메모리에 올라가지도 않는다 — 구조를 바꿔야 한다'));
+      return svg(W, H, g);
+    })();
+
+    // ── Conv1D 연결 ─────────────────────────────────────────────
+    const conv1d = (() => {
+      const W = 1720, H = 530;
+      const g = [];
+      const VX = 300, VY = 100, HX = 1060, HY = 142, R = 42, DY = 84;
+      for (let i = 0; i < 5; i++) {
+        g.push(h('circle', { key: 'v' + i, cx: VX, cy: VY + i * DY, r: R, fill: '#fff',
+          stroke: MUT, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'vt' + i, x: VX, y: VY + i * DY + 10,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 24, fontWeight: 700,
+          fill: INK }, 'V' + (i + 1)));
+      }
+      const PAIR = [ACC, GRN, VIO, '#E8873A'];
+      for (let k = 0; k < 4; k++) {
+        const hy = HY + k * DY;
+        g.push(h('circle', { key: 'h' + k, cx: HX, cy: hy, r: R, fill: '#EEF0FE',
+          stroke: ACC, strokeWidth: 3 }));
+        g.push(h('text', { key: 'ht' + k, x: HX, y: hy + 10, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 24, fontWeight: 700, fill: ACC }, 'H' + (k + 1)));
+        [0, 1].forEach((d) => {
+          g.push(h('line', { key: 'e' + k + d, x1: VX + R, y1: VY + (k + d) * DY,
+            x2: HX - R, y2: hy, stroke: PAIR[k], strokeWidth: 3, opacity: 0.85 }));
+        });
+      }
+      g.push(h('text', { key: 'vl', x: VX, y: 54, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 24, fontWeight: 700, fill: MUT }, '입력 5개'));
+      g.push(h('text', { key: 'hl', x: HX, y: 54, textAnchor: 'middle', fontFamily: KR,
+        fontSize: 24, fontWeight: 700, fill: ACC }, '출력 4개'));
+      // 가중치 상자
+      g.push(h('rect', { key: 'wb', x: 1280, y: 110, width: 400, height: 250, rx: 18,
+        fill: '#EEF0FE', stroke: ACC, strokeWidth: 3 }));
+      g.push(h('text', { key: 'wt', x: 1310, y: 160, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: ACC }, '가중치는 이것뿐'));
+      ['W₁', 'W₂', 'b'].forEach((t, i) => {
+        g.push(h('rect', { key: 'wr' + i, x: 1310 + i * 120, y: 190, width: 100,
+          height: 80, rx: 12, fill: '#fff' }));
+        g.push(h('text', { key: 'wx' + i, x: 1360 + i * 120, y: 242,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 32, fontWeight: 800,
+          fill: INK }, t));
+      });
+      g.push(h('text', { key: 'wn', x: 1310, y: 320, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '네 번 연결 · 가중치 3개'));
+      g.push(h('text', { key: 'cap', x: 30, y: 512, fontFamily: KR, fontSize: 23,
+        fill: MUT }, 'H1 은 V1·V2 말고는 아무것도 받지 않는다 — 멀리 있는 관계를 애초에 잘랐다'));
+      return svg(W, H, g);
+    })();
+
+
+    // ── 커널·패딩·스트라이드 ────────────────────────────────────
+    const knobs = (() => {
+      const W = 1720, H = 480;
+      const g = [];
+      const X0 = 430, PITCH = 78, CW = 70;
+      const row = (key, y, title, note, marks, col) => {
+        g.push(h('text', { key: key + 't', x: X0, y: y - 16, fontFamily: KR,
+          fontSize: 26, fontWeight: 800, fill: col }, title));
+        for (let i = 0; i < 7; i++)
+          g.push(h('rect', { key: key + 'c' + i, x: X0 + i * PITCH, y: y, width: CW,
+            height: 58, rx: 10, fill: '#F1F0F6' }));
+        marks.forEach((m, j) => {
+          g.push(h('rect', { key: key + 'm' + j, x: X0 + m[0] * PITCH - 6, y: y - 7,
+            width: (m[1] - 1) * PITCH + CW + 12, height: 72, rx: 12, fill: 'none',
+            stroke: col, strokeWidth: 3.5 }));
+        });
+        g.push(h('text', { key: key + 'n', x: X0 + 8 * PITCH + 40, y: y + 40,
+          fontFamily: KR, fontSize: 23, fill: 'var(--fg-3)' }, note));
+      };
+      row('k', 96, 'kernel_size — 몇 개를 묶을까', '3 이면 세 칸씩 묶는다',
+        [[0, 3], [1, 3]], ACC);
+      row('p', 246, 'padding — 양끝이 억울하지 않게',
+        '0 을 붙여 끝 값도 같은 횟수로 불려 간다', [[0, 1]], GRN);
+      // 왼쪽에 0 한 칸을 덧대는 것이 패딩이다 — 칸 자체가 보여야 한다
+      g.push(h('rect', { key: 'pl', x: X0 - PITCH, y: 246, width: CW, height: 58,
+        rx: 10, fill: 'none', stroke: GRN, strokeWidth: 3, strokeDasharray: '8 5' }));
+      g.push(h('text', { key: 'plt', x: X0 - PITCH + CW / 2, y: 285,
+        textAnchor: 'middle', fontFamily: EN, fontSize: 24, fontWeight: 700,
+        fill: GRN }, '0'));
+      g.push(h('rect', { key: 'pr', x: X0 + 7 * PITCH, y: 246, width: CW, height: 58,
+        rx: 10, fill: 'none', stroke: GRN, strokeWidth: 3, strokeDasharray: '8 5' }));
+      g.push(h('text', { key: 'prt', x: X0 + 7 * PITCH + CW / 2, y: 285,
+        textAnchor: 'middle', fontFamily: EN, fontSize: 24, fontWeight: 700,
+        fill: GRN }, '0'));
+      row('s', 396, 'strides — 몇 칸씩 건너뛸까',
+        '2 면 한 칸씩 건너뛴다 — 출력이 절반이 된다', [[0, 2], [2, 2], [4, 2]], VIO);
+      return svg(W, H, g);
+    })();
+
+    // ── 쌓으면 차원이 늘어난다 ──────────────────────────────────
+    const stacking = (() => {
+      const W = 1720, H = 480;
+      const g = [];
+      const stack = (key, x, n, lab, col) => {
+        for (let i = 0; i < n; i++) {
+          g.push(h('rect', { key: key + i, x: x + i * 14, y: 120 - i * 12, width: 150,
+            height: 210, rx: 14, fill: '#fff', stroke: col, strokeWidth: 2.5 }));
+        }
+        g.push(h('text', { key: key + 'l', x: x + 75, y: 372, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 23, fontWeight: 700, fill: col }, lab));
+      };
+      stack('a', 90, 1, '필터 1 → 한 줄', MUT);
+      g.push(h('text', { key: 'x1', x: 330, y: 236, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: AX }, '→'));
+      stack('b', 400, 3, '필터 3 → 세 줄', ACC);
+      g.push(h('text', { key: 'x2', x: 700, y: 236, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: AX }, '→'));
+      stack('c', 770, 5, '필터 5 → 다섯 줄', VIO);
+      g.push(h('text', { key: 'x3', x: 1100, y: 236, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 34, fill: AX }, '→'));
+      g.push(h('rect', { key: 'fl', x: 1180, y: 200, width: 480, height: 76, rx: 14,
+        fill: '#EDF9F4', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'flt', x: 1420, y: 248, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 30, fontWeight: 800, fill: GRN }, 'Flatten'));
+      g.push(h('text', { key: 'fln', x: 1420, y: 322, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fill: MUT }, '한 줄로 펴서 Dense 로'));
+      g.push(h('text', { key: 'cap', x: 90, y: 440, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '합성곱을 지날 때마다 필터 개수만큼 차원이 늘어난다'));
+      return svg(W, H, g);
+    })();
+
+    // ── Conv1D 실전 결과 ────────────────────────────────────────
+    const conv1dResult = (() => {
+      const W = 1720, H = 300;
+      const g = [];
+      const card = (key, x, w, t, v, s, col, bg) => {
+        g.push(h('rect', { key: key + 'b', x: x, y: 20, width: w, height: 240, rx: 20,
+          fill: bg, stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: x + 34, y: 80, fontFamily: KR,
+          fontSize: 25, fill: 'var(--fg-3)' }, t));
+        g.push(h('text', { key: key + 'v', x: x + 34, y: 164, fontFamily: EN,
+          fontSize: 54, fontWeight: 800, fill: col }, v));
+        g.push(h('text', { key: key + 's', x: x + 34, y: 218, fontFamily: KR,
+          fontSize: 22, fill: MUT }, s));
+      };
+      card('a', 30, 520, '지난주 Dense 모델', '7만+', '정확도 80%대', MUT,
+        'var(--surface-app)');
+      g.push(h('text', { key: 'x', x: 590, y: 150, textAnchor: 'middle', fontFamily: EN,
+        fontSize: 36, fill: AX }, '→'));
+      card('b', 650, 520, 'Conv1D 로 바꾸면', '3,900', '가중치는 확 줄었다', ACC,
+        '#EEF0FE');
+      card('c', 1210, 480, '그런데 정확도는', '60%대', '오히려 떨어졌다', RED, '#FDF0F0');
+      return svg(W, H, g);
+    })();
+
+    // ── 숫자로 그림 만들기 ──────────────────────────────────────
+    const makeImage = (() => {
+      const W = 900, H = 700;
+      const g = [];
+      // 왼쪽 — 세 층의 숫자
+      const LAY = [
+        ['R', RED, [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[60,110,160,210,255],[80,130,180,230,255]]],
+        ['G', GRN, [[0,0,0,0,0],[255,255,255,255,255],[0,0,0,0,0],[40,90,140,190,240],[0,0,0,0,0]]],
+        ['B', ACC, [[0,0,0,0,0],[0,0,0,0,0],[255,255,255,255,255],[0,0,0,0,0],[0,0,0,0,0]]],
+      ];
+      LAY.forEach((L, k) => {
+        const x0 = 40 + k * 26, y0 = 90 + k * 26;
+        g.push(h('text', { key: 'll' + k, x: x0 - 22, y: y0 - 10, fontFamily: EN,
+          fontSize: 22, fontWeight: 800, fill: L[1] }, L[0]));
+        L[2].forEach((row, r) => row.forEach((v, c) => {
+          g.push(h('rect', { key: 'c' + k + r + c, x: x0 + c * 40, y: y0 + r * 40,
+            width: 36, height: 36, rx: 6, fill: L[1], opacity: 0.12 + v / 255 * 0.78 }));
+        }));
+      });
+      g.push(h('text', { key: 'lt', x: 40, y: 56, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: MUT }, '배열에 값을 적고'));
+      g.push(h('text', { key: 'ar', x: 470, y: 300, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fill: AX }, '→'));
+      // 오른쪽 — 합쳐서 출력
+      g.push(h('text', { key: 'rt', x: 560, y: 56, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: INK }, '합쳐서 출력하면'));
+      const OUT = [
+        ['#000000','#000000','#000000','#000000','#000000'],
+        ['#00E063','#00E063','#00E063','#00E063','#00E063'],
+        ['#3A3AF0','#3A3AF0','#3A3AF0','#3A3AF0','#3A3AF0'],
+        ['#3C5A28','#6E7A2E','#A09A35','#D2BA3B','#FFD942'],
+        ['#501C1C','#822C2C','#B43C3C','#E64C4C','#FF5C5C'],
+      ];
+      OUT.forEach((row, r) => row.forEach((cc, c) => {
+        g.push(h('rect', { key: 'o' + r + c, x: 570 + c * 56, y: 90 + r * 56,
+          width: 52, height: 52, rx: 8, fill: cc }));
+      }));
+      g.push(h('text', { key: 'cap', x: 40, y: 660, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '실습에서 이 값을 바꿔 보고 결과를 확인할 것 — 12 이미지구조.ipynb'));
+      return svg(W, H, g);
+    })();
+
+
+    // ── 손으로 계산 ─────────────────────────────────────────────
+    const convDemo = (() => {
+      const S = this.state.cstep;              // 0 = 시작 전, 1..9 = 그 칸까지 계산
+      const PIX = 60;                          // 채워진 칸 한 개의 기여 — 200*.1+100*.2+50*.4
+      const val = (r) => (3 - r) * 3 * PIX;    // 창이 r 행에서 시작할 때의 합
+      const done = S > 0 ? S - 1 : -1;         // 마지막으로 계산을 끝낸 칸
+      const cr = done >= 0 ? Math.floor(done / 3) : 0;
+      const cc = done >= 0 ? done % 3 : 0;
+
+      const SW = 1720, SH = 430;
+      const g = [];
+      // 왼쪽 — 우리가 만든 입력 5×5
+      const IP = 66, IC = 60, IX = 36, IY = 66;
+      g.push(h('text', { key: 'it', x: IX, y: 40, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: 'var(--neutral-lighter)' }, '우리가 만든 입력 5×5'));
+      for (let r = 0; r < 5; r++) {
+        const on = r < 3;
+        for (let c = 0; c < 5; c++)
+          g.push(h('rect', { key: 'i' + r + c, x: IX + c * IP, y: IY + r * IP,
+            width: IC, height: IC, rx: 8, fill: on ? 'rgb(200,100,50)' : '#141222',
+            stroke: 'rgba(255,255,255,.18)', strokeWidth: 1.5 }));
+        g.push(h('text', { key: 'il' + r, x: IX + 5 * IP + 14, y: IY + r * IP + 38,
+          fontFamily: EN, fontSize: 19, fill: on ? '#D8D5E8' : MUT },
+          on ? 'R200 G100 B50' : '0'));
+      }
+      if (S > 0)
+        g.push(h('rect', { key: 'win', x: IX + cc * IP - 6, y: IY + cr * IP - 6,
+          width: 2 * IP + IC + 12, height: 2 * IP + IC + 12, rx: 12, fill: 'none',
+          stroke: '#00E49B', strokeWidth: 5 }));
+
+      // 가운데 — 박아 넣은 가중치
+      g.push(h('rect', { key: 'wb', x: 590, y: 66, width: 300, height: 268, rx: 18,
+        fill: 'rgba(255,255,255,.07)', stroke: '#7B8CFF', strokeWidth: 3 }));
+      g.push(h('text', { key: 'wt', x: 618, y: 114, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#7B8CFF' }, '박아 넣은 가중치'));
+      [['R', '0.1', RED], ['G', '0.2', GRN], ['B', '0.4', '#7B8CFF'],
+       ['A', '0', MUT]].forEach((w, i) => {
+        g.push(h('text', { key: 'wl' + i, x: 618, y: 166 + i * 44, fontFamily: EN,
+          fontSize: 24, fontWeight: 800, fill: w[2] }, w[0]));
+        g.push(h('text', { key: 'wv' + i, x: 684, y: 166 + i * 44, fontFamily: EN,
+          fontSize: 24, fill: '#D8D5E8' }, '× ' + w[1]));
+      });
+      g.push(h('text', { key: 'wn', x: 618, y: 366, fontFamily: KR, fontSize: 20,
+        fill: MUT }, 'kernel 3×3 · set_weights'));
+
+      // 오른쪽 — 출력 3×3
+      const OP = 112, OC = 104, OX = 970, OY = 78;
+      g.push(h('text', { key: 'ot', x: OX, y: 40, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#00E49B' }, '출력 3×3'));
+      for (let r = 0; r < 3; r++)
+        for (let c = 0; c < 3; c++) {
+          const idx = r * 3 + c, got = idx <= done;
+          g.push(h('rect', { key: 'o' + r + c, x: OX + c * OP, y: OY + r * OP,
+            width: OC, height: OC, rx: 12,
+            fill: got ? 'rgba(0,228,155,.16)' : 'rgba(255,255,255,.05)',
+            stroke: idx === done ? '#00E49B' : 'rgba(255,255,255,.16)',
+            strokeWidth: idx === done ? 4 : 2 }));
+          g.push(h('text', { key: 'ov' + r + c, x: OX + c * OP + OC / 2,
+            y: OY + r * OP + OC / 2 + 12, textAnchor: 'middle', fontFamily: EN,
+            fontSize: 32, fontWeight: 800, fill: got ? '#00E49B' : '#4A4660' },
+            got ? String(val(r)) : '?'));
+        }
+      // 계산식
+      if (S > 0) {
+        const nf = 3 - cr;
+        g.push(h('text', { key: 'ct', x: 1350, y: 130, fontFamily: KR, fontSize: 22,
+          fill: 'var(--neutral-lighter)' },
+          (cr + 1) + '번째 줄 · ' + (cc + 1) + '번째 칸'));
+        g.push(h('text', { key: 'c1', x: 1350, y: 186, fontFamily: EN, fontSize: 25,
+          fill: '#D8D5E8' }, '채워진 칸 ' + (nf * 3) + '개'));
+        g.push(h('text', { key: 'c2', x: 1350, y: 234, fontFamily: EN, fontSize: 25,
+          fill: '#D8D5E8' }, '× 60'));
+        g.push(h('line', { key: 'cl', x1: 1350, y1: 258, x2: 1640, y2: 258,
+          stroke: 'rgba(255,255,255,.25)', strokeWidth: 2 }));
+        g.push(h('text', { key: 'c3', x: 1350, y: 316, fontFamily: EN, fontSize: 46,
+          fontWeight: 800, fill: '#00E49B' }, String(val(cr))));
+      } else {
+        g.push(h('text', { key: 'c0', x: 1350, y: 200, fontFamily: KR, fontSize: 23,
+          fill: MUT }, '버튼을 눌러'));
+        g.push(h('text', { key: 'c0b', x: 1350, y: 240, fontFamily: KR, fontSize: 23,
+          fill: MUT }, '한 칸씩 옮겨 보자'));
+      }
+
+      const btn = (lab, on, act) => h('button', { key: lab, onClick: on,
+        disabled: !act, style: { border: 'none', cursor: act ? 'pointer' : 'default',
+          borderRadius: '14px', padding: '16px 26px', fontFamily: KR,
+          fontSize: '23px', fontWeight: 700,
+          background: act ? '#00B37A' : 'rgba(255,255,255,.10)',
+          color: act ? '#04150F' : '#6E6890' } }, lab);
+
+      return h('div', { style: { display: 'flex', flexDirection: 'column',
+          gap: '16px', width: '100%', height: '100%' } },
+        h('div', { style: { flex: 1, minHeight: 0 } }, svg(SW, SH, g)),
+        h('div', { style: { display: 'flex', gap: '16px', alignItems: 'center' } },
+          btn(S >= 9 ? '아홉 칸 다 돌았다' : '필터를 한 칸 옮긴다  \u2192',
+            () => this.setState({ cstep: Math.min(9, S + 1) }), S < 9),
+          h('button', { onClick: () => this.setState({ cstep: 0 }),
+            style: { border: '2px solid rgba(255,255,255,.22)', cursor: 'pointer',
+              borderRadius: '14px', padding: '16px 26px', fontFamily: KR,
+              fontSize: '23px', fontWeight: 700, background: 'transparent',
+              color: 'var(--neutral-lighter)' } }, '처음으로'),
+          h('span', { style: { fontFamily: KR, fontSize: '22px', color: '#8D89A6' } },
+            '아래가 비어 있는 만큼 값이 줄어든다 \u2014 540 · 360 · 180')));
+    })();
+
+
+    // ── 가중치 세기 ─────────────────────────────────────────────
+    const paramCount = (() => {
+      const W = 1720, H = 470;
+      const g = [];
+      g.push(h('rect', { key: 'lb', x: 36, y: 30, width: 700, height: 380, rx: 20,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'lt', x: 70, y: 88, fontFamily: KR, fontSize: 25,
+        fontWeight: 700, fill: INK }, '첫 합성곱 한 층을 세어 보면'));
+      [['커널 5 × 5', '25'], ['× 입력 채널 4', '100'], ['+ 절편 1', '101'],
+       ['× 필터 10개', '1,010']].forEach((r, i) => {
+        g.push(h('text', { key: 'rl' + i, x: 70, y: 152 + i * 54, fontFamily: KR,
+          fontSize: 24, fill: 'var(--fg-3)' }, r[0]));
+        g.push(h('text', { key: 'rv' + i, x: 690, y: 152 + i * 54, textAnchor: 'end',
+          fontFamily: EN, fontSize: 28, fontWeight: 800,
+          fill: i === 3 ? ACC : MUT }, r[1]));
+      });
+      const bar = (key, y, val, max, lab, col, note) => {
+        const bw = Math.max(26, 560 * (val / max));
+        g.push(h('text', { key: key + 'l', x: 800, y: y, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: col }, lab));
+        g.push(h('rect', { key: key + 'b', x: 800, y: y + 26, width: bw, height: 70,
+          rx: 14, fill: col }));
+        g.push(h('text', { key: key + 'v', x: 800 + bw + 24, y: y + 76,
+          fontFamily: EN, fontSize: 38, fontWeight: 800, fill: col },
+          val.toLocaleString()));
+        g.push(h('text', { key: key + 'n', x: 800, y: y + 136, fontFamily: KR,
+          fontSize: 22, fill: MUT }, note));
+      };
+      bar('a', 76, 75000, 75000, '지난주 표 데이터 · Dense', MUT, '입력 11개 · 층 3개');
+      bar('b', 266, 7636, 75000, '오늘 사진 · CNN', ACC, '500×500 이미지 · 합성곱 4단');
+      g.push(h('text', { key: 'cap', x: 800, y: 456, fontFamily: KR, fontSize: 25,
+        fontWeight: 700, fill: ACC }, '열 배 가볍다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 학습 곡선 ───────────────────────────────────────────────
+    const trainCurve = (() => {
+      const W = 900, H = 740;
+      const g = [];
+      const N = 100;
+      const loss = [], acc = [];
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        loss.push(0.7959 * Math.exp(-2.6 * t) + 0.1927 * (1 - Math.exp(-2.6 * t)));
+        acc.push(0.50 + (0.9131 - 0.50) * (1 - Math.exp(-3.0 * t)));
+      }
+      const P = { x0: 96, x1: 852, y0: 96, y1: 600 };
+      const sx = (i) => P.x0 + i / (N - 1) * (P.x1 - P.x0);
+      const syL = (v) => P.y1 - (v / 0.85) * (P.y1 - P.y0);
+      const syA = (v) => P.y1 - (v / 1.0) * (P.y1 - P.y0);
+      g.push(h('rect', { key: 'bg', x: P.x0, y: P.y0, width: P.x1 - P.x0,
+        height: P.y1 - P.y0, rx: 12, fill: 'var(--surface-app)' }));
+      [0, 0.25, 0.5, 0.75, 1].forEach((t, i) => {
+        const y = P.y1 - t * (P.y1 - P.y0);
+        g.push(h('line', { key: 'gl' + i, x1: P.x0, y1: y, x2: P.x1, y2: y,
+          stroke: '#E4E2EC', strokeWidth: 1.5 }));
+      });
+      const path = (arr, sy) => arr.map((v, i) => (i ? 'L' : 'M') + sx(i).toFixed(1)
+        + ' ' + sy(v).toFixed(1)).join(' ');
+      g.push(h('path', { key: 'pl', d: path(loss, syL), fill: 'none', stroke: RED,
+        strokeWidth: 4 }));
+      g.push(h('path', { key: 'pa', d: path(acc, syA), fill: 'none', stroke: GRN,
+        strokeWidth: 4 }));
+      g.push(h('text', { key: 'll', x: P.x0 + 16, y: syL(0.7959) - 18, fontFamily: KR,
+        fontSize: 22, fontWeight: 700, fill: RED }, 'loss 0.7959'));
+      g.push(h('text', { key: 'lv', x: P.x1 - 10, y: syL(0.1927) - 20,
+        textAnchor: 'end', fontFamily: EN, fontSize: 26, fontWeight: 800, fill: RED },
+        '0.1927'));
+      g.push(h('text', { key: 'av', x: P.x1 - 10, y: syA(0.9131) - 20,
+        textAnchor: 'end', fontFamily: EN, fontSize: 26, fontWeight: 800, fill: GRN },
+        'accuracy 0.9131'));
+      g.push(h('text', { key: 'xl', x: (P.x0 + P.x1) / 2, y: 646, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fill: MUT }, 'epoch 0 → 100'));
+      g.push(h('text', { key: 'cap', x: P.x0, y: 700, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '곡선 모양은 개념 예시 — 시작·끝 값은 실제 실행 결과다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 피처맵 ──────────────────────────────────────────────────
+    const featureMaps = (() => {
+      const W = 1720, H = 520;
+      const g = [];
+      const rng = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+      const STAGE = [['Conv 1 · 피처맵 10장', 10, 8, ACC],
+                     ['MaxPool 뒤', 10, 5, GRN],
+                     ['Conv 2 · 새 피처', 10, 4, VIO]];
+      let x = 40;
+      STAGE.forEach((st, si) => {
+        const [lab, n, res, col] = st;
+        g.push(h('text', { key: 'l' + si, x: x, y: 76, fontFamily: KR, fontSize: 24,
+          fontWeight: 700, fill: col }, lab));
+        const CELL = 82, COLS = 5;
+        for (let k = 0; k < n; k++) {
+          const bx = x + (k % COLS) * (CELL + 10);
+          const by = 116 + Math.floor(k / COLS) * (CELL + 14);
+          const r = rng(17 + si * 31 + k * 7);
+          for (let a = 0; a < res; a++)
+            for (let b = 0; b < res; b++)
+              g.push(h('rect', { key: 'p' + si + k + a + b,
+                x: bx + a * (CELL / res), y: by + b * (CELL / res),
+                width: CELL / res + 0.6, height: CELL / res + 0.6,
+                fill: col, opacity: 0.06 + r() * 0.72 }));
+          g.push(h('rect', { key: 'f' + si + k, x: bx, y: by, width: CELL,
+            height: CELL, rx: 6, fill: 'none', stroke: col, strokeWidth: 1.5,
+            opacity: 0.5 }));
+        }
+        x += COLS * (CELL + 10) + 64;
+        if (si < 2) g.push(h('text', { key: 'a' + si, x: x - 40, y: 216,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 34, fill: AX }, '→'));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 470, fontFamily: KR, fontSize: 23,
+        fill: MUT },
+        '실제 출력의 배치를 옮겨 그린 것 — 14 건물외벽학습.ipynb 에서 직접 띄워 볼 것'));
+      return svg(W, H, g);
+    })();
+
+    // ── 피처 벡터와 클러스터 ────────────────────────────────────
+    const featureVec = (() => {
+      const W = 1720, H = 400;
+      const g = [];
+      const rnd = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+      g.push(h('text', { key: 'lt', x: 36, y: 34, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: 'var(--neutral-lighter)' },
+        'flatten 하면 한 줄이 된다 — 숫자 25개'));
+      const r0 = rnd(2026);
+      const PITCH = 66, CW = 60;
+      for (let k = 0; k < 25; k++) {
+        const v = r0();
+        g.push(h('rect', { key: 'v' + k, x: 36 + k * PITCH, y: 50, width: CW,
+          height: 58, rx: 8, fill: '#00E49B', opacity: 0.12 + v * 0.6 }));
+        g.push(h('text', { key: 'vt' + k, x: 36 + k * PITCH + CW / 2, y: 87,
+          textAnchor: 'middle', fontFamily: EN, fontSize: 17,
+          fill: '#EAE7F5' }, v.toFixed(2)));
+      }
+      g.push(h('text', { key: 'ln', x: 36, y: 174, fontFamily: KR, fontSize: 24,
+        fill: 'var(--neutral-lighter)' },
+        '이 25개가 각각 무슨 뜻인지 우리는 모른다.'));
+      g.push(h('text', { key: 'ln2', x: 36, y: 220, fontFamily: KR, fontSize: 24,
+        fill: 'var(--neutral-lighter)' },
+        '다만 서로 다른 길을 걸어왔으니 다른 정보를 담고 있는 것은 분명하다.'));
+      g.push(h('text', { key: 'ln3', x: 36, y: 288, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#00E49B' },
+        '사진 100장이면 25차원 공간에 점 100개가 찍힌 셈이다'));
+      g.push(h('text', { key: 'ar', x: 900, y: 240, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 40, fill: '#6E6890' }, '→'));
+      const COL = ['#00E49B', '#7B8CFF', '#FF7AA2', '#FFB86B'];
+      const CEN = [[1090, 230], [1330, 186], [1230, 338], [1560, 268]];
+      const r1 = rnd(77);
+      CEN.forEach((c, ci) => {
+        for (let k = 0; k < 16; k++) {
+          const a = r1() * Math.PI * 2, d = r1() * 76;
+          g.push(h('circle', { key: 'p' + ci + k, cx: c[0] + Math.cos(a) * d,
+            cy: c[1] + Math.sin(a) * d * 0.72, r: 7, fill: COL[ci], opacity: 0.55 }));
+        }
+        g.push(h('circle', { key: 'c' + ci, cx: c[0], cy: c[1], r: 12, fill: COL[ci],
+          stroke: '#0C0B17', strokeWidth: 3 }));
+      });
+      g.push(h('text', { key: 'rt', x: 1000, y: 140, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: '#00E49B' }, 'K-평균으로 묶으면'));
+      g.push(h('text', { key: 'rn', x: 1000, y: 388, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '비슷한 외벽끼리 묶인다 — 2주차 클러스터링'));
+      return svg(W, H, g);
+    })();
+
+    // ── 격자 = 이미지 ───────────────────────────────────────────
+    const gridAsImage = (() => {
+      const W = 1720, H = 480;
+      const g = [];
+      const rnd = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+      const LAY = [['주택 수', '#FFB86B'], ['거주인구 수', '#00B37A'],
+                   ['직장인구 수', '#FF7AA2'], ['거주자 추정소득', '#7B8CFF']];
+      const r = rnd(31);
+      LAY.forEach((L, k) => {
+        const x0 = 70 + k * 32, y0 = 76 + k * 32;
+        for (let a = 0; a < 8; a++)
+          for (let b = 0; b < 8; b++)
+            g.push(h('rect', { key: 'c' + k + a + b, x: x0 + a * 29, y: y0 + b * 29,
+              width: 26, height: 26, rx: 4, fill: L[1], opacity: 0.12 + r() * 0.70 }));
+        // 라벨은 겹쳐 쌓인 층 바깥 오른쪽에 모아 둔다 — 층 위에 얹으면 묻힌다
+        g.push(h('rect', { key: 'ls' + k, x: 440, y: 170 + k * 38, width: 22,
+          height: 22, rx: 5, fill: L[1] }));
+        g.push(h('text', { key: 'l' + k, x: 474, y: 188 + k * 38, fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: L[1] }, L[0]));
+      });
+      g.push(h('text', { key: 'lt', x: 70, y: 46, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: INK }, '격자 데이터 네 층'));
+      g.push(h('text', { key: 'eq', x: 790, y: 240, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 46, fill: AX }, '='));
+      const RGBA = [['R', '#D93636'], ['G', '#00B37A'], ['B', '#4434E2'],
+                    ['A', '#9E9AB8']];
+      RGBA.forEach((L, k) => {
+        const x0 = 890 + k * 32, y0 = 76 + k * 32;
+        for (let a = 0; a < 8; a++)
+          for (let b = 0; b < 8; b++)
+            g.push(h('rect', { key: 'r' + k + a + b, x: x0 + a * 29, y: y0 + b * 29,
+              width: 26, height: 26, rx: 4, fill: L[1], opacity: 0.12 + r() * 0.70 }));
+        g.push(h('rect', { key: 'rs' + k, x: 1260, y: 170 + k * 38, width: 22,
+          height: 22, rx: 5, fill: L[1] }));
+        g.push(h('text', { key: 'rl' + k, x: 1294, y: 188 + k * 38, fontFamily: EN,
+          fontSize: 23, fontWeight: 800, fill: L[1] }, L[0]));
+      });
+      g.push(h('text', { key: 'rt', x: 890, y: 46, fontFamily: KR, fontSize: 24,
+        fontWeight: 700, fill: INK }, '이미지 RGBA 네 층'));
+      g.push(h('text', { key: 'cap', x: 70, y: 452, fontFamily: KR, fontSize: 23,
+        fill: MUT }, '숫자가 0~255 대신 인구수와 금액일 뿐 — 모양은 완전히 같다'));
+      return svg(W, H, g);
+    })();
+
+    // ── 매장 하나가 그림 한 장 ──────────────────────────────────
+    const gridSample = (() => {
+      const W = 1720, H = 534;
+      const g = [];
+      const LAY = [['거주인구', '#4434E2', 0.5, 0.5], ['직장인구', '#00B37A', 0.5, 0.78],
+                   ['추정소득', '#FF7AA2', 0.76, 0.5], ['주택 수', '#E8873A', 0.26, 0.5]];
+      LAY.forEach((L, k) => {
+        const x0 = 60 + k * 410;
+        g.push(h('text', { key: 'l' + k, x: x0, y: 66, fontFamily: KR, fontSize: 25,
+          fontWeight: 800, fill: L[1] }, L[0]));
+        for (let a = 0; a < 11; a++)
+          for (let b = 0; b < 11; b++) {
+            const dx = (a / 10 - L[2]), dy = (b / 10 - L[3]);
+            const v = Math.exp(-(dx * dx + dy * dy) * 9);
+            g.push(h('rect', { key: 'c' + k + a + b, x: x0 + a * 27, y: 90 + b * 27,
+              width: 24, height: 24, rx: 4, fill: L[1], opacity: 0.06 + v * 0.84 }));
+          }
+        // 한가운데가 매장 자리다 — 둘레 120칸이 배후지
+        g.push(h('rect', { key: 'm' + k, x: x0 + 5 * 27 - 4, y: 90 + 5 * 27 - 4,
+          width: 32, height: 32, rx: 7, fill: 'none', stroke: RED, strokeWidth: 4 }));
+        g.push(h('text', { key: 'n' + k, x: x0, y: 420, fontFamily: KR, fontSize: 21,
+          fill: MUT }, '11 × 11 격자 · 1.1km'));
+      });
+      g.push(h('text', { key: 'mk', x: 60, y: 452, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: RED }, '빨간 칸이 매장 자리 — 둘레 120칸이 배후지다'));
+      g.push(h('rect', { key: 'yb', x: 60, y: 474, width: 1600, height: 52, rx: 14,
+        fill: 'var(--surface-app)' }));
+      g.push(h('text', { key: 'yt', x: 90, y: 508, fontFamily: KR, fontSize: 24,
+        fill: 'var(--fg-3)' }, '맞혀야 할 값 — 이 매장의 월 매출액'));
+      g.push(h('text', { key: 'yv', x: 1630, y: 508, textAnchor: 'end', fontFamily: EN,
+        fontSize: 28, fontWeight: 800, fill: ACC }, '약 3억 원'));
+      return svg(W, H, g);
+    })();
+
+    // ── 층마다 단위가 다르다 ────────────────────────────────────
+    const normNeed = (() => {
+      const W = 1720, H = 380;
+      const g = [];
+      const D = [['거주인구 수', 3200, '명'], ['직장인구 수', 1800, '명'],
+                 ['거주자 추정소득', 4800000, '원'], ['주택 수', 62, '호']];
+      const max = 4800000;
+      D.forEach((d, i) => {
+        const y = 60 + i * 76;
+        g.push(h('text', { key: 'l' + i, x: 40, y: y + 34, fontFamily: KR,
+          fontSize: 24, fill: INK }, d[0]));
+        const bw = Math.max(10, 900 * Math.log10(d[1] + 1) / Math.log10(max + 1));
+        g.push(h('rect', { key: 'b' + i, x: 380, y: y + 6, width: bw, height: 42,
+          rx: 8, fill: i === 2 ? RED : ACC, opacity: i === 2 ? 1 : 0.55 }));
+        g.push(h('text', { key: 'v' + i, x: 380 + bw + 20, y: y + 36, fontFamily: EN,
+          fontSize: 24, fontWeight: 700, fill: i === 2 ? RED : MUT },
+          d[1].toLocaleString() + ' ' + d[2]));
+      });
+      g.push(h('text', { key: 'cap', x: 1380, y: 120, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: RED }, '소득 한 층이'));
+      g.push(h('text', { key: 'cap2', x: 1380, y: 158, fontFamily: KR, fontSize: 24,
+        fontWeight: 800, fill: RED }, '학습을 지배한다'));
+      g.push(h('text', { key: 'cap3', x: 1380, y: 210, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '가로축은 로그 눈금'));
+      return svg(W, H, g);
+    })();
+
+    // ── 격자 CNN 모델 ───────────────────────────────────────────
+    const gridModel = (() => {
+      const W = 1720, H = 420;
+      const g = [];
+      const ST = [['입력', '11×11', 4], ['BatchNorm', '11×11', 4],
+                  ['Conv 2×2', '11×11', 10], ['MaxPool', '5×5', 10],
+                  ['Conv', '5×5', 20], ['MaxPool', '2×2', 20],
+                  ['Conv', '2×2', 10], ['MaxPool', '1×1', 10]];
+      const X0 = 26, CW = 150, GAP = 12;
+      ST.forEach((s, i) => {
+        const x = X0 + i * (CW + GAP);
+        const bw = Math.max(30, Math.min(100, parseInt(s[1]) * 9));
+        g.push(h('rect', { key: 'b' + i, x: x + (CW - bw) / 2, y: 190 - bw / 2,
+          width: bw, height: bw, rx: 10, fill: '#EEF0FE', stroke: ACC,
+          strokeWidth: 2.5 }));
+        g.push(h('text', { key: 't' + i, x: x + CW / 2, y: 86, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fontWeight: 700, fill: ACC }, s[0]));
+        g.push(h('text', { key: 'z' + i, x: x + CW / 2, y: 296, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 21, fontWeight: 700, fill: INK }, s[1]));
+        g.push(h('text', { key: 'f' + i, x: x + CW / 2, y: 328, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 20, fill: MUT }, '피처 ' + s[2]));
+      });
+      const xf = X0 + 8 * (CW + GAP);
+      g.push(h('rect', { key: 'fb', x: xf, y: 150, width: 132, height: 84, rx: 16,
+        fill: '#EDF9F4', stroke: GRN, strokeWidth: 3 }));
+      g.push(h('text', { key: 'ft', x: xf + 66, y: 186, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 22, fontWeight: 800, fill: GRN }, 'Flatten'));
+      g.push(h('text', { key: 'ft2', x: xf + 66, y: 218, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 20, fill: GRN }, '피처 10개'));
+      g.push(h('text', { key: 'ar', x: xf + 146, y: 196, fontFamily: EN, fontSize: 30,
+        fill: AX }, '→'));
+      g.push(h('rect', { key: 'ob', x: xf + 182, y: 150, width: 160, height: 84,
+        rx: 16, fill: '#FFF4E8', stroke: '#E8873A', strokeWidth: 3 }));
+      g.push(h('text', { key: 'ot', x: xf + 262, y: 186, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 23, fontWeight: 800, fill: '#E8873A' }, '매출액'));
+      g.push(h('text', { key: 'ot2', x: xf + 262, y: 218, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 20, fill: '#E8873A' }, 'linear'));
+      g.push(h('text', { key: 'cap', x: 30, y: 390, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '외벽 모델과 다른 곳은 둘뿐이다 — 맨 앞의 BatchNorm, 그리고 마지막 활성화가 linear'));
+      return svg(W, H, g);
+    })();
+
+    // ── 계보 ────────────────────────────────────────────────────
+    const lineage = (() => {
+      const W = 1720, H = 480;
+      const g = [];
+      const L = [
+        ['1998', 'LeNet', '작게, 그러나 되게', ['필기체 98.8%', '파라미터 6만'], MUT],
+        ['2012', 'AlexNet', 'GPU 와 드롭아웃', ['ImageNet 우승', '파라미터 5천만'], ACC],
+        ['2014', 'VGG', '3×3 만 깊게', ['작은 커널을 반복', '구조가 단순하다'], VIO],
+        ['2015', 'ResNet', '건너뛰어 잇는다', ['깊어도 나빠지지 않는다', '지금도 기본형'], GRN],
+        ['2017', 'DenseNet', '앞을 전부 이어 붙인다', ['더 적은 파라미터로', '같은 성능'], '#E8873A'],
+        ['2019', 'EfficientNet', '같이 키운다', ['깊이·너비·해상도를', '정해진 비율로'], RED],
+      ];
+      const CW = 262, GAP = 18, X0 = 30;
+      L.forEach((l, i) => {
+        const x = X0 + i * (CW + GAP);
+        g.push(h('rect', { key: 'b' + i, x: x, y: 60, width: CW, height: 320, rx: 18,
+          fill: '#fff', stroke: l[5], strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'y' + i, x: x + 26, y: 112, fontFamily: EN,
+          fontSize: 24, fontWeight: 800, fill: l[5] }, l[0]));
+        g.push(h('text', { key: 'n' + i, x: x + 26, y: 166, fontFamily: EN,
+          fontSize: 30, fontWeight: 800, fill: INK }, l[1]));
+        g.push(h('text', { key: 'k' + i, x: x + 26, y: 214, fontFamily: KR,
+          fontSize: 22, fontWeight: 700, fill: l[5] }, l[2]));
+        l[3].forEach((s, j) => g.push(h('text', { key: 's' + i + j, x: x + 26,
+          y: 268 + j * 38, fontFamily: KR, fontSize: 20,
+          fill: 'var(--fg-3)' }, s)));
+      });
+      g.push(h('line', { key: 'ax', x1: 30, y1: 420, x2: 1690, y2: 420, stroke: AX,
+        strokeWidth: 3 }));
+      g.push(h('text', { key: 'cap', x: 30, y: 456, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '연도는 논문 발표 기준'));
+      return svg(W, H, g);
+    })();
+
+    return {
+      showFooter: this.props.showFooter ?? true,
+      weekMap, denseAll, blowUp, conv1d, knobs, stacking, conv1dResult,
+      makeImage, convDemo, paramCount, trainCurve,
+      gridAsImage, gridSample, normNeed, gridModel,
+      featureMaps, featureVec, lineage,
+    };
+  }
+}
+window.DC_DECKS.push({ deck: 0, props: {}, Component: Component });
+})();
+</script>
+<script src="vendor/dc-mount.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage    = document.getElementById('stage');
+  var slides   = Array.prototype.slice.call(stage.children).filter(function (n) {
+    return n.tagName === 'SECTION';
+  });
+  var total    = slides.length;
+  var cards    = Array.prototype.slice.call(document.querySelectorAll('.ov-card'));
+  var gCur     = document.getElementById('g-cur');
+  var gLabel   = document.getElementById('g-label');
+  var progress = document.getElementById('progress');
+  var jumpEl   = document.getElementById('jump');
+  var nNum     = document.getElementById('n-num');
+  var nBody    = document.getElementById('n-body');
+  var body     = document.body;
+
+  function pad(n) { return String(n).length < 2 ? '0' + n : String(n); }
+  document.getElementById('g-total').textContent = pad(total);
+
+  /* ---------- fit the fixed 1920x1080 stage into the viewport ---------- */
+  function fit() {
+    var s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  /* ---------- navigation ---------- */
+  var cur = -1;
+
+  function show(i, pushHash) {
+    i = Math.max(0, Math.min(total - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) {
+      slides[cur].classList.remove('is-current');
+      if (cards[cur]) cards[cur].classList.remove('is-current');
+    }
+    if (cur >= 0) slides[cur].removeAttribute('data-deck-active');
+    cur = i;
+    slides[cur].classList.add('is-current');
+    if (cards[cur]) cards[cur].classList.add('is-current');
+    // 기계학습의 역사 keeps its GIFs on a still frame unless the slide is live,
+    // and it watches for deck-stage's data-deck-active attribute. The presenter
+    // tracks the current slide with a class, so mirror the attribute it expects.
+    slides[cur].setAttribute('data-deck-active', '');
+
+    var sec = slides[cur];
+    gCur.textContent = sec.getAttribute('data-screen-label') || pad(cur + 1);
+    gLabel.textContent = sec.getAttribute('data-label') || '';
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+
+    var notes = sec.getAttribute('data-speaker-notes') || '';
+    nNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    nBody.className = notes ? '' : 'nempty';
+    nBody.textContent = notes || '(이 슬라이드에는 노트가 없습니다)';
+
+    if (pushHash !== false) history.replaceState(null, '', '#' + (cur + 1));
+    if (body.classList.contains('overview-on') && cards[cur]) {
+      cards[cur].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function next() { show(cur + 1); }
+  function prev() { show(cur - 1); }
+
+  /* ---------- auto-hiding chrome ---------- */
+  var uiTimer = null;
+  function poke() {
+    body.classList.add('ui-visible');
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(function () {
+      if (!body.classList.contains('overview-on') &&
+          !body.classList.contains('help-on')) {
+        body.classList.remove('ui-visible');
+      }
+    }, 2600);
+  }
+  ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, poke, { passive: true });
+  });
+
+  /* ---------- digit buffer: type 12 -> slide 12 ---------- */
+  var buf = '', bufTimer = null;
+  function flushBuf(commit) {
+    if (commit && buf) show(parseInt(buf, 10) - 1);
+    buf = '';
+    jumpEl.style.display = 'none';
+    clearTimeout(bufTimer);
+  }
+  function pushDigit(d) {
+    buf += d;
+    if (parseInt(buf, 10) > total) buf = d;
+    jumpEl.textContent = buf;
+    jumpEl.style.display = 'block';
+    clearTimeout(bufTimer);
+    bufTimer = setTimeout(function () { flushBuf(true); }, 850);
+  }
+
+  /* ---------- overlays ---------- */
+  function toggle(cls) {
+    if (body.classList.toggle(cls)) {
+      body.classList.add('ui-visible');
+      clearTimeout(uiTimer);
+    } else {
+      poke();
+    }
+  }
+  function closeOverlays() {
+    body.classList.remove('overview-on', 'help-on');
+    poke();
+  }
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  }
+
+  /* ---------- keys ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = e.key;
+
+    if (k >= '0' && k <= '9') { pushDigit(k); e.preventDefault(); return; }
+
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        flushBuf(false); next(); break;
+      case ' ':
+        flushBuf(false); if (e.shiftKey) { prev(); } else { next(); } break;
+      case 'Enter':
+        if (buf) { flushBuf(true); } else { next(); } break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        flushBuf(false); prev(); break;
+      case 'Home': flushBuf(false); show(0); break;
+      case 'End':  flushBuf(false); show(total - 1); break;
+      case 'o': case 'O': toggle('overview-on'); break;
+      case 'n': case 'N': toggle('notes-on'); break;
+      case 'b': case 'B': body.classList.toggle('blanked'); break;
+      case 'f': case 'F': fullscreen(); break;
+      case 'h': case 'H': case '?': case '/': toggle('help-on'); break;
+      case 'Escape':
+        if (body.classList.contains('help-on') ||
+            body.classList.contains('overview-on')) closeOverlays();
+        else flushBuf(false);
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  /* ---------- pointer nav (leave real interactive content alone) ---------- */
+  document.getElementById('stagewrap').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    if (e.clientX < window.innerWidth * 0.35) prev();
+    else if (e.clientX > window.innerWidth * 0.65) next();
+    else poke();
+  });
+
+  var tx = null;
+  window.addEventListener('touchstart', function (e) {
+    tx = e.changedTouches[0].clientX;
+  }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 55) { if (dx < 0) next(); else prev(); }
+    tx = null;
+  }, { passive: true });
+
+  cards.forEach(function (c) {
+    c.addEventListener('click', function () {
+      show(parseInt(c.getAttribute('data-go'), 10));
+      body.classList.remove('overview-on');
+      poke();
+    });
+  });
+
+  /* ---------- image slots with no file on disk ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.imgslot img'), function (img) {
+    function miss() { img.parentNode.classList.add('no-img'); }
+    img.addEventListener('error', miss);
+    if (img.complete && img.naturalWidth === 0) miss();
+  });
+
+  /* ---------- go ---------- */
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isFinite(start) && start >= 1 ? start - 1 : 0, false);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt((location.hash || '').replace('#', ''), 10);
+    if (isFinite(n)) show(n - 1, false);
+  });
+  poke();
+})();
+</script>
+<script>
+/* vendor/ 가 함께 오지 않으면 차트는 조용히 빈 칸이 된다 — 슬라이드는 멀쩡해
+   보이고 그림만 사라져서, 발표 중에야 알아채게 된다. 그때만 그 자리에 이유를
+   적는다. 이 스크립트는 인라인이라 vendor/ 가 없어도 반드시 실행된다.
+
+   런타임이 살아 있는데 슬롯이 비어 있는 것은 전혀 다른 버그다. 그 경우에는
+   손대지 않고 콘솔에만 남긴다 — 슬롯을 지워버리면 verify_all 이 문제를 보지
+   못하고 통과시켜 버린다. */
+addEventListener('load', function () {
+  setTimeout(function () {
+    var live = (typeof React !== 'undefined') && (window.DC_DECKS || []).length > 0;
+    var bad = [].slice.call(document.querySelectorAll('[data-dc-slot]'))
+                .filter(function (e) { return !e.firstElementChild; });
+    if (!bad.length) return;
+    if (live) {
+      console.warn('[deck] 런타임은 정상인데 비어 있는 슬롯: '
+        + bad.map(function (e) { return e.dataset.dcSlot; }).join(', '));
+      return;
+    }
+    bad.forEach(function (e) {
+      e.removeAttribute('data-dc-slot');
+      e.style.cssText = 'display:flex;align-items:center;justify-content:center;'
+        + 'width:100%;min-height:200px;box-sizing:border-box;border:3px dashed #CE3A3A;'
+        + 'border-radius:12px;background:rgba(206,58,58,.08);color:#CE3A3A;'
+        + 'font-size:26px;font-weight:700;text-align:center;padding:26px;line-height:1.5';
+      e.textContent = '차트를 그릴 수 없습니다 — vendor/ 폴더가 present.html 과 같은 위치에 있어야 합니다';
+    });
+    console.error('[deck] 차트 런타임 없음(vendor/ 누락). 빈 슬롯 ' + bad.length + '개');
+  }, 800);
+});
+</script>
+</body>
+</html>

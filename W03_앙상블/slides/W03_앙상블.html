@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>도시빅데이터와 머신러닝 — 3주차 앙상블</title>
+<title>W03_앙상블</title>
 
 <!-- design-system styles, same order as the deck's <helmet> -->
 <link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
@@ -14,10 +14,10 @@
 
 <style>
 #stage > section[data-deck="0"] {
-  --type-hero:96px; --type-title:64px; --type-subtitle:44px; --type-formula:48px;
-  --type-body:34px; --type-small:28px; --type-eyebrow:26px; --type-note:24px;
-  --pad-top:100px; --pad-bottom:80px; --pad-x:100px;
-  --gap-title:52px; --gap-item:28px;
+  --type-hero:94px; --type-title:60px; --type-subtitle:40px; --type-formula:44px;
+  --type-body:31px; --type-small:26px; --type-eyebrow:24px; --type-note:22px;
+  --pad-top:82px; --pad-bottom:70px; --pad-x:94px;
+  --gap-title:42px; --gap-item:24px;
 }
 #stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
 
@@ -263,254 +263,474 @@
 
 <div id="stagewrap">
   <div id="stage">
-<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="의사결정나무는 단순하고 계산이 빠르다. 그래서 여러 개를 모으기에 궁합이 좋다. 오늘은 그 단순한 나무를 수백 그루 모아 훨씬 강한 모델을 만드는 방법." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 78% 22%,rgba(158,93,249,.28),transparent 60%)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">3주차 · 앙상블 알고리즘</div>
-  <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">앙상블</h1>
-  <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">약한 모델을 여럿 모으면 왜 강해지는가</p>
-  <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:12px 0 0;max-width:1200px"></div>
-  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">05_Bagging_RF.ipynb · 06_Boosting.ipynb</p>
-</section>
-
-<section data-deck="0" data-label="통계와 기계학습의 관점 차이" data-screen-label="02" data-speaker-notes="지난 시간과 오늘 사이에 있는 관점 차이를 먼저 짚는다. 통계는 내가 본 데이터를 어떤 분포의 표본으로 본다. 그래서 분포를 계산하는 과정 자체가 과적합을 밀어낸다. 기계학습은 데이터 한 줄 한 줄에 의미를 부여한다. 그래서 과적합의 끝까지 갈 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">관점</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">데이터를 무엇으로 보는가</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:12px">
-    <div style="background:var(--surface-app);border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:20px">
-      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:var(--fg-1)">통계</div>
-      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">내가 본 건 <b style="color:var(--fg-1)">어떤 분포의 표본일 뿐</b>이라고 가정한다. 분포를 계산하는 과정이 구석에 박힌 데이터를 감싸 버린다.</p>
-      <div style="font-size:var(--type-small);color:var(--primary-main);font-weight:700">→ 과적합을 밀어낸다</div>
-    </div>
-    <div style="background:var(--neutral-black);color:#fff;border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:20px">
-      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700">기계학습</div>
-      <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">데이터 <b style="color:#fff">한 줄 한 줄에 의미</b>를 부여한다. 본 것만 가지고 끝까지 간다.</p>
-      <div style="font-size:var(--type-small);color:#FF7AA2;font-weight:700">→ 과적합의 끝까지 갈 수 있다</div>
-    </div>
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 007 Bagging_RF.pptx p.1 · 008 Boost.pptx p.1 — 앙상블. 앞에서 만든 나무 한 그루는 사실 그리 강하지 않다. 그런데 그 약한 것들을 수백 개 모으면 지금도 정형 데이터에서 가장 강한 모델이 된다. 오늘은 그걸 두 갈래로 나눠 본다 — 나란히 모으는 배깅, 이어 붙이는 부스팅." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;position:relative">
+  <div style="position:absolute;inset:0;opacity:0.28"><div class="imgslot" style=""><img src="uploads/bag_s01_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>숲 — 나무들</span></div></div></div>
+  <div style="position:relative;display:flex;flex-direction:column;gap:32px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">3주차 · 앙상블 알고리즘</div>
+    <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.1;letter-spacing:-0.025em">Bagging · Random Forest<br>Boosting · GBM</h1>
+    <p style="margin:0;font-size:var(--type-subtitle);font-weight:500;color:var(--neutral-lighter);line-height:1.35">나무 한 그루는 약하다. 그래서 숲을 만든다.</p>
+    <div style="height:2px;background:linear-gradient(90deg,#4434E2,#9E5DF9,#00E49B);margin:8px 0 0;max-width:1200px"></div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter)">한양대학교 도시공학과 · 05_Bagging_RF.ipynb · 06_Boosting.ipynb</p>
   </div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1620px">시작 전제가 다르니 <b style="color:var(--fg-1)">같은 데이터에서 다른 결론</b>이 나온다.</p>
 </section>
 
-<section data-deck="0" data-label="연표" data-screen-label="03" data-speaker-notes="의사결정나무 이후 10여 년이 지나 새 알고리즘들이 나온다. 배깅 94년, 부스팅 97년, 랜덤포레스트 2001년, XGBoost 2016년. 지금 현장에서 정형 데이터로 가장 많이 쓰는 것들이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">계보</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">지금도 현장에서 쓰는 것들</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="timeline"></span></div>
+<section data-deck="0" data-label="앙상블 모델" data-screen-label="02" data-speaker-notes="출처: 007 Bagging_RF.pptx p.3 — 앙상블의 정의는 아주 짧다. 2개 이상의 학습 모델을 결합하는 메타 알고리즘. 메타라는 말은 알고리즘 위의 알고리즘이라는 뜻이다. 결합 방식이 두 갈래인데, 여러 모델을 동시에 만들어 투표시키는 것과, 앞 모델의 잔차를 다음 모델이 맡는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">ENSEMBLE MODEL</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">2개 이상의 학습 모델을 결합하는 <span style="color:var(--primary-main)">메타 알고리즘</span></h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="ensembleShapes"></span></div>
 </section>
 
-<section data-deck="0" data-label="앙상블은 메타 알고리즘" data-screen-label="04" data-speaker-notes="앙상블은 자기 의지가 없다. 데이터를 어떻게 분석하겠다는 주장이 없고, 그런 주장을 가진 알고리즘들을 한 단계 위에서 재조합할 뿐이다. 그래서 메타 알고리즘이라고 한다. 개별 모델이 아주 많이 필요한데 신경망은 오래 걸리니, 계산이 빠른 의사결정나무와 궁합이 맞았다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="Hard vs Soft Voting" data-screen-label="03" data-speaker-notes="출처: 007 Bagging_RF.pptx p.3 — 투표에도 두 가지가 있다. 하드 보팅은 각 모델의 결론만 세어서 다수결, 소프트 보팅은 확률을 더한다. 이 예시가 딱 갈리는 경우다. A와 B는 0이라고 하는데 확신이 약하고, C만 1이라고 하는데 99퍼센트로 확신한다. 하드로는 0, 소프트로는 1이 나온다. 어느 쪽이 맞는지는 데이터가 정한다 — 확률을 믿을 만한 모델이면 소프트가 낫다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">VOTING</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">결론을 셀 것인가, 확신을 더할 것인가</h2>
+  <div style="flex:1;min-height:0"><span data-dc-slot="voting"></span></div>
+</section>
+
+<section data-deck="0" data-label="Bias-Variance Trade Off" data-screen-label="04" data-speaker-notes="출처: 007 Bagging_RF.pptx p.4 — 앙상블이 왜 통하는지는 이 그림에서 나온다. 편향은 과녁의 중심에서 얼마나 벗어났나, 분산은 얼마나 흩어졌나다. 나무 한 그루는 오른쪽 아래 — 편향은 낮은데 분산이 크다. 데이터가 조금만 바뀌어도 완전히 다른 나무가 된다. 이 분산을 줄이는 게 배깅이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary-dark);font-weight:600">META ALGORITHM</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">자기 의지가<br>없는 알고리즘</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">“데이터를 이렇게 보겠다”는 <b style="color:var(--fg-1)">주장이 없다.</b> 그런 주장을 가진 알고리즘들을 한 단계 위에서 재조합할 뿐이다.</p>
-    <div style="padding:28px 34px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-2);line-height:1.45">개별 모델이 <b style="color:var(--fg-1)">수백~수천 개</b> 필요하다. 신경망은 너무 오래 걸린다 — 그래서 <b style="color:var(--secondary-dark)">빠른 나무</b>와 궁합이 맞았다.</div>
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">BIAS–VARIANCE TRADE OFF</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">빗나갔나,<br>흩어졌나</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">편향(Bias)</b> — 중심에서 얼마나 벗어났나<br><b style="color:var(--fg-1)">분산(Variance)</b> — 얼마나 흩어졌나</p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">깊은 나무 한 그루는 <b style="color:#D93636">Low Bias · High Variance</b>. 데이터가 조금만 바뀌어도 전혀 다른 나무가 된다.<br><br>이 <b style="color:var(--fg-1)">분산</b>을 줄이려고 여러 그루를 모은다.</div>
   </div>
-  <div style="height:700px"><span data-dc-slot="metaSketch"></span></div>
+  <div style="height:780px"><span data-dc-slot="biasVariance"></span></div>
 </section>
 
-<section data-deck="0" data-label="모델이 다르다는 뜻" data-screen-label="05" data-speaker-notes="여기서 용어를 정리한다. 모델이 다르다는 건 알고리즘 종류가 다르다는 뜻이 아니다. 같은 y=ax+b라도 a가 0.1인 것과 0.2인 것은 다른 모델이다. 숫자 하나만 달라도 다른 모델." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">용어 정리</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em">“모델이 다르다”는<br>무슨 뜻인가</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:12px">
-    <div style="background:#FDF0F0;border:2px solid #D93636;border-radius:16px;padding:40px 44px">
-      <div style="font-size:var(--type-subtitle);font-weight:700;color:#D93636;margin-bottom:16px">이런 뜻이 아니다</div>
-      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">회귀 + 의사결정나무를 합쳤다</p>
-    </div>
-    <div style="background:#EDF9F4;border:2px solid #00B37A;border-radius:16px;padding:40px 44px">
-      <div style="font-size:var(--type-subtitle);font-weight:700;color:#00B37A;margin-bottom:16px">이런 뜻이다</div>
-      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">같은 나무인데 <b style="color:var(--fg-1)">깊이가 다르다</b><br>같은 나무인데 <b style="color:var(--fg-1)">학습한 데이터가 다르다</b></p>
-    </div>
+<section data-deck="0" data-label="복잡도와 오차" data-screen-label="05" data-speaker-notes="출처: 007 Bagging_RF.pptx p.5 — 지난 시간 트리 깊이에서 본 그림이 여기서도 똑같이 나온다. 모델을 복잡하게 할수록 훈련 오차는 계속 내려가고 테스트 오차는 어느 지점에서 다시 올라간다. 왼쪽은 편향이 큰 구간, 오른쪽은 분산이 큰 구간이다. 앙상블은 오른쪽에서 시작해 분산을 깎아 내려오는 전략이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:56px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:760px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bag_s05_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Prediction Error vs Model Complexity</span></div></div>
   </div>
-  <div style="padding:32px 40px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1620px;font-family:var(--font-display)">y = <b style="color:#00E49B">0.1</b>x + b 와 y = <b style="color:#00E49B">0.2</b>x + b 는 <span style="font-family:var(--font-sans)">다른 모델이다. 숫자 하나만 달라도.</span></div>
-</section>
-
-<section data-deck="0" data-label="오늘의 질문" data-screen-label="06" data-speaker-notes="여기가 오늘의 핵심 질문. 여러 모델을 모으면 좋다는 건 알겠다. 그런데 내가 아는 알고리즘은 의사결정나무 하나고, 데이터도 하나다. 몇 번을 돌려도 똑같은 나무가 나온다. 어떻게 모델을 여러 개 얻을 것인가. 학생들에게 먼저 답을 받아 볼 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:44px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 80% 30%,rgba(0,228,155,.24),transparent 60%)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">오늘의 질문</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.25;letter-spacing:-0.02em;max-width:1620px">알고리즘도 하나, 데이터도 하나.<br>모델을 <b style="color:var(--accent-green)">여러 개</b> 어떻게 얻는가?</h2>
-  <p style="margin:0;font-size:var(--type-subtitle);color:var(--neutral-lighter);line-height:1.4;max-width:1560px">몇 번을 돌려도 똑같은 나무가 나온다.</p>
-</section>
-
-<section data-deck="0" data-label="두 갈래" data-screen-label="07" data-speaker-notes="앙상블에는 두 가지 방식뿐이다. 보팅은 병렬 — 각자 독립적으로 판단하고 투표한다. 부스팅은 직렬 — 이어달리기처럼 앞이 결정한 걸 받아 뒤가 다시 본다. 이 둘의 차이가 이후 모든 것을 가른다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">방법은 둘뿐</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">나란히 갈까, 이어달릴까</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="votingVsBoosting"></span></div>
-</section>
-
-<section data-deck="0" data-label="하드 보팅과 소프트 보팅" data-screen-label="08" data-speaker-notes="투표에도 두 방식이 있다. 하드 보팅은 한 표는 한 표. 소프트 보팅은 확신도로 가중한다. 6명이 51~60%로 감소라고 하고 4명이 100% 확신으로 비감소라고 하면 누구 손을 들어줄 것인가. 정답은 없고 하이퍼파라미터다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">투표 방식</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 표는 한 표인가, 확신을 셀 것인가</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="hardSoft"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">어느 쪽이 옳다고 <b style="color:var(--fg-1)">아무도 정할 수 없다.</b> 이렇게 모델 바깥에서 정해 주는 값을 <b style="color:var(--primary-main)">하이퍼파라미터</b>라고 한다.</p>
-</section>
-
-<section data-deck="0" data-label="어디에 무엇을 쓰나" data-screen-label="09" data-speaker-notes="편향-분산으로 보면 어느 방식이 맞는지가 갈린다. 분산이 크고 편향이 낮은 애들 — 흩어져 있지만 정답 주변에 몰려 있는 — 은 투표하면 좋아진다. 편향이 크고 분산이 낮은 애들 — 영점이 아예 안 맞는 — 은 부스팅으로 한 칸씩 끌어내린다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">BIAS · VARIANCE</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">어디에 무엇을 쓰나</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="biasVariance"></span></div>
-</section>
-
-<section data-deck="0" data-label="모델을 여러 개 얻는 법" data-screen-label="10" data-speaker-notes="답은 모델이 아니라 데이터를 바라보는 것이었다. K-fold는 데이터를 다섯 조각으로 나눠 돌아가며 테스트로 쓴다. 모델 다섯 개가 나온다. 한계는 fold를 늘리면 테스트 개수가 줄어든다는 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="height:640px"><span data-dc-slot="kfold"></span></div>
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">방법 ① K-FOLD</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">데이터를<br>돌려가며 쓴다</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">5조각으로 나눠 하나씩 테스트로 쓰면 <b style="color:var(--fg-1)">모델 5개</b>가 나온다.</p>
-    <div style="padding:26px 32px;background:#FDF0F0;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#D93636">한계</b> — fold 를 늘리면 테스트 데이터가 줄어든다. 모델을 100개, 만 개 얻을 수는 없다.</div>
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">ERROR–COMPLEXITY</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">훈련 오차와<br>테스트 오차</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">왼쪽 = <b style="color:var(--fg-1)">High Bias</b> · 오른쪽 = <b style="color:var(--fg-1)">High Variance</b>.</p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">앙상블은 <b style="color:var(--fg-1)">오른쪽에서 시작해</b> 분산을 깎아 빨간 곡선의 바닥으로 내려오는 전략이다.</div>
   </div>
 </section>
 
-<section data-deck="0" data-label="부트스트랩" data-screen-label="11" data-speaker-notes="부트스트랩은 훨씬 단순하다. 120개 중에서 중복을 허용해 랜덤하게 뽑는다. 같은 데이터를 두 번 뽑아도 된다. 이러면 서로 다른 데이터셋을 무제한으로 만들 수 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="여러 모델을 어디서 구하지" data-screen-label="06" data-speaker-notes="출처: 신규 — 여기서 한 번 멈추고 학생들에게 물어볼 것. 앞에서 여러 모델을 모아 투표시키면 좋다는 것까지 왔다. 그런데 정작 큰 문제가 남았다. 우리한테 데이터는 한 벌뿐이다. 같은 데이터로 같은 알고리즘을 돌리면 매번 똑같은 나무가 나온다. 똑같은 나무 백 개를 모아 투표시켜 봐야 한 개와 결과가 같다. 그러니 질문은 이것이다 — 서로 다른 모델을 어디서 구하지? 답은 셋 중 하나다. 알고리즘을 바꾸거나, 하이퍼파라미터를 바꾸거나, 데이터를 바꾸거나. 앞의 둘은 손이 많이 가고 개수를 늘리기 어렵다. 그래서 앙상블이 고른 길이 세 번째다. 데이터를 여러 벌로 만들어서 나무를 여러 그루 심는다. 그 데이터를 여러 벌로 만드는 방법이 다음 두 장이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 26%,rgba(68,52,226,.30),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">여기서 한 번 막힌다</div>
+  <h2 style="margin:0;font-size:64px;font-weight:800;line-height:1.25;letter-spacing:-0.025em;max-width:1700px">데이터는 한 벌뿐인데<br><span style="color:var(--accent-green)">여러 모델을 어디서 구하지?</span></h2>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1700px">같은 데이터로 같은 알고리즘을 돌리면 <b style="color:#fff">매번 똑같은 나무</b>가 나온다. 똑같은 것 백 개를 모아 봐야 한 개와 같다.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px">
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><div style="font-size:26px;font-weight:800;color:var(--neutral-lighter)">알고리즘을 바꾼다</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">개수를 늘리기 어렵다</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><div style="font-size:26px;font-weight:800;color:var(--neutral-lighter)">설정을 바꾼다</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">손이 많이 간다</p></div>
+    <div style="background:rgba(0,228,155,.12);border:2px solid rgba(0,228,155,.4);border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:10px"><div style="font-size:26px;font-weight:800;color:#00E49B">데이터를 바꾼다</div><p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">앙상블이 고른 길 — 다음 두 장</p></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="재표집 ① K-fold" data-screen-label="07" data-speaker-notes="출처: 007 Bagging_RF.pptx p.6 — 여러 모델을 만들려면 데이터를 여러 벌로 나눠야 한다. 방법이 두 가지다. K-fold는 전체를 K등분해서 한 칸씩 돌아가며 테스트로 쓴다. 겹치지 않게 나누는 게 핵심이고, 데이터를 아껴 쓰는 방법이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:26px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">재표집 ①</div>
+    <h1 style="margin:0;font-size:76px;font-weight:800;line-height:1.08;letter-spacing:-0.03em;color:var(--primary-main)">K-fold Cross Validation</h1>
+  </div>
+  <div style="font-size:var(--type-body);color:var(--fg-3);line-height:1.4;margin-top:-8px">전체를 K등분해서 <b style="color:var(--fg-1)">한 칸씩 돌아가며</b> 테스트로 쓴다</div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.05fr;gap:36px">
+    <div style="min-height:0"><span data-dc-slot="kfold"></span></div>
+    <div style="min-height:0;background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/en_kfold.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>K-fold 원본 도해 — 10개를 5등분해 다섯 벌의 훈련·테스트 조합을 만든다</span></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">한 칸씩 돌아가며 테스트로 쓴다 — <b style="color:var(--fg-1)">겹치지 않게</b> 나누고, 데이터를 아껴 쓴다.</p>
+</section>
+
+<section data-deck="0" data-label="재표집 ② Bootstrap" data-screen-label="08" data-speaker-notes="출처: 007 Bagging_RF.pptx p.7 — 부트스트랩은 다르다. 복원 추출이다. 뽑고 다시 넣고 또 뽑는다. 그래서 한 표본 안에 같은 데이터가 두 번 들어갈 수도 있고, 아예 안 뽑힌 데이터도 생긴다. 안 뽑힌 것들이 자동으로 그 모델의 테스트 세트가 된다 — OOB라고 부른다. 표본을 무한히 만들 수 있다는 게 결정적이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:26px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">재표집 ②</div>
+    <h1 style="margin:0;font-size:76px;font-weight:800;line-height:1.08;letter-spacing:-0.03em;color:#00B37A">Bootstrap</h1>
+    <span style="font-family:var(--font-sans);font-size:var(--type-body);font-weight:700;color:var(--neutral-medium)">복원 추출</span>
+  </div>
+  <div style="font-size:var(--type-body);color:var(--fg-3);line-height:1.4;margin-top:-8px">뽑고 <b style="color:var(--fg-1)">다시 넣는다</b> — 그래서 표본을 무한히 만들 수 있다</div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.05fr;gap:36px">
+    <div style="min-height:0"><span data-dc-slot="bootstrap"></span></div>
+    <div style="min-height:0;background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/en_bootstrap.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Bootstrap 원본 도해 — 같은 데이터가 여러 번 뽑히고, 안 뽑힌 것이 테스트가 된다</span></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">뽑고 <b style="color:var(--fg-1)">다시 넣는다.</b> 같은 데이터가 두 번 들어갈 수 있고, 안 뽑힌 것은 그 모델의 테스트가 된다.</p>
+</section>
+
+<section data-deck="0" data-label="Bagging" data-screen-label="09" data-speaker-notes="출처: 007 Bagging_RF.pptx p.8 — Bootstrap Aggregating을 줄여서 Bagging이다. 부트스트랩으로 표본을 여러 벌 만들고, 각각에 나무를 하나씩 심고, 마지막에 투표시킨다. 그게 전부다. 브라이만이 1994년에 냈다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">방법 ② BOOTSTRAP</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">중복을 허용해<br>다시 뽑는다</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">같은 확률로 매번 다시 뽑는다. <b style="color:var(--fg-1)">같은 데이터가 두 번 들어와도 된다.</b></p>
-    <div style="padding:26px 32px;background:#EDF9F4;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:#00B37A">장점</b> — 서로 다른 데이터셋을 <b style="color:var(--fg-1)">무제한</b>으로 만들 수 있다. 만 개도 십만 개도.</div>
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">BOOTSTRAP AGGREGATING</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">Bagging</h2>
+    <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">
+      <li>부트스트랩으로 표본을 <b style="color:var(--fg-1)">여러 벌</b> 만든다</li>
+      <li>표본마다 나무를 <b style="color:var(--fg-1)">하나씩</b> 심는다</li>
+      <li>마지막에 <b style="color:var(--fg-1)">투표</b>시킨다</li>
+    </ol>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">Breiman, L. <i>Bagging Predictors.</i> 1994 / Machine Learning 24, 123–140 (1996)</p>
   </div>
-  <div style="height:660px"><span data-dc-slot="bootstrap"></span></div>
+  <div style="height:790px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bag_s08_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Bagging 다이어그램 — Bootstrap sample n → Learning model n → Aggregation</span></div></div>
+  </div>
 </section>
 
-<section data-deck="0" data-label="배깅" data-screen-label="12" data-speaker-notes="배깅은 Bootstrap AGGregatING의 줄임말이다. 부트스트랩으로 만든 여러 데이터셋으로 나무를 각각 학습시키고 투표한다. 이름이 곧 설명이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="배깅은 행을 뽑는다" data-screen-label="10" data-speaker-notes="출처: 007 Bagging_RF.pptx p.9 — 배깅이 무엇을 뽑는지 정확히 보자. 행, 즉 데이터를 뽑는다. 변수 x1부터 x7은 모든 표본이 다 쓴다. 그래서 나무들이 서로 꽤 닮는다 — 강한 변수 하나가 있으면 모든 나무가 그걸 첫 분기로 쓴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">BAGGING</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em"><span style="color:var(--primary-main)">B</span>ootstrap <span style="color:var(--primary-main)">Agg</span>regat<span style="color:var(--primary-main)">ing</span></h2>
-  <div style="height:280px"><span data-dc-slot="baggingFlow"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1620px">중복 추출로 데이터셋을 여러 개 만들고 → 나무를 각각 학습시키고 → <b style="color:var(--fg-1)">투표한다.</b> 이름이 곧 설명이다.</p>
-</section>
-
-<section data-deck="0" data-label="실습 데이터 — S-DoT" data-screen-label="13" data-speaker-notes="이번 데이터는 서울 S-DoT 도시데이터 센서다. 전봇대 2미터 높이에 1,400여 개가 달려 있고 한 시간 단위로 값이 들어온다. 온도를 고온·저온으로 나눠 종속변수로 쓰고, 센서 반경 200미터 안의 토지이용과 건축물 주용도 면적 비율을 독립변수로 붙였다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">도시 데이터 사례</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">서울 S-DoT<br>도시데이터 센서</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">전봇대 2m 높이에 <b style="color:var(--fg-1)">1,400여 개</b>. 한 시간 단위로 값이 들어온다.</p>
-    <div style="display:flex;flex-direction:column;gap:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5;padding:26px 30px;background:var(--surface-app);border-radius:14px">
-      <div><b style="color:#D93636">종속변수</b> — 그 시각 센서들 중 상대적 고온 / 저온</div>
-      <div><b style="color:var(--primary-main)">독립변수</b> — 반경 200m 안의 연속지적도 토지이용 + 건축물 주용도 면적 비율</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">배깅은 <span style="color:var(--primary-main)">행</span>만 뽑는다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.1fr;gap:36px">
+    <div style="min-height:0"><span data-dc-slot="bagSample"></span></div>
+    <div style="min-height:0;background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/en_bagging.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>원데이터에서 부트스트랩 세 벌을 뽑아 나무를 셋 심고 합치는 도해</span></div></div>
     </div>
   </div>
-  <div style="height:740px"><span data-dc-slot="sdot"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">변수는 <b style="color:var(--fg-1)">전부 그대로</b>다. 그래서 강한 변수가 하나 있으면 모든 나무가 그걸 첫 분기로 쓴다 — 나무들이 서로 닮는다.</p>
 </section>
 
-<section data-deck="0" data-label="나무 20그루의 힘" data-screen-label="14" data-speaker-notes="깊이 3짜리 나무를 몇 개까지 모을지 늘려 보면, 20개쯤에서 테스트 정확도가 크게 올라간다. 나무 하나는 얕아서 약한데 모으면 강해진다. 다만 무한정 늘린다고 계속 좋아지지는 않는다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.25fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="height:760px"><span data-dc-slot="nEstimators"></span></div>
-  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">깊이 3짜리 나무를 모으면</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">약한 나무<br>20그루가<br>강해진다</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">깊이는 그대로 3인데 <b style="color:var(--fg-1)">테스트 정확도</b>가 함께 올라간다 — 과적합 없이 좋아졌다는 뜻이다.</p>
-    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">다만 무한정 늘린다고 계속 좋아지지는 않는다.</p>
-  </div>
-</section>
-
-<section data-deck="0" data-label="얻은 것과 잃은 것" data-screen-label="15" data-speaker-notes="배깅이 준 것과 가져간 것. 정확도와 일반화를 얻었지만 해석력을 잃었다. 나무 하나는 분기를 따라가면 설명이 되는데, 20개 모델이 어떤 분기로 이 결론에 왔는지는 설명할 수가 없다. 정확도를 좇을수록 사람이 이해할 수 있는 영역이 줄어든다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">거래</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정확도를 얻고 해석력을 잃는다</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:12px">
-    <div style="background:#EDF9F4;border:2px solid #00B37A;border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
-      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:#00B37A">얻은 것</div>
-      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">정확도 · 일반화 · 과적합 완화<br>그리고 <b style="color:var(--fg-1)">병렬 연산</b>이 가능하다</p>
-    </div>
-    <div style="background:#FDF0F0;border:2px solid #D93636;border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
-      <div style="font-family:var(--font-display);font-size:var(--type-subtitle);font-weight:700;color:#D93636">잃은 것</div>
-      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">나무 하나는 분기를 따라가면 설명이 됐다.<br>이제 <b style="color:var(--fg-1)">20개 모델의 분기</b>를 다 설명해야 한다.</p>
+<section data-deck="0" data-label="랜덤 포레스트는 열도 뽑는다" data-screen-label="11" data-speaker-notes="출처: 007 Bagging_RF.pptx p.10 — 랜덤 포레스트는 여기서 한 걸음 더 간다. 행뿐 아니라 열, 즉 변수도 뽑는다. 그러면 어떤 나무는 강한 변수를 아예 못 받는다. 일부러 약하게 만드는 것이다. 나무들이 서로 달라지고, 그 다양성이 분산을 더 줄인다. 브라이만이 2001년에 냈다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">RANDOM FOREST · 2001</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">랜덤 포레스트는 <span style="color:#00B37A">열</span>도 뽑는다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.1fr;gap:36px">
+    <div style="min-height:0"><span data-dc-slot="rfSample"></span></div>
+    <div style="min-height:0;background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center">
+      <div class="imgslot fit-contain" style=""><img src="uploads/en_rf.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>부트스트랩마다 쓰는 변수 열까지 달라지는 랜덤 포레스트 도해</span></div></div>
     </div>
   </div>
-  <div style="padding:30px 38px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1620px">정확도를 좇을수록 <b style="color:var(--accent-green)">사람이 이해할 수 있는 영역이 줄어든다.</b> 이 거래는 앞으로 계속 나온다.</div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">어떤 나무는 <b style="color:var(--fg-1)">강한 변수를 아예 못 받는다.</b> 일부러 약하게 만들어 서로 다르게 하고, 그 다양성이 분산을 더 줄인다.</p>
 </section>
 
-<section data-deck="0" data-label="무엇이 온도를 정하는가" data-screen-label="16" data-speaker-notes="배깅의 장점 하나. 모든 나무가 모든 변수를 볼 수 있었으니 feature importance를 그대로 합산할 수 있다. 결과를 보면 산림과 임야 면적, 단독주택 면적, 대지 면적이 온도를 가르는 데 크게 기여한다. 상식과도 맞는다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">배깅의 장점</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">무엇이 도시의 온도를 가르는가</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="sdotFI"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">모든 나무가 <b style="color:var(--fg-1)">모든 변수</b>를 볼 수 있었으니 중요도를 그대로 합산할 수 있다. <span style="color:var(--neutral-medium);font-size:var(--type-small)">노트북 실행 결과 · 변수 110개 중 상위</span></p>
-</section>
-
-<section data-deck="0" data-label="배깅의 진짜 문제" data-screen-label="17" data-speaker-notes="여기가 이 장의 핵심. 데이터를 아무리 랜덤하게 뽑아도 가장 잘 나누는 변수는 매번 첫 분기를 차지한다. 그래서 나무들이 다 비슷해진다. 다 똑같은 교육을 받은 거수기들이 투표하는 셈이다. 그러면 투표의 의미가 없다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);overflow:hidden">
-  <div style="height:760px"><span data-dc-slot="biasedTrees"></span></div>
-  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">배깅의 한계</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">다 똑같은<br>거수기가 된다</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">데이터를 아무리 랜덤하게 뽑아도 <b style="color:#fff">가장 잘 나누는 변수</b>가 매번 첫 분기를 차지한다.</p>
-    <div style="padding:28px 34px;background:rgba(255,122,162,.14);border:2px solid rgba(255,122,162,.4);border-radius:14px;font-size:var(--type-body);line-height:1.45">서로 다른 주관을 가진 사람들이 투표해야 뜻이 있는데 — <b style="color:#FF7AA2">다 같은 답을 낸다.</b></div>
+<section data-deck="0" data-label="전환 — 부스팅" data-screen-label="12" data-speaker-notes="여기까지가 나란히 모으는 길이다. 이제 완전히 다른 발상으로 간다 — 앞 모델이 틀린 것을 다음 모델이 맡는다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(217,54,54,.30),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#FF7AA2;font-weight:700">PART 2</div>
+  <h2 style="margin:0;font-size:78px;font-weight:800;line-height:1.15;letter-spacing:-0.025em">Boosting</h2>
+  <p style="margin:0;font-size:var(--type-subtitle);color:var(--neutral-lighter);line-height:1.4;max-width:1500px">나란히 모으는 대신 — <b style="color:#fff">앞이 틀린 것을 다음이 맡는다.</b></p>
+  <div style="display:flex;gap:20px;margin-top:8px">
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:22px 32px;font-size:var(--type-body)">AdaBoost</div>
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:22px 32px;font-size:var(--type-body)">GBM</div>
+    <div style="background:rgba(255,255,255,.07);border-radius:14px;padding:22px 32px;font-size:var(--type-body)">XGBoost · LightGBM · CatBoost</div>
   </div>
 </section>
 
-<section data-deck="0" data-label="랜덤 포레스트" data-screen-label="18" data-speaker-notes="해법은 단순하다. 데이터만 랜덤하게 뽑을 게 아니라 변수도 랜덤하게 뽑자. 110개 변수 중 다섯 개만 주고 그 안에서 나누라고 한다. 그러면 나무마다 다른 관점이 생긴다. 이게 랜덤포레스트고, 지금도 정형 데이터에서 가장 강력하다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">RANDOM FOREST · 2001</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">변수까지 랜덤하게 뽑는다</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="randomForest"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">110개 중 <b style="color:var(--fg-1)">다섯 개만</b> 주고 그 안에서 나누라고 한다 — 나무마다 <b style="color:var(--primary-main)">다른 관점</b>이 생긴다.</p>
-</section>
-
-<section data-deck="0" data-label="그런데 중요도는?" data-screen-label="19" data-speaker-notes="랜덤포레스트가 만든 새 문제. feature importance를 그대로 쓸 수 없다. 애초에 참여할 기회조차 못 받은 변수가 있는데 어떻게 순위를 매기나. 억울한 변수가 생긴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">새로 생긴 문제</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em;max-width:1620px">참여할 기회도 못 받았는데<br>중요도를 어떻게 매기나</h2>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.55;max-width:1620px">배깅은 모든 나무가 모든 변수를 봤으니 그냥 합산하면 됐다. 랜덤포레스트는 <b style="color:var(--fg-1)">애초에 뽑히지 않은 변수</b>가 있다.</p>
-  <div style="padding:34px 42px;background:#FDF0F0;border:2px solid #D93636;border-radius:16px;font-size:var(--type-subtitle);font-weight:600;line-height:1.4;max-width:1620px;color:var(--fg-1)">“나는 기회도 못 받았는데, 왜 내 중요도가 0인가?”</div>
-</section>
-
-<section data-deck="0" data-label="흔들어 보고 판단한다" data-screen-label="20" data-speaker-notes="그래서 반대로 본다. 변수 하나만 값을 뒤섞어 놓고 정확도가 얼마나 흔들리는지 본다. 크게 흔들리면 중요한 변수고, 꿈쩍도 안 하면 안 중요한 변수다. 이게 permutation importance. 정확한 대신 아주 느리다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="height:700px"><span data-dc-slot="permutation"></span></div>
+<section data-deck="0" data-label="AdaBoost 8단계" data-screen-label="13" data-speaker-notes="출처: 008 Boost.pptx p.4 — AdaBoost는 Adaptive Boosting의 줄임말이다. 약한 분류기를 여러 개 연결해 강한 분류기를 만드는 메타 알고리즘. 8단계인데 핵심은 5·6번이다 — 모델마다 가중치를 매기고, 틀린 데이터의 뽑힐 확률을 올린다. 이 두 줄이 전부다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary-dark);font-weight:600">PERMUTATION IMPORTANCE</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">한 변수만<br>뒤섞어 본다</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">값을 흔들었을 때 <b style="color:var(--fg-1)">정확도가 무너지면</b> 중요한 변수, 꿈쩍 않으면 안 중요한 변수.</p>
-    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">모든 변수를 데이터 전체에 대해 다시 돌려야 해서 <b style="color:#D93636">아주 느리다.</b> SHAP 도 마찬가지.</div>
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">ADAPTIVE BOOSTING · 1997</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">약한 것을 이어<br>강한 것을 만든다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">약한 분류기(weak learner)를 여러 개 연결하여 강한 분류기(strong learner)를 생성하는 <b style="color:var(--fg-1)">메타 알고리즘</b>.</p>
+    <div style="padding:22px 26px;background:#FDF0F0;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">핵심은 <b style="color:#D93636">5번과 6번</b> — 모델마다 가중치를 매기고, 틀린 데이터가 뽑힐 확률을 올린다.</div>
+  </div>
+  <div style="height:700px;background:var(--surface-app);border-radius:16px;padding:34px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s04_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>AdaBoost 8단계</span></div></div>
   </div>
 </section>
 
-<section data-deck="0" data-label="방향은 한마디로 못 한다" data-screen-label="21" data-speaker-notes="중요한 한계. 회귀는 계수 부호로 방향을 말할 수 있었다. 비선형 알고리즘은 못 한다. 키가 크면 플러스, 작으면 마이너스, 너무 작으면 무영향 — 이런 걸 한 줄로 요약할 수가 없다. 데이터가 확정되면 그때 그 데이터에서의 영향은 말할 수 있다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.2;letter-spacing:-0.02em">“이 변수는 플러스인가 마이너스인가”<br>— 답할 수 없다</h2>
-  <div style="height:230px"><span data-dc-slot="nonlinearDirection"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.55;max-width:1620px">회귀는 계수 부호 하나로 끝났다. 비선형은 <b style="color:var(--fg-1)">구간마다 방향이 다르다.</b> 데이터 한 건이 정해지면 그때의 영향은 말할 수 있지만, 모델 전체의 방향은 한마디로 요약되지 않는다.</p>
-</section>
-
-<section data-deck="0" data-label="부스팅 — 이어달리기" data-screen-label="22" data-speaker-notes="이제 다른 갈래. 부스팅은 앞 모델이 끝나야 뒤가 시작한다. 직렬이라 느리다. 그래서 개별 모델을 아주 약하게 쓴다 — 깊이 1짜리 나무, 즉 분기 하나. weak learner라고 부른다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:70px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#F59E0B;font-weight:700">BOOSTING</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">앞이 끝나야<br>뒤가 간다</h2>
-    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">직렬이라 <b style="color:#D93636">느리다.</b> 배깅은 병렬이라 GPU 를 그대로 쓸 수 있지만, 부스팅은 팔짱 끼고 기다린다.</p>
-    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">그래서 개별 모델을 <b style="color:var(--fg-1)">아주 약하게</b> 쓴다 — 분기 하나짜리 나무. 이를 <b style="color:#F59E0B">weak learner</b> 라 한다.</div>
-  </div>
-  <div style="height:620px"><span data-dc-slot="weakLearner"></span></div>
-</section>
-
-<section data-deck="0" data-label="AdaBoost 를 한 단계씩" data-screen-label="23" data-speaker-notes="에이다부스트를 버튼으로 돌려 본다. 처음엔 모든 데이터가 같은 선택 확률을 갖는다. 약한 모델이 한 번 나누면 맞춘 것과 못 맞춘 것이 갈린다. 맞춘 건 확률을 낮추고 못 맞춘 건 올린다. 다음 모델은 못 맞춘 것들을 겨냥해 학습한다. 원의 크기가 곧 선택 확률이다." style="background:#fff;padding:56px var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;font-family:var(--font-sans);color:var(--fg-1);overflow:hidden">
+<section data-deck="0" data-label="AdaBoost.M1" data-screen-label="14" data-speaker-notes="출처: 008 Boost.pptx p.5 · ESL Algorithm 10.1 — 같은 것을 수식으로 쓰면 이렇다. 처음에 모든 데이터의 가중치를 1/N로 똑같이 준다. M번 반복하면서 err를 재고 알파를 구하고 가중치를 갱신한다. 마지막 줄이 최종 모델인데, 각 모델의 예측에 알파를 곱해서 더한 뒤 부호를 본다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
-    <h2 style="margin:0;font-size:56px;font-weight:800;line-height:1.1;letter-spacing:-0.03em">AdaBoost 를 한 단계씩</h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">원의 크기 = 뽑힐 확률</span>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 것을 수식으로</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Hastie, Tibshirani, Friedman. <i>ESL</i> Algorithm 10.1</span>
   </div>
-  <div style="flex:1;min-height:0;display:flex;align-items:center;margin-top:12px"><span data-dc-slot="adaDemo"></span></div>
-</section>
-
-<section data-deck="0" data-label="GBM — 잔차를 학습한다" data-screen-label="24" data-speaker-notes="GBM은 다르게 접근한다. 첫 모델이 맞추고 남은 차이, 즉 잔차를 다음 모델이 학습한다. 그 모델이 남긴 잔차를 또 다음 모델이. 잔차가 0에 가까워질 때까지 쌓아 올린다. 에이다부스트가 못 맞춘 데이터를 겨냥했다면 GBM은 남은 오차 자체를 겨냥한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">GRADIENT BOOSTING</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">남은 오차를 다음 나무가 맡는다</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="gbmResidual"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">AdaBoost 는 <b style="color:#F59E0B">못 맞춘 데이터</b>를 겨냥했고, GBM 은 <b style="color:var(--primary-main)">남은 오차 자체</b>를 겨냥한다.</p>
-</section>
-
-<section data-deck="0" data-label="XGBoost 이후" data-screen-label="25" data-speaker-notes="XGBoost, LightGBM, CatBoost. 알고리즘 자체의 차이는 크지 않고 속도를 혁신적으로 올렸고 부스팅에 여러 트릭을 넣었다. 실무에서는 estimator를 6천 개, 만 개까지 쓴다. 여러분이 생각하는 100개 수준이 아니다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:var(--gap-title);font-family:var(--font-sans);overflow:hidden">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">2016 →</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">XGBoost · LightGBM · CatBoost</h2>
-  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.55;max-width:1620px">알고리즘의 차이는 크지 않다. <b style="color:#fff">속도를 혁신적으로 올렸고</b>, 부스팅에 여러 트릭을 넣었다.</p>
-  <div style="display:flex;align-items:baseline;gap:26px;margin-top:8px">
-    <span style="font-family:var(--font-display);font-size:130px;font-weight:800;color:var(--accent-green);line-height:0.9;letter-spacing:-0.04em">6,000</span>
-    <span style="font-size:var(--type-subtitle);font-weight:700">~ 10만 개</span>
+  <div style="height:560px;background:#fff;border-radius:16px;padding:34px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s05_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Algorithm 10.1 AdaBoost.M1</span></div></div>
   </div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5;max-width:1620px">실무에서 쓰는 estimator 개수다. 여러분이 생각하는 <b style="color:#fff">100개 수준이 아니다.</b> 이쯤 되면 과적합을 걱정하기보다 성능을 밀어붙이는 편이 낫다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">마지막 줄 — <b style="color:var(--fg-1)">G(x) = sign[ Σ αₘGₘ(x) ]</b>. 각 모델의 예측에 그 모델의 가중치를 곱해 더한 뒤 부호를 본다.</p>
 </section>
 
-<section data-deck="0" data-label="여덟 알고리즘 비교" data-screen-label="26" data-speaker-notes="같은 데이터에 여덟 알고리즘을 돌린 결과. 훈련 정확도는 대부분 100%에 가깝고 테스트에서 갈린다. 다만 정확도만 보면 안 된다 — 정밀도가 중요한지 재현율이 중요한지는 목적이 정한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">같은 데이터 · 같은 분할</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">여덟 개를 나란히 놓고 보면</h2>
+<section data-deck="0" data-label="S-DoT 데이터" data-screen-label="15" data-speaker-notes="출처: 008 Boost.pptx p.6 — 실습 데이터는 서울시 S-DoT 센서다. 센서 반경 안의 도로 면적 비율이 x, 대지 면적 비율이 y이고, 그 지점이 주변보다 더운지 아닌지가 색이다. 1031개. 보다시피 빨강과 파랑이 뒤섞여 있어서 직선 하나로는 못 가른다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">실습 데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">S-DoT<br>도시 열섬</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">
+      <div><b style="color:var(--fg-1)">x</b> — 센서 반경 내 도로 면적 비율</div>
+      <div><b style="color:var(--fg-1)">y</b> — 센서 반경 내 대지 면적 비율</div>
+      <div><b style="color:#D93636">색</b> — 주변보다 더운가(고온) / 아닌가(저온)</div>
+    </div>
+    <div style="padding:22px 26px;background:var(--surface-app);border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">데이터 <b style="color:var(--fg-1)">1,031개.</b> 빨강과 파랑이 뒤섞여 있어 <b style="color:var(--fg-1)">직선 하나로는 못 가른다.</b></div>
+  </div>
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s06_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>S-DoT 고온/저온 산점도</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="Stump Tree" data-screen-label="16" data-speaker-notes="출처: 008 Boost.pptx p.7 — 부스팅이 쓰는 약한 학습기는 이거다. 깊이 1짜리 나무, 스텀프. 한 번만 자른다. 대지 비율 0.4067에서 가로로 한 줄 그은 게 전부다. 아래쪽 177개는 저온이 81퍼센트, 위쪽 854개는 고온이 66퍼센트. 잘 맞히지도 못한다. 그런데 이 못난 것들을 이어 붙일 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s07_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Stump Tree 결정 경계 — 대 0.4067에서 가로 분할</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">WEAK LEARNER</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">깊이 1짜리<br>Stump Tree</h2>
+    <div style="background:var(--surface-app);border-radius:14px;padding:24px 28px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--primary-main)">대 &lt; 0.4067</div>
+      <div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">데이터 177개 · 고온 34 (0.19) · <b style="color:var(--fg-1)">저온 143 (0.81)</b></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:14px;padding:24px 28px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:#D93636">대 &gt; 0.4067</div>
+      <div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">데이터 854개 · <b style="color:var(--fg-1)">고온 560 (0.66)</b> · 저온 294 (0.34)</div>
+    </div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">한 번만 자른다. <b style="color:var(--fg-1)">잘 맞히지도 못한다.</b> 이 못난 것들을 이어 붙일 것이다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="모델 가중치" data-screen-label="17" data-speaker-notes="출처: 008 Boost.pptx p.8 — 그 스텀프가 얼마나 틀렸나. 31.81퍼센트다. 그걸 알파 공식에 넣으면 0.7623이 나온다. 오른쪽 곡선이 그 관계인데, 오차율이 0.5면 알파가 0이다 — 동전 던지기랑 같으니 발언권을 안 준다는 뜻이다. 오차가 작을수록 알파가 커진다. 그리고 0.5보다 나쁘면 알파가 음수가 되는데, 반대로 뒤집어서 쓰겠다는 뜻이다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">MODEL WEIGHT</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">잘 맞힌 모델에<br>발언권을 준다</h2>
+    <div style="height:110px;background:#fff;border-radius:12px;padding:16px 22px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s08_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>err = 예측값과 실제값이 다를 확률 = 0.3181</span></div></div></div>
+    <div style="height:150px;background:#fff;border-radius:12px;padding:16px 22px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s08_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>α = ln((1−err)/err) = 0.7623</span></div></div></div>
+    <div style="padding:20px 24px;background:#fff;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">오차 <b style="color:var(--fg-1)">0.5</b> 면 α = 0 — 동전 던지기와 같으니 발언권이 없다.<br>0.5 보다 나쁘면 α 가 <b style="color:#D93636">음수</b> — 반대로 뒤집어 쓴다.</div>
+  </div>
+  <div style="height:780px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s08_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>err 에 따른 α 곡선</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="틀린 데이터의 확률을 올린다" data-screen-label="18" data-speaker-notes="출처: 008 Boost.pptx p.9 — 두 번째 핵심. 실제값 y와 예측값 y_pred를 나란히 놓고 다른 자리를 찾는다. 다른 자리에만 exp(α)를 곱한다. 알파가 0.7623이니 exp하면 2.14329, 맞은 것은 1이다. 결국 틀린 데이터의 가중치만 2.14배가 된다. 다음 판에서 그만큼 더 자주 뽑힌다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">틀린 데이터만 <span style="color:#D93636">2.14배</span></h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">wᵢ ← wᵢ × exp[α × I(yᵢ ≠ Gₘ(xᵢ))]</span>
+  </div>
+  <div style="height:130px;background:var(--surface-app);border-radius:14px;padding:18px 26px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s09_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>wi = wi × exp[α × I(yi ≠ Gm(xi))]</span></div></div></div>
+  <div style="height:540px;display:grid;grid-template-columns:1.7fr 0.75fr;gap:30px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:20px;display:flex;flex-direction:column">
+      <div style="font-family:var(--font-display);font-size:20px;color:var(--neutral-medium);padding-bottom:8px">y &nbsp;·&nbsp; y_pred &nbsp;·&nbsp; exp 항</div>
+      <div style="height:460px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s09_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>y / y_pred / tmp 배열</span></div></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:20px;display:flex;flex-direction:column">
+      <div style="font-family:var(--font-display);font-size:20px;color:var(--neutral-medium);padding-bottom:8px">갱신된 가중치</div>
+      <div style="height:460px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s09_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>1 또는 2.14329</span></div></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">맞은 것은 <b style="color:var(--fg-1)">1</b>, 틀린 것은 <b style="color:#D93636">exp(0.7623) = 2.14329</b>. 다음 판에서 그만큼 더 자주 뽑힌다.</p>
+</section>
+
+<section data-deck="0" data-label="점이 커진다" data-screen-label="19" data-speaker-notes="출처: 008 Boost.pptx p.10 — 그걸 그림으로 보면 이렇다. 점 크기가 가중치다. 첫 모델이 틀린 데이터들만 커졌다. 다음 스텀프는 이 커진 점들을 맞히려고 다른 자리를 자를 수밖에 없다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s10_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>오답 데이터의 가중치가 커진 산점도</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">오답 데이터의 가중치 증가</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">점이 커진다</h2>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">점 크기가 곧 <b style="color:var(--fg-1)">가중치</b>다. 첫 모델이 틀린 것들만 커졌다.</p>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">다음 스텀프는 이 커진 점들을 맞히려고 <b style="color:var(--fg-1)">다른 자리를 자를 수밖에 없다.</b> 이게 “Adaptive” 다.</div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="8개의 스텀프" data-screen-label="20" data-speaker-notes="출처: 008 Boost.pptx p.11 — 100번 반복한 것 중 앞 8개다. 자르는 자리가 계속 바뀐다. 가로, 세로, 다시 가로. 그리고 가중치를 보라 — 0.76에서 시작해 0.10대까지 떨어진다. 뒤로 갈수록 남은 오답이 어려워지니 정확도가 떨어지고, 그만큼 발언권이 줄어든다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:20px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:52px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">자르는 자리가 계속 바뀐다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">100번 반복 중 앞 8개</span>
+  </div>
+  <div style="height:756px;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:14px">
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 1</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">① α = <b>0.7623</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 2</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">② α = <b>0.5634</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 3</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">③ α = <b>0.3508</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_4.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 4</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">④ α = <b>0.1848</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_5.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 5</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">⑤ α = <b>0.2044</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_6.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 6</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">⑥ α = <b>0.1029</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_7.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 7</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">⑦ α = <b>0.1809</b></div></div>
+    <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_8.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 8</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">⑧ α = <b>0.1185</b></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.4">뒤로 갈수록 남은 오답이 어려워진다 → 정확도가 떨어지고 <b style="color:var(--fg-1)">발언권도 줄어든다.</b></p>
+</section>
+
+<section data-deck="0" data-label="최종 모델" data-screen-label="21" data-speaker-notes="출처: 008 Boost.pptx p.12 — 100개를 다 더하면 이 경계가 나온다. 스텀프 하나하나는 직선 한 줄인데, 가중합하니 곡선 같은 경계가 생겼다. 개별 모델의 예측값 플러스 1과 마이너스 1에 가중치를 곱해서 더하고, 0보다 크면 +1, 작으면 -1이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="height:790px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s12_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>AdaBoost 최종 결정 경계</span></div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:600">최종 모델</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">직선 100개를 더하면<br>곡선이 된다</h2>
+    <div style="font-family:var(--font-display);font-size:34px;color:var(--primary-main);font-weight:600">G(x) = sign[ Σ αₘ Gₘ(x) ]</div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">개별 모델의 예측값(<b style="color:var(--fg-1)">+1 / −1</b>)에 그 모델의 가중치를 곱해 합한 뒤, <b style="color:var(--fg-1)">0을 기준으로</b> 부호를 본다.</p>
+  </div>
+</section>
+
+<section data-deck="0" data-label="변수 중요도와 학습률" data-screen-label="22" data-speaker-notes="출처: 008 Boost.pptx p.13 — AdaBoost의 변수 중요도는 개별 모델의 중요도에 가중치를 곱해 더한 것이다. 그리고 학습률이 여기서 처음 나온다 — 알파 앞에 곱하는 상수다. 작게 주면 각 모델의 발언권을 깎아서 천천히 간다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:36px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">FEATURE IMPORTANCE · LEARNING RATE</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">중요도도 가중합이다</h2>
+  <div style="background:#fff;border-radius:16px;padding:34px 40px;display:flex;flex-direction:column;gap:12px">
+    <div style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">AdaBoost feature importance</div>
+    <div style="font-size:38px;font-weight:700;color:var(--fg-1)">= 개별 모델의 feature importance × 그 모델의 가중치</div>
+  </div>
+  <div style="height:230px;background:#fff;border-radius:16px;padding:28px 34px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s13_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Adaboost Learning Rate — 가중치 = LearningRate × ln((1−err)/err)</span></div></div></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">학습률은 α 앞에 곱하는 상수다. <b style="color:var(--fg-1)">작게 주면</b> 모델마다의 발언권을 깎아 천천히 간다.</p>
+</section>
+
+<section data-deck="0" data-label="AdaBoost 와 GBM" data-screen-label="23" data-speaker-notes="출처: 008 Boost.pptx p.15 — 이제 GBM. 둘 다 약한 모델을 이어 붙이는 건 같다. 다른 건 다음 판을 어떻게 만드느냐다. AdaBoost는 틀린 데이터의 뽑힐 확률을 올려서 데이터셋 자체를 바꾸고, GBM은 경사하강 개념으로 다음 학습 데이터를 생성한다. 이 한 줄 차이가 전부다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:38px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">무엇이 다른가</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">다음 판을 어떻게 만드나</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:36px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:38px 42px;display:flex;flex-direction:column;gap:18px;border-top:8px solid #D93636">
+      <div style="font-family:var(--font-display);font-size:44px;font-weight:800;color:#D93636">AdaBoost</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">Weak learner 를 연결하여 예측</p>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-1);line-height:1.5;font-weight:600">이전 모델의 오분류 데이터에 <b>가중치를 부여</b>하여 학습 데이터셋을 추출</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:38px 42px;display:flex;flex-direction:column;gap:18px;border-top:8px solid var(--primary-main)">
+      <div style="font-family:var(--font-display);font-size:44px;font-weight:800;color:var(--primary-main)">GBM</div>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">Weak learner 를 연결하여 예측</p>
+      <p style="margin:0;font-size:var(--type-body);color:var(--fg-1);line-height:1.5;font-weight:600"><b>Gradient Descent</b>(경사 하강) 개념을 통해 다음 학습 데이터셋을 생성</p>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">그럼 <b style="color:var(--fg-1)">경사 하강</b>이 뭔지부터 봐야 한다.</p>
+</section>
+
+<section data-deck="0" data-label="경사하강 ① 아무 값에서 시작" data-screen-label="24" data-speaker-notes="출처: 008 Boost.pptx p.16 — 경사하강법. x와 y가 있고 y = αx 라고 놓자. 우리가 찾을 건 α 하나뿐이다. 정답을 모르니 아무 값이나 잡는다. 여기서는 2로 잡았다. 즉 f(x) = 2x 로 시작한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">GRADIENT DESCENT ①</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">아무 값에서<br>시작한다</h2>
+    <div style="height:120px;background:var(--surface-app);border-radius:12px;padding:18px 24px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s16_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>f(x) = αx</span></div></div></div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">찾을 것은 <b style="color:var(--fg-1)">α 하나</b>. 정답을 모르니 <b style="color:var(--primary-main)">임의로 2</b> 를 잡는다.</p>
+    <div style="height:110px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:12px;padding:16px 24px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s17_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>f(x) = 2x</span></div></div></div>
+  </div>
+  <div style="height:800px;background:var(--surface-app);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s17_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Loss = ½Σ(yi − 2xi)²</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="경사하강 ② 얼마나 틀렸나" data-screen-label="25" data-speaker-notes="출처: 008 Boost.pptx p.17 — α를 2로 놓고 20개 데이터의 예측값을 다 구하고 오차 제곱을 더하면 5,081이 나온다. 그럼 α를 1부터 7까지 다 넣어보면? 오른쪽 곡선이 그거다. 4~5 근처에서 바닥이다. 그런데 이렇게 다 해보는 건 변수가 하나일 때나 가능하다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">GRADIENT DESCENT ②</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">얼마나<br>틀렸나</h2>
+    <div style="height:130px;background:#fff;border-radius:12px;padding:18px 24px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s18_4.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Loss = ½ Σ(yi − αxi)²</span></div></div></div>
+    <div style="background:#fff;border-radius:14px;padding:24px 28px;display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:var(--type-small);color:var(--fg-3)">α = 2 일 때 Loss</span>
+      <span style="font-family:var(--font-display);font-size:44px;font-weight:800;color:#D93636">5,081</span>
+    </div>
+    <div style="padding:20px 24px;background:#fff;border-radius:12px;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">전부 넣어보면 <b style="color:var(--fg-1)">4~5 근처</b>가 바닥이다. 그런데 이렇게 다 해보는 건 <b style="color:#D93636">변수가 하나일 때나</b> 가능하다.</div>
+  </div>
+  <div style="height:800px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s17_5.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>α 에 따른 Loss 곡선</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="경사하강 ③ 미분해서 반대로" data-screen-label="26" data-speaker-notes="출처: 008 Boost.pptx p.18 — 그래서 다 해보지 않고 미분한다. Loss를 α로 미분하면 주황 점선이 나온다. 지금 위치에서 그 값이 음수면 오른쪽으로, 양수면 왼쪽으로 가면 된다. 경사의 반대 방향으로 조금씩 움직인다 — 그게 경사하강이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">GRADIENT DESCENT ③</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">미분해서<br>반대로 간다</h2>
+    <div style="height:150px;background:var(--surface-app);border-radius:12px;padding:18px 24px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s18_7.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>∂Loss/∂α = Σxi²α − Σyixi</span></div></div></div>
+    <div style="height:130px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:12px;padding:16px 24px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s18_8.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>−∂Loss/∂α</span></div></div></div>
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">경사의 <b style="color:var(--primary-main)">반대 방향</b>으로 조금씩 움직인다.</p>
+  </div>
+  <div style="height:800px;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s18_6.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Loss 곡선과 그 미분값</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="GBM의 경사는 잔차다" data-screen-label="27" data-speaker-notes="출처: 008 Boost.pptx p.19 — 여기가 오늘 가장 중요한 한 장이다. GBM은 α가 아니라 예측값 f(x) 자체로 미분한다. Loss를 f(x)로 미분하면 f(x) − y 가 나오고, 부호를 뒤집으면 y − f(x), 곧 잔차다. 경사의 반대 방향이 곧 잔차라는 뜻이다. 그래서 다음 모델은 잔차를 예측하도록 학습시킨다. 이게 Gradient Boosting이라는 이름의 이유다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 82% 30%,rgba(68,52,226,.34),transparent 62%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">GBM 에서의 경사 하강</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">경사의 반대 방향 = <span style="color:var(--accent-green)">잔차</span></h2>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="height:120px;background:#fff;border-radius:14px;padding:16px 26px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s19_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>min L = ½Σ(yi − f(xi))²</span></div></div></div>
+    <div style="height:110px;background:#fff;border-radius:14px;padding:14px 26px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s19_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>∂L/∂f(xi) = f(xi) − yi</span></div></div></div>
+    <div style="height:120px;background:#EDF9F4;border:3px solid #00B37A;border-radius:14px;padding:14px 26px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s19_3.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>−∂L/∂f(xi) = yi − f(xi) = 잔차</span></div></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">그래서 다음 모델은 <b style="color:#fff">잔차를 예측하도록</b> 학습시킨다. 이것이 <b style="color:var(--accent-green)">Gradient Boosting</b> 이라는 이름의 이유다.</p>
+</section>
+
+<section data-deck="0" data-label="GBM 알고리즘" data-screen-label="28" data-speaker-notes="출처: 008 Boost.pptx p.20 — 프리드먼의 GBM 알고리즘. 1번에서 상수 하나로 시작한다 — 회귀면 그냥 평균이다. 2번 루프에서 유사 잔차를 구하고, 그 잔차에 나무를 맞추고, 얼마나 더할지 정하고, 모델에 더한다. M번 돌리면 끝. 앞에서 본 세 줄이 여기 2-1, 2-2에 그대로 들어 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">GBM Algorithm</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">Friedman, J. H. <i>Greedy Function Approximation.</i> Annals of Statistics 29(5), 2001</span>
+  </div>
+  <div style="flex:1;min-height:0;background:var(--surface-app);border-radius:16px;padding:34px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s20_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GBM 알고리즘 의사코드</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">1번은 <b style="color:var(--fg-1)">상수 하나</b>로 시작 — 회귀면 그냥 평균이다. 2-1이 유사 잔차, 2-2가 그 잔차에 나무를 맞추는 단계다.</p>
+</section>
+
+<section data-deck="0" data-label="Loss 를 바꾸면" data-screen-label="29" data-speaker-notes="출처: 008 Boost.pptx p.21 — GBM의 진짜 힘은 여기 있다. 잔차를 어떻게 정의하느냐가 Loss function에 달려 있는데, 미분만 되면 뭐든 쓸 수 있다. L2는 제곱, L1은 절대값, Huber는 둘을 섞은 것, Quantile은 분위수다. 이상치가 많은 도시 데이터에서는 L2가 이상치에 끌려가므로 Huber를 쓰는 게 낫다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">Loss 를 바꾸면 잔차가 바뀐다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">미분만 되면 무엇이든</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.55fr 1fr;gap:26px">
+    <div style="background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column">
+      <div style="font-family:var(--font-display);font-size:20px;color:var(--neutral-medium);padding-bottom:6px">연속형 — L2 · L1 · Huber · Quantile</div>
+      <div style="height:596px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s21_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>연속형 손실함수 8종</span></div></div></div>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column">
+      <div style="font-family:var(--font-display);font-size:20px;color:var(--neutral-medium);padding-bottom:6px">범주형 — Bernoulli · AdaBoost</div>
+      <div style="height:596px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s21_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>범주형 손실함수</span></div></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">이상치가 많은 도시 데이터에서 <b style="color:var(--fg-1)">L2 는 이상치에 끌려간다</b> — Huber 를 쓰는 편이 낫다.<br><span style="color:var(--neutral-medium)">Natekin &amp; Knoll. <i>Gradient boosting machines, a tutorial.</i> Front. Neurorobot. 7:21 (2013)</span></p>
+</section>
+
+<section data-deck="0" data-label="GBM 회귀" data-screen-label="30" data-speaker-notes="출처: 008 Boost.pptx p.22–23 — 회귀에 써 보면 이렇다. 왼쪽이 원 데이터 1031개, 도로 비율과 온도 차이다. 오른쪽이 GBM이 그린 선인데 계단 모양이다. 나무를 쓰니 당연하다 — 나무는 구간을 나누고 그 안에서 평균을 낼 뿐이다. 회귀선이 아니라 계단이 나온다는 걸 기억할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">GBM 은 계단을 그린다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">S-DoT 온도차이 vs 도로면적 비율 · 1,031개</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:20px;display:flex;flex-direction:column">
+      <div style="font-family:var(--font-display);font-size:21px;color:var(--neutral-medium);padding-bottom:6px">실제 데이터 1,031개</div>
+      <div style="height:610px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s23_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>도로비율 vs 온도차이 산점도</span></div></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:20px;display:flex;flex-direction:column">
+      <div style="font-family:var(--font-display);font-size:21px;color:var(--neutral-medium);padding-bottom:6px">GBM 활용</div>
+      <div style="height:610px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s23_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>GBM 예측값 — 계단 모양</span></div></div></div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">나무는 <b style="color:var(--fg-1)">구간을 나누고 그 안에서 평균</b>을 낼 뿐이다. 그래서 회귀선이 아니라 계단이 나온다.</p>
+</section>
+
+<section data-deck="0" data-label="Learning Rate" data-screen-label="31" data-speaker-notes="출처: 008 Boost.pptx p.24 — 경사의 반대로 간다는 건 알겠는데 얼마나 갈 것인가. 너무 작으면 한참 걸리고, 너무 크면 골짜기를 건너뛰어 발산한다. 이 그림 오른쪽처럼 튕겨 나간다. 실무에서는 학습률을 작게 두고 나무를 많이 쓰는 쪽을 택한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">LEARNING RATE</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">얼마나 갈 것인가</h2>
+  <div style="flex:1;min-height:0;background:var(--surface-app);border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s24_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>Learning rate — too low / just right / too high</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">너무 작으면 <b style="color:var(--fg-1)">한참 걸리고</b>, 너무 크면 골짜기를 건너뛰어 <b style="color:#D93636">발산한다.</b> 실무에서는 작게 두고 나무를 많이 쓴다.</p>
+</section>
+
+<section data-deck="0" data-label="GBM 의 과적합" data-screen-label="32" data-speaker-notes="출처: 008 Boost.pptx p.25 — GBM은 계속 잔차를 쫓아가므로 과적합 위험이 배깅보다 훨씬 크다. 제어 방법이 셋이다. 학습률로 영향력을 줄이고, 배깅처럼 데이터를 일부만 쓰고, 랜덤 포레스트처럼 변수를 일부만 쓴다. 오른쪽 그림에서 노란 선이 아무것도 안 한 것인데 200번 넘어가면서 다시 올라간다. 나머지는 안 올라간다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.15fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">OVERFITTING</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">잔차를 계속 쫓으면<br>외워 버린다</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#fff;border-radius:12px;padding:20px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">① 학습률(shrinkage)</b> — 모델이 더해질수록 영향력을 수축</div>
+      <div style="background:#fff;border-radius:12px;padding:20px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">② subsample</b> — 배깅처럼 데이터 일부만 써서 제어</div>
+      <div style="background:#fff;border-radius:12px;padding:20px 24px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">③ max_features</b> — 랜덤 포레스트처럼 변수 일부만</div>
+    </div>
+    <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.5">결국 <b style="color:var(--fg-3)">배깅과 랜덤 포레스트의 아이디어를 부스팅 안으로 가져온 것</b>이다.</p>
+  </div>
+  <div style="height:790px;background:#fff;border-radius:16px;padding:26px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/bst_s25_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>shrinkage / subsample / max_features 별 Test Set Deviance</span></div></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="세 개의 구현체" data-screen-label="33" data-speaker-notes="출처: 008 Boost.pptx p.26 — 실무에서 쓰는 건 사이킷런의 GBM이 아니라 이 셋이다. 알고리즘이 새로운 게 아니라 GBM을 병렬로 빠르게 돌리는 구현이다. XGBoost는 캐글을 휩쓸었고, LightGBM은 MS가 더 빠르게 만들었고, CatBoost는 범주형 변수를 잘 다룬다. 도시 데이터는 행정동 같은 범주형이 많으니 CatBoost를 한 번 써 볼 만하다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실무에서 쓰는 것</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">새 알고리즘이 아니라 <span style="color:var(--primary-main)">빠른 구현</span>이다</h2>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 34px;display:flex;flex-direction:column;gap:16px;justify-content:center">
+      <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--fg-1)">XGBoost</span><span style="font-family:var(--font-display);font-size:24px;color:var(--neutral-medium)">2016</span></div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">대용량에서 GBM 등을 빠르게 <b style="color:var(--fg-1)">병렬 수행</b>하도록 만든 오픈소스.</p>
+      <div style="font-family:var(--font-display);font-size:19px;color:var(--neutral-medium);word-break:break-all">xgboost.readthedocs.io</div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 34px;display:flex;flex-direction:column;gap:16px;justify-content:center">
+      <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--fg-1)">LightGBM</span><span style="font-family:var(--font-display);font-size:24px;color:var(--neutral-medium)">2016</span></div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">Microsoft. 대용량 GBM 을 더 <b style="color:var(--fg-1)">빠르게</b> 돌리는 프레임워크.</p>
+      <div style="font-family:var(--font-display);font-size:19px;color:var(--neutral-medium);word-break:break-all">github.com/microsoft/LightGBM</div>
+    </div>
+    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:16px;padding:34px 34px;display:flex;flex-direction:column;gap:16px;justify-content:center">
+      <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--primary-dark)">CatBoost</span><span style="font-family:var(--font-display);font-size:24px;color:var(--primary-main)">2017</span></div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">러시아 Yandex. <b style="color:var(--fg-1)">범주형 변수</b>를 그대로 다룬다.</p>
+      <div style="font-family:var(--font-display);font-size:19px;color:var(--primary-dark);word-break:break-all">catboost.ai</div>
+    </div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도시 데이터는 <b style="color:var(--fg-1)">행정동·용도지역</b> 같은 범주형이 많다 — CatBoost 를 한 번 써 볼 만하다.</p>
+</section>
+
+<section data-deck="0" data-label="다섯 모델을 같이 돌리면" data-screen-label="34" data-speaker-notes="출처: 008 Boost.pptx p.28–29 · 06_Boosting.ipynb — 같은 데이터에 다섯을 다 돌린 결과다. 학습 정확도만 보면 배깅과 랜덤 포레스트가 100퍼센트인데, 테스트에서는 68.6과 72.86이다. 배깅은 완전히 외웠고 일반화에 실패했다. 반대로 AdaBoost는 학습이 89.65로 제일 낮은데 테스트가 73.64로 제일 높다. 학습 정확도가 높은 게 좋은 모델이 아니라는 걸 이 표 한 장이 보여 준다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 18% 82%,rgba(0,228,155,.20),transparent 60%)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">분석 결과 종합 · 06_Boosting.ipynb</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">학습 100% 가 좋은 모델이 아니다</h2>
   <div style="flex:1;min-height:0"><span data-dc-slot="compareTable"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">정확도만 보면 안 된다. <b style="color:var(--fg-1)">무엇이 중요한 지표인지</b>는 알고리즘이 아니라 <b style="color:var(--primary-main)">연구 목적</b>이 정한다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">Bagging 은 <b style="color:#fff">완전히 외우고</b> 테스트 68.60%. AdaBoost 는 학습이 제일 낮은데 테스트가 제일 높다.</p>
 </section>
 
-<section data-deck="0" data-label="정리" data-screen-label="27" data-speaker-notes="정리. 앙상블은 알고리즘이 아니라 조합 방법이다. 데이터를 다시 뽑아 모델을 여럿 만들고 투표하거나, 앞 모델의 실패를 다음 모델이 이어받는다. 정확도를 얻는 대신 해석력을 내준다. 다음 주는 신경망 — 여기서 배운 과적합과 하이퍼파라미터가 그대로 다시 나온다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:40px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 20% 80%,rgba(158,93,249,.24),transparent 60%)">
-  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:600">정리</div>
-  <ol style="margin:0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:26px;font-size:var(--type-subtitle);line-height:1.4;max-width:1620px">
-    <li>앙상블은 알고리즘이 아니라 <b style="color:var(--accent-green)">조합 방법</b>이다.</li>
-    <li><b style="color:var(--accent-green)">투표</b>는 나란히, <b style="color:var(--accent-green)">부스팅</b>은 이어달리기.</li>
-    <li>정확도를 얻는 대신 <b style="color:var(--accent-green)">해석력</b>을 내준다.</li>
-  </ol>
-  <div style="margin-top:16px;padding:32px 40px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--type-body);line-height:1.45;max-width:1620px">다음 주 — <b style="color:#fff">인공신경망</b>. 오늘 본 과적합과 하이퍼파라미터가 그대로 다시 나온다.<br><span style="color:var(--neutral-medium);font-size:var(--type-small)">예습: 07 SLP.ipynb · 08 MLP.ipynb</span></div>
+<section data-deck="0" data-label="정리" data-screen-label="35" data-speaker-notes="정리. 배깅은 나란히 모아 분산을 줄이고, 랜덤 포레스트는 변수까지 뽑아 더 다르게 만들고, 부스팅은 이어 붙여 편향을 줄인다. 그리고 마지막 표가 말하듯 학습 정확도는 지표가 아니다. 다음 주는 신경망 — 나무를 모으는 대신 함수를 겹치는 길로 간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">정리</div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">약한 것을 모으는 두 가지 길</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 38px;display:flex;flex-direction:column;gap:14px;border-left:8px solid var(--primary-main)">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">나란히 — 분산을 줄인다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55"><b style="color:var(--fg-1)">Bagging</b> 행을 뽑아 여러 나무 → 투표<br><b style="color:var(--fg-1)">Random Forest</b> 열까지 뽑아 더 다르게</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:34px 38px;display:flex;flex-direction:column;gap:14px;border-left:8px solid #D93636">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#D93636">이어서 — 편향을 줄인다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55"><b style="color:var(--fg-1)">AdaBoost</b> 틀린 데이터의 확률을 올린다<br><b style="color:var(--fg-1)">GBM</b> 잔차를 다음 모델이 예측한다</p>
+    </div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.45">다음 주 — <b style="color:#00E49B">인공신경망</b>. 나무를 모으는 대신 <b style="color:#fff">함수를 겹치는</b> 길로 간다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">실습: 05_Bagging_RF.ipynb · 06_Boosting.ipynb</span></div>
 </section>
   </div>
 </div>
@@ -518,8 +738,8 @@
 <div id="progress"></div>
 
 <div id="guide">
-  <div class="deckname">도시빅데이터와 머신러닝 — 3주차 앙상블</div>
-  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">27</span></div>
+  <div class="deckname">W03_앙상블</div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">35</span></div>
   <div class="slidelabel" id="g-label"></div>
   <div class="keys">
     <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
@@ -544,32 +764,40 @@
   </header>
   <div id="ovgrid">
 <button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
-<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">통계와 기계학습의 관점 차이</div></button>
-<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">연표</div></button>
-<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">앙상블은 메타 알고리즘</div></button>
-<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">모델이 다르다는 뜻</div></button>
-<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">오늘의 질문</div></button>
-<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">두 갈래</div></button>
-<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">하드 보팅과 소프트 보팅</div></button>
-<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">어디에 무엇을 쓰나</div></button>
-<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">모델을 여러 개 얻는 법</div></button>
-<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">부트스트랩</div></button>
-<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">배깅</div></button>
-<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">실습 데이터 — S-DoT</div></button>
-<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">나무 20그루의 힘</div></button>
-<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">얻은 것과 잃은 것</div></button>
-<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">무엇이 온도를 정하는가</div></button>
-<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">배깅의 진짜 문제</div></button>
-<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">랜덤 포레스트</div></button>
-<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">그런데 중요도는?</div></button>
-<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">흔들어 보고 판단한다</div></button>
-<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">방향은 한마디로 못 한다</div></button>
-<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">부스팅 — 이어달리기</div></button>
-<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">AdaBoost 를 한 단계씩</div></button>
-<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">GBM — 잔차를 학습한다</div></button>
-<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">XGBoost 이후</div></button>
-<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">여덟 알고리즘 비교</div></button>
-<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">정리</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">앙상블 모델</div></button>
+<button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">Hard vs Soft Voting</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">Bias-Variance Trade Off</div></button>
+<button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">복잡도와 오차</div></button>
+<button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">여러 모델을 어디서 구하지</div></button>
+<button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">재표집 ① K-fold</div></button>
+<button class="ov-card" data-go="7"><div class="ov-thumb"><div class="ov-num">08</div></div><div class="ov-label">재표집 ② Bootstrap</div></button>
+<button class="ov-card" data-go="8"><div class="ov-thumb"><div class="ov-num">09</div></div><div class="ov-label">Bagging</div></button>
+<button class="ov-card" data-go="9"><div class="ov-thumb"><div class="ov-num">10</div></div><div class="ov-label">배깅은 행을 뽑는다</div></button>
+<button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">랜덤 포레스트는 열도 뽑는다</div></button>
+<button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">전환 — 부스팅</div></button>
+<button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">AdaBoost 8단계</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">AdaBoost.M1</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">S-DoT 데이터</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">Stump Tree</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">모델 가중치</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">틀린 데이터의 확률을 올린다</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">점이 커진다</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">8개의 스텀프</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">최종 모델</div></button>
+<button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">변수 중요도와 학습률</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">AdaBoost 와 GBM</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">경사하강 ① 아무 값에서 시작</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">경사하강 ② 얼마나 틀렸나</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">경사하강 ③ 미분해서 반대로</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">GBM의 경사는 잔차다</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">GBM 알고리즘</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">Loss 를 바꾸면</div></button>
+<button class="ov-card" data-go="29"><div class="ov-thumb"><div class="ov-num">30</div></div><div class="ov-label">GBM 회귀</div></button>
+<button class="ov-card" data-go="30"><div class="ov-thumb"><div class="ov-num">31</div></div><div class="ov-label">Learning Rate</div></button>
+<button class="ov-card" data-go="31"><div class="ov-thumb"><div class="ov-num">32</div></div><div class="ov-label">GBM 의 과적합</div></button>
+<button class="ov-card" data-go="32"><div class="ov-thumb"><div class="ov-num">33</div></div><div class="ov-label">세 개의 구현체</div></button>
+<button class="ov-card" data-go="33"><div class="ov-thumb"><div class="ov-num">34</div></div><div class="ov-label">다섯 모델을 같이 돌리면</div></button>
+<button class="ov-card" data-go="34"><div class="ov-thumb"><div class="ov-num">35</div></div><div class="ov-label">정리</div></button>
   </div>
 </div>
 
@@ -599,622 +827,346 @@
 <script>
 (function () {
 class Component extends DCLogic {
-  state = { ada: 0 };
-
   renderVals() {
     const h = React.createElement;
     const KR = 'var(--font-sans)', EN = 'var(--font-display)';
     const INK = 'var(--fg-1)', MUT = 'var(--neutral-medium)', AX = '#C9C7D6';
-    const ACC = '#4434E2', VIO = '#9E5DF9', GRN = '#00B37A', RED = '#D93636', AMB = '#F59E0B';
-
+    const ACC = '#4434E2', GRN = '#00B37A', RED = '#D93636', AMB = '#F59E0B';
     const rng = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
-    const gauss = (r) => { const u = Math.max(r(), 1e-9), v = r();
-      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-    const mkScale = (W, H, pad, rx, ry) => ({
-      x: v => pad + (v - rx[0]) / (rx[1] - rx[0]) * (W - pad * 2),
-      y: v => H - pad - (v - ry[0]) / (ry[1] - ry[0]) * (H - pad * 2) });
 
-    // ── 03 연표 ─────────────────────────────────────────────────
+    // ── 계보 타임라인 ───────────────────────────────────────────
     const timeline = (() => {
-      const W = 1660, H = 380, x0 = 110, x1 = W - 110;
-      const YS = [1994, 2016];
-      const px = y => x0 + (y - YS[0]) / (YS[1] - YS[0]) * (x1 - x0);
-      const ITEMS = [[1994, 'Bagging', ACC, 1], [1997, 'AdaBoost', AMB, -1],
-                     [1999, 'Gradient Boosting', AMB, 1], [2001, 'Random Forest', ACC, -1],
-                     [2016, 'XGBoost', VIO, 1]];
+      // 연도를 눈금으로 쓰면 '16 두 개가 겹친다. 계보를 읽히는 게 목적이므로
+      // 칸을 고르게 두고 연도는 상자마다 적는다.
+      const W = 1720, H = 700, y0 = 350;
+      const NODE = [
+        { t: 'Decision Tree', y: "'84~'86", row: 0, c: MUT },
+        { t: 'Bagging', y: "'94", row: -1, c: ACC },
+        { t: 'Boosting', y: "'97", row: 1, c: RED },
+        { t: 'GBM', y: "'99", row: 1, c: RED },
+        { t: 'Random Forest', y: "'01", row: -1, c: GRN },
+        { t: 'XGBoost', y: "'16", row: 1, c: RED },
+        { t: 'LightGBM', y: "'16", row: 1, c: RED },
+        { t: 'CatBoost', y: "'17", row: 1, c: RED },
+      ];
+      const step = (W - 300) / (NODE.length - 1);
+      const px = (i) => 170 + i * step;
       return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
           style: { width: '100%', height: '100%', display: 'block' } },
-        h('line', { key: 'ax', x1: x0, y1: H / 2, x2: x1, y2: H / 2, stroke: AX,
-          strokeWidth: 3 }),
-        ITEMS.map(([y, t, col, dir]) => h('g', { key: t },
-          h('line', { x1: px(y), y1: H / 2, x2: px(y), y2: H / 2 + dir * 56,
-            stroke: col, strokeWidth: 3 }),
-          h('circle', { cx: px(y), cy: H / 2, r: 12, fill: col }),
-          h('text', { x: px(y), y: H / 2 + dir * 92, textAnchor: 'middle', fontFamily: EN,
-            fontSize: 30, fontWeight: 700, fill: col }, t),
-          h('text', { x: px(y), y: H / 2 + dir * (dir > 0 ? 128 : 128), textAnchor: 'middle',
-            fontFamily: EN, fontSize: 25, fill: MUT }, y))),
-        h('text', { key: 'n', x: W / 2, y: H - 12, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 23, fill: MUT }, 'LightGBM · CatBoost 도 뒤이어 — 지금 정형 데이터의 기본값'));
+        h('line', { key: 'ax', x1: 90, y1: y0, x2: W - 60, y2: y0, stroke: AX, strokeWidth: 3 }),
+        NODE.map((n, i) => {
+          const x = px(i), ny = y0 + n.row * 150;
+          const w = Math.max(200, n.t.length * 15 + 44);
+          return h('g', { key: i },
+            h('line', { x1: x, y1: y0, x2: x, y2: ny + (n.row > 0 ? -34 : 34),
+              stroke: AX, strokeWidth: 2 }),
+            h('circle', { cx: x, cy: y0, r: 9, fill: n.c }),
+            h('rect', { x: x - w / 2, y: ny - 34, width: w, height: 68, rx: 14,
+              fill: '#fff', stroke: n.c, strokeWidth: 2.5 }),
+            h('text', { x: x, y: ny + 1, textAnchor: 'middle', fontFamily: KR,
+              fontSize: 23, fontWeight: 700, fill: n.c }, n.t),
+            h('text', { x: x, y: ny + 26, textAnchor: 'middle', fontFamily: EN,
+              fontSize: 20, fontWeight: 700, fill: MUT }, n.y));
+        }),
+        h('text', { key: 'ub', x: 70, y: y0 - 150, fontFamily: KR, fontSize: 24,
+          fill: ACC, fontWeight: 700 }, '나란히'),
+        h('text', { key: 'lb', x: 70, y: y0 + 158, fontFamily: KR, fontSize: 24,
+          fill: RED, fontWeight: 700 }, '이어서'),
+        h('text', { key: 'sc', x: W - 60, y: H - 12, textAnchor: 'end', fontFamily: KR,
+          fontSize: 20, fill: MUT }, '가로 간격은 계보 순서 — 연도 축척이 아니다'));
     })();
 
-    // ── 04 메타 ─────────────────────────────────────────────────
-    const metaSketch = (() => {
-      const W = 860, H = 700;
-      const base = (x, t) => h('g', { key: t },
-        h('rect', { x: x, y: 430, width: 200, height: 86, rx: 14, fill: '#fff',
-          stroke: 'var(--border-1)', strokeWidth: 2 }),
-        h('text', { x: x + 100, y: 482, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 26, fontWeight: 700, fill: INK }, t));
+    // ── 앙상블의 두 모양 ────────────────────────────────────────
+    const ensembleShapes = (() => {
+      const W = 1720, H = 900;
+      const box = (x, y, w, hh, t, fill, stroke, fs) => h('g', { key: 'b' + x + '_' + y },
+        h('rect', { x: x, y: y, width: w, height: hh, rx: 12, fill: fill,
+          stroke: stroke, strokeWidth: 2 }),
+        h('text', { x: x + w / 2, y: y + hh / 2 + 8, textAnchor: 'middle', fontFamily: KR,
+          fontSize: fs || 24, fontWeight: 600, fill: INK }, t));
+      const arw = (x1, y1, x2, y2) => h('line', { key: 'a' + x1 + '_' + y1 + '_' + x2 + '_' + y2,
+        x1: x1, y1: y1, x2: x2, y2: y2, stroke: AX, strokeWidth: 2.5,
+        markerEnd: 'url(#ah)' });
       return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
           style: { width: '100%', height: '100%', display: 'block' } },
-        h('rect', { key: 'm', x: 150, y: 120, width: 560, height: 120, rx: 18,
-          fill: VIO, opacity: 0.14, stroke: VIO, strokeWidth: 3 }),
-        h('text', { key: 'mt', x: 430, y: 172, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 34, fontWeight: 800, fill: VIO }, '앙상블 (메타)'),
-        h('text', { key: 'ms', x: 430, y: 210, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 23, fill: MUT }, '재조합만 한다'),
-        [110, 330, 550].map((x, i) => h('line', { key: 'l' + i, x1: 430, y1: 240,
-          x2: x + 100, y2: 430, stroke: VIO, strokeWidth: 2.5, opacity: 0.5 })),
-        base(110, '나무 1'), base(330, '나무 2'), base(550, '나무 3'),
-        h('text', { key: 'd', x: 430, y: 592, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 26, fill: MUT }, '실제로 데이터를 보는 건 이쪽'));
+        h('defs', { key: 'd' }, h('marker', { id: 'ah', markerWidth: 9, markerHeight: 9,
+          refX: 8, refY: 3, orient: 'auto' },
+          h('path', { d: 'M0,0 L0,6 L9,3 z', fill: AX }))),
+        // Voting
+        h('text', { key: 'v', x: 40, y: 84, fontFamily: KR, fontSize: 30, fontWeight: 800,
+          fill: ACC }, 'Voting — 나란히 만들어 투표'),
+        box(40, 250, 150, 76, 'Data', '#fff', AX),
+        arw(196, 288, 268, 190), arw(196, 288, 268, 288), arw(196, 288, 268, 386),
+        box(274, 152, 190, 76, 'Model A', '#EEF0FE', ACC),
+        box(274, 250, 190, 76, 'Model B', '#EEF0FE', ACC),
+        box(274, 348, 190, 76, 'Model C', '#EEF0FE', ACC),
+        arw(470, 190, 540, 288), arw(470, 288, 540, 288), arw(470, 386, 540, 288),
+        box(546, 250, 170, 76, 'Voting', '#fff', ACC),
+        arw(722, 288, 786, 288),
+        box(792, 250, 170, 76, 'Predict', '#fff', ACC),
+        // Boosting
+        h('text', { key: 'bo', x: 40, y: 600, fontFamily: KR, fontSize: 30, fontWeight: 800,
+          fill: RED }, 'Boosting — 잔차를 다음에게 넘긴다'),
+        box(40, 700, 150, 76, 'Data', '#fff', AX),
+        arw(196, 738, 258, 738),
+        box(264, 700, 180, 76, 'Model A', '#FDF0F0', RED),
+        arw(450, 738, 512, 738),
+        h('text', { key: 'r1', x: 481, y: 718, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: RED, fontWeight: 700 }, '잔차'),
+        box(518, 700, 180, 76, 'Model B', '#FDF0F0', RED),
+        arw(704, 738, 766, 738),
+        h('text', { key: 'r2', x: 735, y: 718, textAnchor: 'middle', fontFamily: KR,
+          fontSize: 22, fill: RED, fontWeight: 700 }, '잔차'),
+        box(772, 700, 180, 76, 'Model C', '#FDF0F0', RED),
+        arw(958, 738, 1020, 738),
+        box(1026, 700, 170, 76, 'Predict', '#fff', RED),
+        h('text', { key: 'n1', x: 1024, y: 272, fontFamily: KR, fontSize: 25, fill: MUT },
+          '모델끼리 서로 모른다 —'),
+        h('text', { key: 'n2', x: 1024, y: 312, fontFamily: KR, fontSize: 25, fill: MUT },
+          '동시에 만들 수 있다 (병렬)'),
+        h('text', { key: 'n3', x: 1258, y: 722, fontFamily: KR, fontSize: 25, fill: MUT },
+          '앞이 끝나야 뒤가 시작된다 —'),
+        h('text', { key: 'n4', x: 1258, y: 762, fontFamily: KR, fontSize: 25, fill: MUT },
+          '순서를 못 바꾼다 (직렬)'));
     })();
 
-    // ── 07 보팅 vs 부스팅 ───────────────────────────────────────
-    const votingVsBoosting = (() => {
-      const W = 1660, H = 470, cw = 790;
-      const box = (x, y, w, hgt, t, col, fill) => h('g', { key: x + '' + y + t },
-        h('rect', { x: x, y: y, width: w, height: hgt, rx: 12, fill: fill || '#fff',
-          stroke: col, strokeWidth: 2.5 }),
-        h('text', { x: x + w / 2, y: y + hgt / 2 + 9, textAnchor: 'middle',
-          fontFamily: KR, fontSize: 24, fontWeight: 700, fill: col }, t));
-      const arrow = (x1, y1, x2, y2, col) => h('line', { key: x1 + '' + y1 + x2,
-        x1: x1, y1: y1, x2: x2, y2: y2, stroke: col, strokeWidth: 3,
-        markerEnd: 'url(#ens-a)' });
-      const panel = (x0, title, sub, col, body) => h('g', { transform: 'translate(' + x0 + ',0)', key: title },
-        h('rect', { width: cw, height: H, rx: 16, fill: '#fff', stroke: 'var(--border-1)' }),
-        h('text', { x: cw / 2, y: 52, textAnchor: 'middle', fontFamily: KR, fontSize: 32,
-          fontWeight: 800, fill: col }, title),
-        h('text', { x: cw / 2, y: 88, textAnchor: 'middle', fontFamily: KR, fontSize: 24,
-          fill: MUT }, sub), body);
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('defs', null, h('marker', { id: 'ens-a', viewBox: '0 0 10 10', refX: 8, refY: 5,
-            markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' },
-          h('path', { d: 'M0,0 L10,5 L0,10 z', fill: MUT }))),
-        panel(0, '보팅 — 나란히', '각자 독립적으로 판단하고 투표', ACC,
-          h('g', null,
-            box(60, 140, 150, 70, '데이터', MUT),
-            [130, 230, 330].map((y, i) => [
-              arrow(215, 175, 300, y + 35, MUT),
-              box(305, y, 170, 70, '나무 ' + (i + 1), ACC),
-              arrow(480, y + 35, 570, 245, MUT)])[0],
-            box(305, 130, 170, 70, '나무 1', ACC), box(305, 230, 170, 70, '나무 2', ACC),
-            box(305, 330, 170, 70, '나무 3', ACC),
-            arrow(215, 175, 300, 165, MUT), arrow(215, 205, 300, 265, MUT),
-            arrow(215, 235, 300, 360, MUT),
-            arrow(480, 165, 570, 245, MUT), arrow(480, 265, 570, 260, MUT),
-            arrow(480, 365, 570, 285, MUT),
-            box(575, 225, 160, 80, '투표', ACC, 'var(--primary-pale)'))),
-        panel(870, '부스팅 — 이어달리기', '앞이 결정한 걸 받아 뒤가 다시 본다', AMB,
-          h('g', null,
-            box(50, 215, 130, 70, '데이터', MUT),
-            arrow(185, 250, 235, 250, MUT),
-            box(240, 215, 140, 70, '나무 1', AMB),
-            arrow(385, 250, 435, 250, MUT),
-            box(440, 215, 140, 70, '나무 2', AMB),
-            arrow(585, 250, 635, 250, MUT),
-            box(640, 215, 110, 70, '결과', AMB, '#FEF6E7'),
-            h('text', { x: 310, y: 335, textAnchor: 'middle', fontFamily: KR, fontSize: 22,
-              fill: RED }, '기다린다'),
-            h('text', { x: 510, y: 335, textAnchor: 'middle', fontFamily: KR, fontSize: 22,
-              fill: RED }, '기다린다'))));
-    })();
-
-    // ── 08 하드/소프트 ──────────────────────────────────────────
-    const hardSoft = (() => {
-      const A = [0.52, 0.55, 0.58, 0.51, 0.60, 0.53];   // 감소라고 한 6명 (확신 낮음)
-      const B = [0.02, 0.01, 0.03, 0.02];                // 비감소라고 한 4명 (확신 높음)
-      const meanAll = (A.reduce((a, b) => a + b, 0) + B.reduce((a, b) => a + b, 0)) / 10;
-      const bar = (v, i, col) => h('div', { key: col + i, style: { flex: 1,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' } },
-        h('div', { style: { width: '100%', height: '150px', background: 'var(--surface-app)',
-          borderRadius: '8px', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' } },
-          h('div', { style: { width: '100%', height: (v * 100) + '%', background: col,
-            borderRadius: '8px 8px 0 0' } })),
-        h('div', { style: { fontFamily: EN, fontSize: '22px', color: MUT } },
-          (v * 100).toFixed(0) + '%'));
+    // ── Hard vs Soft Voting ─────────────────────────────────────
+    const voting = (() => {
+      const M = [
+        { n: 'Model A', p0: 0.52, p1: 0.48 },
+        { n: 'Model B', p0: 0.62, p1: 0.38 },
+        { n: 'Model C', p0: 0.01, p1: 0.99 },
+      ];
+      const s0 = M.reduce((a, m) => a + m.p0, 0), s1 = M.reduce((a, m) => a + m.p1, 0);
+      const bar = (m, k) => h('div', { key: k, style: { background: '#fff',
+          borderRadius: '14px', padding: '20px 26px', display: 'flex',
+          alignItems: 'center', gap: '26px' } },
+        h('div', { style: { fontFamily: EN, fontSize: '25px', fontWeight: 700,
+          width: '150px', color: INK } }, m.n),
+        h('div', { style: { flex: 1, display: 'flex', height: '46px',
+          borderRadius: '8px', overflow: 'hidden' } },
+          h('div', { style: { width: (m.p0 * 100) + '%', background: ACC,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontFamily: EN, fontSize: '21px', fontWeight: 700 } },
+            m.p0 >= 0.12 ? (m.p0 * 100).toFixed(0) + '%' : ''),
+          h('div', { style: { width: (m.p1 * 100) + '%', background: RED,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontFamily: EN, fontSize: '21px', fontWeight: 700 } },
+            m.p1 >= 0.12 ? (m.p1 * 100).toFixed(0) + '%' : '')),
+        h('div', { style: { fontFamily: EN, fontSize: '26px', fontWeight: 800,
+          width: '112px', textAlign: 'right', color: m.p0 > m.p1 ? ACC : RED } },
+          'Predict ' + (m.p0 > m.p1 ? '0' : '1')));
+      const card = (title, sub, val, col, note) => h('div', { style: { background: '#fff',
+          borderRadius: '16px', padding: '34px 36px', display: 'flex',
+          flexDirection: 'column', gap: '10px', border: '3px solid ' + col } },
+        h('div', { style: { fontFamily: EN, fontSize: '24px', fontWeight: 700,
+          color: col } }, title),
+        h('div', { style: { fontFamily: KR, fontSize: '21px', color: MUT,
+          lineHeight: 1.45 } }, sub),
+        h('div', { style: { fontFamily: EN, fontSize: '52px', fontWeight: 800,
+          color: col, marginTop: '4px' } }, val),
+        h('div', { style: { fontFamily: KR, fontSize: '20px', color: MUT } }, note));
       return h('div', { style: { display: 'grid', gridTemplateColumns: '1.5fr 1fr',
-          gap: '48px', alignItems: 'center', width: '100%' } },
-        h('div', { style: { display: 'flex', gap: '10px', alignItems: 'flex-end' } },
-          A.map((v, i) => bar(v, i, RED)), B.map((v, i) => bar(v, i, ACC))),
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '22px' } },
-          h('div', { style: { background: '#FDF0F0', border: '2px solid ' + RED,
-            borderRadius: '14px', padding: '26px 30px' } },
-            h('div', { style: { fontFamily: KR, fontSize: '26px', fontWeight: 700,
-              color: RED, marginBottom: '8px' } }, '하드 보팅 → 감소'),
-            h('div', { style: { fontFamily: KR, fontSize: '24px', color: 'var(--fg-3)' } },
-              '6 표 대 4 표. 확신은 안 센다.')),
-          h('div', { style: { background: 'var(--primary-pale)', border: '2px solid ' + ACC,
-            borderRadius: '14px', padding: '26px 30px' } },
-            h('div', { style: { fontFamily: KR, fontSize: '26px', fontWeight: 700,
-              color: ACC, marginBottom: '8px' } }, '소프트 보팅 → 비감소'),
-            h('div', { style: { fontFamily: KR, fontSize: '24px', color: 'var(--fg-3)' } },
-              '평균 확률 ' + (meanAll * 100).toFixed(0) + '%. 확신한 4명이 이긴다.'))));
-    })();
-
-    // ── 09 편향-분산 ────────────────────────────────────────────
-    const biasVariance = (() => {
-      const W = 1660, H = 460, r = rng(9090);
-      const quad = (x0, cx, cy, sp, title, tag, col) => {
-        const pts = [];
-        for (let i = 0; i < 16; i++) pts.push([cx + gauss(r) * sp, cy + gauss(r) * sp]);
-        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
-          h('rect', { width: 400, height: H, rx: 14, fill: '#fff', stroke: 'var(--border-1)' }),
-          [90, 60, 30].map((rr, i) => h('circle', { key: rr, cx: 200, cy: 235, r: rr,
-            fill: 'none', stroke: i === 2 ? GRN : '#E3E2EA', strokeWidth: 2 })),
-          pts.map((p, i) => h('circle', { key: i, cx: 200 + p[0], cy: 235 + p[1], r: 7,
-            fill: col, opacity: 0.7 })),
-          h('text', { x: 200, y: 44, textAnchor: 'middle', fontFamily: KR, fontSize: 25,
-            fontWeight: 700, fill: INK }, title),
-          h('text', { x: 200, y: H - 24, textAnchor: 'middle', fontFamily: KR, fontSize: 26,
-            fontWeight: 800, fill: col }, tag));
-      };
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        quad(0, 0, 0, 12, '편향 ↓ 분산 ↓', '앙상블 불필요', MUT),
-        quad(420, 0, 0, 48, '편향 ↓ 분산 ↑', '투표가 좋다', ACC),
-        quad(840, 62, 58, 12, '편향 ↑ 분산 ↓', '부스팅이 좋다', AMB),
-        quad(1260, 62, 58, 48, '편향 ↑ 분산 ↑', '방법이 없다', RED));
-    })();
-
-    // ── 10 K-fold ───────────────────────────────────────────────
-    const kfold = (() => {
-      const W = 860, H = 640, x0 = 90, cw = (W - 150) / 5;
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        [0, 1, 2, 3, 4].map(k => h('g', { key: k },
-          h('text', { x: 60, y: 118 + k * 100, textAnchor: 'end', fontFamily: EN,
-            fontSize: 24, fill: MUT }, '모델 ' + (k + 1)),
-          [0, 1, 2, 3, 4].map(i => h('rect', { key: i, x: x0 + i * cw, y: 88 + k * 100,
-            width: cw - 8, height: 58, rx: 8,
-            fill: i === k ? RED : ACC, opacity: i === k ? 0.85 : 0.22 })))),
-        h('g', { key: 'lg', transform: 'translate(' + x0 + ',' + (H - 70) + ')' },
-          h('rect', { x: 0, y: 0, width: 36, height: 24, rx: 5, fill: RED, opacity: 0.85 }),
-          h('text', { x: 48, y: 20, fontFamily: KR, fontSize: 24, fill: INK }, '테스트'),
-          h('rect', { x: 170, y: 0, width: 36, height: 24, rx: 5, fill: ACC, opacity: 0.22 }),
-          h('text', { x: 218, y: 20, fontFamily: KR, fontSize: 24, fill: INK }, '훈련')));
-    })();
-
-    // ── 11 부트스트랩 ───────────────────────────────────────────
-    const bootstrap = (() => {
-      const W = 880, H = 660;
-      const r = rng(3344);
-      const rows = [];
-      for (let k = 0; k < 4; k++) {
-        const picks = [];
-        for (let i = 0; i < 7; i++) picks.push(1 + Math.floor(r() * 7));
-        rows.push(picks);
-      }
-      const chip = (n, x, y, dup) => h('g', { key: x + '' + y },
-        h('rect', { x: x, y: y, width: 76, height: 56, rx: 10,
-          fill: dup ? AMB : ACC, opacity: dup ? 0.28 : 0.18,
-          stroke: dup ? AMB : ACC, strokeWidth: 2 }),
-        h('text', { x: x + 38, y: y + 37, textAnchor: 'middle', fontFamily: EN,
-          fontSize: 26, fontWeight: 700, fill: dup ? '#9A6206' : ACC }, n));
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('text', { key: 'o', x: 24, y: 56, fontFamily: KR, fontSize: 25, fill: MUT }, '원본'),
-        [1, 2, 3, 4, 5, 6, 7].map((n, i) => chip(n, 130 + i * 86, 26, false)),
-        h('line', { key: 'sep', x1: 24, y1: 118, x2: W - 24, y2: 118, stroke: '#E3E2EA',
-          strokeWidth: 2 }),
-        rows.map((row, k) => h('g', { key: 'r' + k },
-          h('text', { x: 24, y: 190 + k * 128, fontFamily: KR, fontSize: 25, fill: MUT },
-            '샘플 ' + (k + 1)),
-          row.map((n, i) => chip(n, 130 + i * 86, 160 + k * 128,
-            row.indexOf(n) !== i)))),
-        h('text', { key: 'n', x: W / 2, y: H - 14, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 23, fill: AMB }, '주황 = 중복으로 다시 뽑힌 것'));
-    })();
-
-    // ── 12 배깅 흐름 ────────────────────────────────────────────
-    const baggingFlow = (() => {
-      const step = (t, s, col) => h('div', { key: t, style: { flex: 1, background: '#fff',
-        border: '3px solid ' + col, borderRadius: '16px', padding: '30px 24px',
-        textAlign: 'center' } },
-        h('div', { style: { fontFamily: KR, fontSize: '32px', fontWeight: 800,
-          color: col, lineHeight: 1.2 } }, t),
-        h('div', { style: { fontFamily: EN, fontSize: '22px', color: MUT,
-          marginTop: '10px' } }, s));
-      const arr = (k) => h('div', { key: k, style: { fontFamily: EN, fontSize: '38px',
-        color: 'var(--border-1)', fontWeight: 700 } }, '→');
-      return h('div', { style: { display: 'flex', alignItems: 'center', gap: '20px',
-          width: '100%' } },
-        step('중복 추출', 'Bootstrap', ACC), arr(1),
-        step('나무 학습', 'fit each', VIO), arr(2),
-        step('투표', 'Aggregating', GRN));
-    })();
-
-    // ── 13 S-DoT ────────────────────────────────────────────────
-    const sdot = (() => {
-      const W = 900, H = 740, pad = 50;
-      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
-      const r = rng(1400), pts = [];
-      for (let i = 0; i < 300; i++) {
-        const x = 0.12 + r() * 0.76, y = 0.12 + r() * 0.76;
-        const green = Math.hypot(x - 0.27, y - 0.72) < 0.2 || Math.hypot(x - 0.78, y - 0.28) < 0.17;
-        pts.push([x, y, green ? 0 : 1]);
-      }
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('rect', { key: 'bg', width: W, height: H, fill: '#FCFCFD', rx: 16,
-          stroke: 'var(--border-1)' }),
-        h('circle', { key: 'g1', cx: s.x(0.27), cy: s.y(0.72), r: (s.x(0.2) - s.x(0)),
-          fill: GRN, opacity: 0.10 }),
-        h('circle', { key: 'g2', cx: s.x(0.78), cy: s.y(0.28), r: (s.x(0.17) - s.x(0)),
-          fill: GRN, opacity: 0.10 }),
-        h('g', { key: 'p' }, pts.map((p, i) => h('circle', { key: i, cx: s.x(p[0]),
-          cy: s.y(p[1]), r: 5.5, fill: p[2] ? RED : ACC, opacity: 0.7 }))),
-        h('g', { key: 'lg', transform: 'translate(' + (W - 260) + ',' + (pad + 10) + ')' },
-          h('circle', { cx: 0, cy: 0, r: 8, fill: RED }),
-          h('text', { x: 20, y: 8, fontFamily: KR, fontSize: 23, fill: INK }, '상대 고온'),
-          h('circle', { cx: 0, cy: 38, r: 8, fill: ACC }),
-          h('text', { x: 20, y: 46, fontFamily: KR, fontSize: 23, fill: INK }, '상대 저온')),
-        h('text', { key: 'n', x: W / 2, y: H - 18, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 22, fill: MUT }, '분포 개념도 — 초록 원은 녹지 · 실제 값은 노트북 실행 결과를 볼 것'));
-    })();
-
-    // ── 14 estimator 수 ─────────────────────────────────────────
-    const nEstimators = (() => {
-      const W = 900, H = 760, pad = 90;
-      const s = mkScale(W, H, pad, [0, 100], [0.55, 1.0]);
-      const r = rng(2211), tr = [], te = [];
-      for (let n = 1; n <= 100; n += 2) {
-        tr.push([n, 0.70 + 0.26 * (1 - Math.exp(-n / 9)) + (r() - 0.5) * 0.012]);
-        te.push([n, 0.62 + 0.21 * (1 - Math.exp(-n / 11)) + (r() - 0.5) * 0.018]);
-      }
-      const p = (a) => a.map((q, i) => (i ? 'L' : 'M') + s.x(q[0]) + ' ' + s.y(q[1])).join(' ');
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
-          stroke: 'var(--border-1)' }),
-        h('line', { key: 'v', x1: s.x(20), y1: pad, x2: s.x(20), y2: H - pad,
-          stroke: GRN, strokeWidth: 2.5, strokeDasharray: '9 8' }),
-        h('text', { key: 'vt', x: s.x(20) + 16, y: pad + 34, fontFamily: KR, fontSize: 24,
-          fontWeight: 700, fill: GRN }, '20그루쯤'),
-        h('line', { key: 'xa', x1: pad, y1: H - pad, x2: W - pad, y2: H - pad,
-          stroke: AX, strokeWidth: 2 }),
-        h('line', { key: 'ya', x1: pad, y1: pad, x2: pad, y2: H - pad, stroke: AX, strokeWidth: 2 }),
-        [0.6, 0.8, 1.0].map(v => h('text', { key: 'y' + v, x: pad - 16, y: s.y(v) + 8,
-          textAnchor: 'end', fontFamily: EN, fontSize: 22, fill: MUT }, v.toFixed(1))),
-        h('path', { key: 'tr', d: p(tr), fill: 'none', stroke: ACC, strokeWidth: 4.5 }),
-        h('path', { key: 'te', d: p(te), fill: 'none', stroke: RED, strokeWidth: 4.5 }),
-        h('text', { key: 'l1', x: W - pad - 10, y: s.y(tr[tr.length - 1][1]) - 20,
-          textAnchor: 'end', fontFamily: KR, fontSize: 26, fontWeight: 700, fill: ACC }, '훈련'),
-        h('text', { key: 'l2', x: W - pad - 10, y: s.y(te[te.length - 1][1]) + 42,
-          textAnchor: 'end', fontFamily: KR, fontSize: 26, fontWeight: 700, fill: RED }, '테스트'),
-        h('text', { key: 'xl', x: W / 2, y: H - 26, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 25, fill: MUT }, '나무 개수 (n_estimators)'),
-        h('text', { key: 'n', x: W / 2, y: 44, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 22, fill: MUT }, '경향 개념도 — 실제 곡선은 노트북 실행 결과를 볼 것'));
-    })();
-
-    // ── 16 S-DoT feature importance ─────────────────────────────
-    const sdotFI = (() => {
-      const rows = [['산림 · 임야 면적', 1.00, GRN], ['단독주택 면적', 0.74, ACC],
-                    ['대지 면적', 0.61, ACC], ['도로 면적', 0.42, '#B9B6CC'],
-                    ['근린생활시설', 0.31, '#B9B6CC'], ['공동주택 면적', 0.24, '#B9B6CC']];
-      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '20px',
-          width: '100%' } },
-        rows.map(([nm, v, col]) => h('div', { key: nm, style: { display: 'grid',
-            gridTemplateColumns: '320px 1fr', alignItems: 'center', gap: '28px' } },
-          h('div', { style: { fontFamily: KR, fontSize: '27px', fontWeight: 700,
-            color: INK, textAlign: 'right' } }, nm),
-          h('div', { style: { height: '48px', background: 'var(--surface-app)',
-            borderRadius: '8px', overflow: 'hidden' } },
-            h('div', { style: { width: (v * 100) + '%', height: '100%', background: col,
-              borderRadius: '8px' } })))));
-    })();
-
-    // ── 17 편향된 나무들 ────────────────────────────────────────
-    const biasedTrees = (() => {
-      const W = 880, H = 760;
-      const tree = (x, y, root, sameRoot) => h('g', { key: x + '' + y },
-        h('rect', { x: x, y: y, width: 200, height: 62, rx: 10,
-          fill: sameRoot ? 'rgba(255,122,162,.22)' : 'rgba(255,255,255,.08)',
-          stroke: sameRoot ? '#FF7AA2' : '#4F4A70', strokeWidth: 2.5 }),
-        h('text', { x: x + 100, y: y + 40, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 24, fontWeight: 700, fill: sameRoot ? '#FF7AA2' : '#9E9AB8' }, root),
-        h('line', { x1: x + 100, y1: y + 62, x2: x + 40, y2: y + 110, stroke: '#4F4A70',
-          strokeWidth: 2 }),
-        h('line', { x1: x + 100, y1: y + 62, x2: x + 160, y2: y + 110, stroke: '#4F4A70',
-          strokeWidth: 2 }));
-      const rows = [['산림 면적', true], ['산림 면적', true], ['산림 면적', true],
-                    ['산림 면적', true], ['단독주택', false], ['산림 면적', true]];
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('rect', { key: 'bg', width: W, height: H, fill: 'rgba(255,255,255,.04)', rx: 18 }),
-        rows.map(([t, same], i) => tree(70 + (i % 3) * 260, 90 + Math.floor(i / 3) * 300,
-          t, same)),
-        h('text', { key: 'n', x: W / 2, y: 46, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 26, fill: '#9E9AB8' }, '나무 6그루의 첫 분기'),
-        h('text', { key: 'n2', x: W / 2, y: H - 26, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 26, fontWeight: 700, fill: '#FF7AA2' },
-          '거의 다 같은 변수로 시작한다'));
-    })();
-
-    // ── 18 랜덤 포레스트 ────────────────────────────────────────
-    const randomForest = (() => {
-      const W = 1660, H = 420;
-      const r = rng(2001);
-      const VARS = ['산림', '단독주택', '대지', '도로', '근생', '공동주택', '지하층수',
-                    '슬레이트', '철골조', '종교시설'];
-      const tree = (x0, k) => {
-        const pick = [];
-        while (pick.length < 3) {
-          const i = Math.floor(r() * VARS.length);
-          if (pick.indexOf(i) < 0) pick.push(i);
-        }
-        return h('g', { key: k, transform: 'translate(' + x0 + ',0)' },
-          h('rect', { width: 380, height: H - 60, y: 40, rx: 14, fill: '#fff',
-            stroke: 'var(--border-1)' }),
-          h('text', { x: 190, y: 84, textAnchor: 'middle', fontFamily: KR, fontSize: 26,
-            fontWeight: 700, fill: INK }, '나무 ' + (k + 1)),
-          h('text', { x: 190, y: 118, textAnchor: 'middle', fontFamily: KR, fontSize: 21,
-            fill: MUT }, '이 셋만 보고 나눈다'),
-          pick.map((i, j) => h('g', { key: j },
-            h('rect', { x: 40, y: 150 + j * 62, width: 300, height: 50, rx: 10,
-              fill: ACC, opacity: 0.14, stroke: ACC, strokeWidth: 2 }),
-            h('text', { x: 190, y: 183 + j * 62, textAnchor: 'middle', fontFamily: KR,
-              fontSize: 25, fontWeight: 700, fill: ACC }, VARS[i]))));
-      };
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('text', { key: 'h', x: 20, y: 28, fontFamily: KR, fontSize: 24, fill: MUT },
-          '변수 110개 중 나무마다 몇 개만 랜덤으로'),
-        tree(0, 0), tree(430, 1), tree(860, 2), tree(1290, 3));
-    })();
-
-    // ── 20 퍼뮤테이션 ───────────────────────────────────────────
-    const permutation = (() => {
-      const W = 860, H = 700;
-      const r = rng(5150);
-      const col = (x, t, drop, c) => {
-        const bars = [];
-        for (let i = 0; i < 8; i++)
-          bars.push(h('rect', { key: i, x: x + 10, y: 130 + i * 34, width: 300, height: 24,
-            rx: 5, fill: i === 3 ? c : '#E3E2EA' }));
-        return h('g', { key: t },
-          h('text', { x: x + 160, y: 96, textAnchor: 'middle', fontFamily: KR, fontSize: 25,
-            fontWeight: 700, fill: INK }, t),
-          bars,
-          h('text', { x: x + 160, y: 470, textAnchor: 'middle', fontFamily: EN,
-            fontSize: 46, fontWeight: 800, fill: c }, drop),
-          h('text', { x: x + 160, y: 512, textAnchor: 'middle', fontFamily: KR,
-            fontSize: 23, fill: MUT }, '정확도 변화'));
-      };
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
-          stroke: 'var(--border-1)' }),
-        h('text', { key: 'h', x: W / 2, y: 52, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 26, fill: MUT }, '한 행(변수)만 값을 뒤섞는다'),
-        col(50, '중요한 변수', '−0.21', RED),
-        col(450, '안 중요한 변수', '−0.01', MUT),
-        h('text', { key: 'n', x: W / 2, y: H - 40, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 24, fill: 'var(--fg-3)' }, '무너지면 중요하다'));
-    })();
-
-    // ── 21 비선형 방향 ──────────────────────────────────────────
-    const nonlinearDirection = (() => {
-      const W = 1660, H = 230, pad = 60;
-      const s = mkScale(W, H, pad, [0, 10], [-1.2, 1.2]);
-      const pts = [];
-      for (let x = 0; x <= 10; x += 0.1)
-        pts.push([x, Math.sin(x * 0.9) * Math.exp(-x / 14)]);
-      const p = pts.map((q, i) => (i ? 'L' : 'M') + s.x(q[0]) + ' ' + s.y(q[1])).join(' ');
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('line', { key: 'z', x1: pad, y1: s.y(0), x2: W - pad, y2: s.y(0), stroke: AX,
-          strokeWidth: 2 }),
-        h('path', { key: 'c', d: p, fill: 'none', stroke: VIO, strokeWidth: 5 }),
-        [[1.2, '+'], [4.6, '−'], [8.0, '+']].map(([x, t]) => h('text', { key: x,
-          x: s.x(x), y: s.y(0) - 46, textAnchor: 'middle', fontFamily: EN, fontSize: 40,
-          fontWeight: 800, fill: t === '+' ? GRN : RED }, t)),
-        h('text', { key: 'l', x: W - pad, y: H - 12, textAnchor: 'end', fontFamily: KR,
-          fontSize: 23, fill: MUT }, '같은 변수인데 구간마다 방향이 다르다'));
-    })();
-
-    // ── 22 weak learner ─────────────────────────────────────────
-    const weakLearner = (() => {
-      const W = 880, H = 620;
-      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-          style: { width: '100%', height: '100%', display: 'block' } },
-        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
-          stroke: 'var(--border-1)' }),
-        h('rect', { key: 'r', x: 330, y: 120, width: 220, height: 76, rx: 12,
-          fill: AMB, opacity: 0.16, stroke: AMB, strokeWidth: 3 }),
-        h('text', { key: 'rt', x: 440, y: 168, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 27, fontWeight: 700, fill: '#9A6206' }, '산림 ≤ 12%'),
-        h('line', { key: 'l1', x1: 440, y1: 196, x2: 250, y2: 300, stroke: AMB, strokeWidth: 3 }),
-        h('line', { key: 'l2', x1: 440, y1: 196, x2: 630, y2: 300, stroke: AMB, strokeWidth: 3 }),
-        h('rect', { key: 'b1', x: 160, y: 300, width: 180, height: 76, rx: 12, fill: RED,
-          opacity: 0.16, stroke: RED, strokeWidth: 3 }),
-        h('text', { key: 'b1t', x: 250, y: 348, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 27, fontWeight: 700, fill: RED }, '고온'),
-        h('rect', { key: 'b2', x: 540, y: 300, width: 180, height: 76, rx: 12, fill: ACC,
-          opacity: 0.16, stroke: ACC, strokeWidth: 3 }),
-        h('text', { key: 'b2t', x: 630, y: 348, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 27, fontWeight: 700, fill: ACC }, '저온'),
-        h('text', { key: 'n', x: W / 2, y: 470, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 30, fontWeight: 800, fill: INK }, '분기 하나짜리 나무'),
-        h('text', { key: 'n2', x: W / 2, y: 512, textAnchor: 'middle', fontFamily: KR,
-          fontSize: 25, fill: MUT }, '혼자서는 약하다. 그래서 weak learner.'));
-    })();
-
-    // ── 23 AdaBoost 데모 ────────────────────────────────────────
-    const adaDemo = (() => {
-      const PTS = (() => {
-        const r = rng(7788), out = [];
-        for (let i = 0; i < 40; i++) {
-          const x = 0.08 + r() * 0.84, y = 0.08 + r() * 0.84;
-          // 진짜 규칙은 대각선이라 수직/수평 분기 하나로는 절대 다 못 맞춘다
-          out.push({ x: x, y: y, c: (x + y > 1.0) ? 1 : 0 });
-        }
-        return out;
-      })();
-      // 수직/수평 분기만 쓰는 weak learner 를 순서대로 학습시킨다.
-      const fitStump = (w) => {
-        let best = null;
-        [['x', 1], ['x', -1], ['y', 1], ['y', -1]].forEach(([ax, sgn]) => {
-          for (let t = 0.1; t < 0.95; t += 0.05) {
-            let err = 0;
-            PTS.forEach((p, i) => {
-              const pred = (sgn * (p[ax] - t) > 0) ? 1 : 0;
-              if (pred !== p.c) err += w[i];
-            });
-            if (!best || err < best.err) best = { ax: ax, sgn: sgn, t: t, err: err };
-          }
-        });
-        return best;
-      };
-      const STEPS = [];
-      let w = PTS.map(() => 1 / PTS.length);
-      for (let m = 0; m < 4; m++) {
-        const st = fitStump(w);
-        const wrong = PTS.map(p => ((st.sgn * (p[st.ax] - st.t) > 0 ? 1 : 0) !== p.c));
-        STEPS.push({ st: st, w: w.slice(), wrong: wrong });
-        const eps = Math.max(1e-6, Math.min(0.499, st.err));
-        const alpha = 0.5 * Math.log((1 - eps) / eps);
-        w = w.map((v, i) => v * Math.exp(wrong[i] ? alpha : -alpha));
-        const z = w.reduce((a, b) => a + b, 0);
-        w = w.map(v => v / z);
-      }
-      const VIEW = [
-        { t: '데이터', n: '빨강과 파랑을 가르고 싶다. 처음엔 모든 점이 같은 확률로 뽑힌다.', k: -1 },
-        { t: '1회차 — 첫 분기', n: '선 하나로는 다 못 맞춘다. 틀린 점에 테두리를 쳤다.', k: 0 },
-        { t: '1회차 후 — 확률 갱신', n: '맞춘 건 작아지고, 틀린 건 커진다. 다음 모델이 저기를 겨냥한다.', k: 1 },
-        { t: '2회차', n: '커진 점들을 맞추려고 다른 자리를 자른다.', k: 2 },
-        { t: '3회차', n: '계속 반복한다. 끝까지 안 맞는 점은 계속 커진다.', k: 3 },
-      ];
-      const i = Math.min(this.state.ada, VIEW.length - 1), V = VIEW[i];
-      const cur = V.k < 0 ? null : STEPS[V.k];
-      const W = 720, H = 620, pad = 48;
-      const s = mkScale(W, H, pad, [0, 1], [0, 1]);
-      const wmax = cur ? Math.max(...cur.w) : 1 / PTS.length;
-
-      const btn = (label, onClick, primary, dis) => h('button', { key: label,
-        onClick: onClick, disabled: !!dis,
-        style: { fontFamily: KR, fontSize: '23px', fontWeight: 700, padding: '13px 26px',
-          borderRadius: '10px', whiteSpace: 'nowrap', cursor: dis ? 'default' : 'pointer',
-          opacity: dis ? 0.4 : 1, border: '2px solid ' + AMB,
-          background: primary ? AMB : '#fff', color: primary ? '#fff' : '#9A6206' } }, label);
-
-      return h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr',
-          gap: '52px', alignItems: 'center', width: '100%' } },
-        h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
-            style: { width: '100%', height: 'auto', display: 'block' } },
-          h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
-            stroke: 'var(--border-1)' }),
-          cur ? h('line', { key: 'sp',
-            x1: cur.st.ax === 'x' ? s.x(cur.st.t) : s.x(0),
-            y1: cur.st.ax === 'x' ? s.y(0) : s.y(cur.st.t),
-            x2: cur.st.ax === 'x' ? s.x(cur.st.t) : s.x(1),
-            y2: cur.st.ax === 'x' ? s.y(1) : s.y(cur.st.t),
-            stroke: AMB, strokeWidth: 5 }) : null,
-          h('g', { key: 'p' }, PTS.map((p, k) => {
-            const ww = cur ? cur.w[k] : 1 / PTS.length;
-            const rad = 8 + (ww / wmax) * 16;
-            return h('circle', { key: k, cx: s.x(p.x), cy: s.y(p.y), r: rad,
-              fill: p.c ? RED : ACC, opacity: 0.6,
-              stroke: cur && cur.wrong[k] ? '#111' : 'none', strokeWidth: 2.5 });
-          }))),
+          gap: '40px', width: '100%', height: '680px', alignItems: 'center' } },
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: '26px' } },
-          h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '18px' } },
-            h('span', { style: { fontFamily: EN, fontSize: '28px', fontWeight: 800,
-              color: AMB } }, (i + 1) + ' / ' + VIEW.length),
-            h('span', { style: { fontSize: '38px', fontWeight: 800, color: INK,
-              lineHeight: 1.2 } }, V.t)),
-          h('div', { style: { background: 'var(--surface-app)', borderLeft: '6px solid ' + AMB,
-            borderRadius: '12px', padding: '28px 32px', fontSize: '27px',
-            color: 'var(--fg-3)', lineHeight: 1.5, minHeight: '150px' } }, V.n),
-          h('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
-            btn('◀ 이전', () => this.setState(s2 => ({ ada: Math.max(0, s2.ada - 1) })),
-                false, i === 0),
-            btn('다음 ▶', () => this.setState(s2 => ({ ada: Math.min(VIEW.length - 1, s2.ada + 1) })),
-                true, i === VIEW.length - 1),
-            btn('처음부터', () => this.setState({ ada: 0 })))));
+          h('div', { style: { display: 'flex', gap: '20px', fontFamily: KR,
+            fontSize: '22px', color: MUT, paddingLeft: '176px' } },
+            h('span', { style: { color: ACC, fontWeight: 700 } }, '■ class 0'),
+            h('span', { style: { color: RED, fontWeight: 700 } }, '■ class 1')),
+          M.map(bar)),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '20px' } },
+          card('Hard Voting', '결론만 세어 다수결', '0',
+            ACC, '0 : 2개 · 1 : 1개'),
+          card('Soft Voting', '확률을 더해서 비교', '1',
+            RED, '0 : ' + s0.toFixed(2) + ' · 1 : ' + s1.toFixed(2))));
     })();
 
-    // ── 24 GBM 잔차 ─────────────────────────────────────────────
-    const gbmResidual = (() => {
-      const W = 1660, H = 440, pad = 54, cw = 530;
-      const truth = (x) => Math.sin(x * 1.1) * 1.6 + x * 0.12;
-      const stair = (x, k) => {                       // k번째까지 누적한 계단 근사
-        const bins = 3 + k * 3;
-        const t = Math.floor(x / 10 * bins) / bins * 10 + 10 / bins / 2;
-        return truth(t);
-      };
-      const panel = (x0, title, fn, resid, col) => {
-        const s = mkScale(cw, H, pad, [0, 10], [-3, 3]);
-        const tp = [], fp = [];
-        for (let x = 0; x <= 10; x += 0.1) {
-          tp.push([x, resid ? truth(x) - stair(x, 0) : truth(x)]);
-          fp.push([x, resid ? stair(x, 1) - stair(x, 0) : fn(x)]);
+    // ── Bias–Variance 4분면 ─────────────────────────────────────
+    const biasVariance = (() => {
+      const W = 800, H = 780;
+      const target = (cx, cy, pts, lab, sub) => {
+        const r = rng(pts.seed), dots = [];
+        for (let i = 0; i < 9; i++) {
+          const ang = r() * Math.PI * 2, rad = r() * pts.spread;
+          dots.push(h('circle', { key: i, cx: cx + pts.bx + Math.cos(ang) * rad,
+            cy: cy + pts.by + Math.sin(ang) * rad, r: 6, fill: RED }));
         }
-        const p = (a) => a.map((q, i) => (i ? 'L' : 'M') + s.x(q[0]) + ' ' + s.y(q[1])).join(' ');
-        return h('g', { key: title, transform: 'translate(' + x0 + ',0)' },
-          h('rect', { width: cw, height: H, rx: 14, fill: '#fff', stroke: 'var(--border-1)' }),
-          h('line', { x1: pad, y1: s.y(0), x2: cw - pad, y2: s.y(0), stroke: AX, strokeWidth: 2 }),
-          h('path', { d: p(tp), fill: 'none', stroke: MUT, strokeWidth: 3.5 }),
-          h('path', { d: p(fp), fill: 'none', stroke: col, strokeWidth: 4.5 }),
-          h('text', { x: cw / 2, y: 40, textAnchor: 'middle', fontFamily: KR, fontSize: 27,
-            fontWeight: 700, fill: col }, title));
+        return h('g', { key: lab },
+          [58, 40, 22].map((rr, i) => h('circle', { key: rr, cx: cx, cy: cy, r: rr,
+            fill: i === 2 ? '#EEF0FE' : 'none', stroke: AX, strokeWidth: 1.8 })),
+          dots,
+          h('text', { x: cx, y: cy + 96, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 22, fontWeight: 700, fill: INK }, lab),
+          h('text', { x: cx, y: cy + 124, textAnchor: 'middle', fontFamily: KR,
+            fontSize: 19, fill: MUT }, sub));
       };
       return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
           style: { width: '100%', height: '100%', display: 'block' } },
-        panel(0, '① 첫 나무가 맞춘다', x => stair(x, 0), false, ACC),
-        h('text', { key: 'a1', x: 552, y: H / 2, textAnchor: 'middle', fontFamily: EN,
-          fontSize: 40, fill: 'var(--border-1)', fontWeight: 700 }, '→'),
-        panel(575, '② 남은 잔차를', x => 0, true, RED),
-        h('text', { key: 'a2', x: 1127, y: H / 2, textAnchor: 'middle', fontFamily: EN,
-          fontSize: 40, fill: 'var(--border-1)', fontWeight: 700 }, '→'),
-        panel(1130, '③ 다음 나무가 맡는다', x => stair(x, 1) - stair(x, 0), true, GRN));
+        h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
+          stroke: 'var(--border-1)' }),
+        h('text', { key: 'lv', x: 250, y: 62, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 23, fontWeight: 700, fill: MUT }, 'Low Variance'),
+        h('text', { key: 'hv', x: 570, y: 62, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 23, fontWeight: 700, fill: MUT }, 'High Variance'),
+        h('text', { key: 'lb', x: 46, y: 250, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 23, fontWeight: 700, fill: MUT,
+          transform: 'rotate(-90 46 250)' }, 'Low Bias'),
+        h('text', { key: 'hb', x: 46, y: 560, textAnchor: 'middle', fontFamily: EN,
+          fontSize: 23, fontWeight: 700, fill: MUT,
+          transform: 'rotate(-90 46 560)' }, 'High Bias'),
+        target(250, 240, { seed: 11, bx: 0, by: 0, spread: 18 }, '정확 + 안정', '이상적'),
+        target(570, 240, { seed: 27, bx: 0, by: 0, spread: 52 }, '흩어짐', '깊은 나무 한 그루'),
+        target(250, 560, { seed: 41, bx: 44, by: 34, spread: 18 }, '치우침', '너무 단순한 모델'),
+        target(570, 560, { seed: 53, bx: 44, by: 34, spread: 52 }, '치우침 + 흩어짐', '최악'));
     })();
 
-    // ── 26 비교표 ───────────────────────────────────────────────
+    // ── K-fold ──────────────────────────────────────────────────
+    const kfold = (() => {
+      const W = 1720, H = 700, CW = 128, CH = 86;
+      const row = (y, testIdx, lab) => {
+        const cells = [];
+        for (let i = 0; i < 10; i++) {
+          const isTest = testIdx.indexOf(i) >= 0;
+          cells.push(h('g', { key: i },
+            h('rect', { x: 200 + i * (CW + 6), y: y, width: CW, height: CH, rx: 8,
+              fill: isTest ? '#FDF0F0' : '#EEF0FE',
+              stroke: isTest ? RED : ACC, strokeWidth: 2 }),
+            h('text', { x: 200 + i * (CW + 6) + CW / 2, y: y + CH / 2 + 8,
+              textAnchor: 'middle', fontFamily: EN, fontSize: 23, fontWeight: 700,
+              fill: isTest ? RED : ACC }, i + 1)));
+        }
+        return h('g', { key: y },
+          h('text', { x: 180, y: y + CH / 2 + 8, textAnchor: 'end', fontFamily: KR,
+            fontSize: 22, fontWeight: 700, fill: MUT }, lab), cells);
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        h('text', { key: 'l1', x: 200, y: 30, fontFamily: KR, fontSize: 24, fill: ACC,
+          fontWeight: 700 }, '■ Training'),
+        h('text', { key: 'l2', x: 366, y: 30, fontFamily: KR, fontSize: 24, fill: RED,
+          fontWeight: 700 }, '■ Testing'),
+        row(56, [0, 1], '1 fold'), row(178, [2, 3], '2 fold'),
+        row(300, [4, 5], '3 fold'), row(422, [6, 7], '4 fold'),
+        row(544, [8, 9], '5 fold'),
+        h('text', { key: 'n', x: 1580, y: 678, textAnchor: 'end', fontFamily: KR,
+          fontSize: 22, fill: MUT }, '겹치지 않게 K 등분 — 모든 데이터가 한 번씩 테스트가 된다'));
+    })();
+
+    // ── Bootstrap ───────────────────────────────────────────────
+    const bootstrap = (() => {
+      const W = 1720, H = 700, CW = 96, CH = 84;
+      const SAMPLES = [[1, 3, 5, 1, 2, 3, 1, 5, 9, 7],
+                       [10, 4, 2, 8, 7, 5, 10, 7, 1, 1],
+                       [3, 5, 7, 9, 1, 3, 5, 9, 10, 1]];
+      const bank = (y, vals, lab, col, bg) => h('g', { key: lab },
+        h('text', { x: 190, y: y + CH / 2 + 8, textAnchor: 'end', fontFamily: KR,
+          fontSize: 22, fontWeight: 700, fill: MUT }, lab),
+        vals.map((v, i) => h('g', { key: i },
+          h('rect', { x: 210 + i * (CW + 6), y: y, width: CW, height: CH, rx: 8,
+            fill: bg, stroke: col, strokeWidth: 2 }),
+          h('text', { x: 210 + i * (CW + 6) + CW / 2, y: y + CH / 2 + 8,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 23, fontWeight: 700,
+            fill: col }, v))));
+      const missing = (vals) => {
+        const s = {}; vals.forEach(v => { s[v] = 1; });
+        const out = []; for (let i = 1; i <= 10; i++) if (!s[i]) out.push(i);
+        return out;
+      };
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        bank(40, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], '원 데이터', MUT, '#F2F1F6'),
+        SAMPLES.map((s, k) => h('g', { key: k },
+          bank(214 + k * 136, s, (k + 1) + ' sample', ACC, '#EEF0FE'),
+          h('text', { x: 1246, y: 214 + k * 136 + CH / 2 + 8, fontFamily: KR,
+            fontSize: 24, fill: RED, fontWeight: 600 },
+            '안 뽑힘 → 테스트 : ' + missing(s).join(', ')))),
+        h('text', { key: 'n', x: 210, y: 678, fontFamily: KR, fontSize: 22, fill: MUT },
+          '복원 추출 — 같은 번호가 여러 번 들어가고, 빠진 번호는 그 모델의 테스트(OOB)가 된다'));
+    })();
+
+    // ── Bagging / RF 표본 ───────────────────────────────────────
+    const mkSample = (dropCols) => {
+      const W = 1720, H = 640, CW = 48, CH = 62;
+      const BS = [{ rows: [1, 2, 6, 7], cols: [1, 2, 6, 7] },
+                  { rows: [4, 5, 6, 7], cols: [4, 5, 6, 7] },
+                  { rows: [1, 3, 5, 7], cols: [1, 3, 5, 7] }];
+      const grid = (x0, y0, rows, cols, lab, col, bg) => {
+        const g = [];
+        g.push(h('text', { key: 'l', x: x0, y: y0 - 20, fontFamily: KR, fontSize: 25,
+          fontWeight: 700, fill: col }, lab));
+        for (let c = 1; c <= 7; c++) {
+          const on = cols.indexOf(c) >= 0;
+          g.push(h('text', { key: 'c' + c, x: x0 + (c - 1) * (CW + 4) + CW / 2, y: y0 + 14,
+            textAnchor: 'middle', fontFamily: EN, fontSize: 20, fontWeight: 700,
+            fill: on ? col : '#DEDCE6' }, 'x' + c));
+        }
+        for (let r = 1; r <= 7; r++) {
+          const rOn = rows.indexOf(r) >= 0;
+          g.push(h('text', { key: 'r' + r, x: x0 - 12, y: y0 + 34 + (r - 1) * (CH + 4) + 38,
+            textAnchor: 'end', fontFamily: EN, fontSize: 20, fontWeight: 700,
+            fill: rOn ? col : '#DEDCE6' }, r));
+          for (let c = 1; c <= 7; c++) {
+            const on = rOn && cols.indexOf(c) >= 0;
+            g.push(h('rect', { key: r + '_' + c, x: x0 + (c - 1) * (CW + 4),
+              y: y0 + 34 + (r - 1) * (CH + 4), width: CW, height: CH, rx: 6,
+              fill: on ? bg : '#F6F5F9', stroke: on ? col : '#EAE8F0',
+              strokeWidth: on ? 2 : 1 }));
+          }
+        }
+        return h('g', { key: lab }, g);
+      };
+      const all = [1, 2, 3, 4, 5, 6, 7];
+      return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
+          style: { width: '100%', height: '100%', display: 'block' } },
+        grid(60, 60, all, all, '원 데이터', 'var(--fg-2)', '#DFDDE8'),
+        [0, 1, 2].map(k => grid(470 + k * 415, 60, BS[k].rows,
+          dropCols ? BS[k].cols : all,
+          'Bootstrap ' + (k + 1), dropCols ? GRN : ACC,
+          dropCols ? '#D8F2E7' : '#DDE2FE')),
+        h('text', { key: 'agg', x: 1700, y: 616, textAnchor: 'end', fontFamily: KR,
+          fontSize: 26, fontWeight: 700, fill: INK }, '→ Aggregating'));
+    };
+    const bagSample = mkSample(false);
+    const rfSample = mkSample(true);
+
+    // ── 비교 표 ─────────────────────────────────────────────────
     const compareTable = (() => {
-      const ROWS = [
-        ['DecisionTree', 0.99, 0.72, ''], ['Bagging', 1.00, 0.82, ''],
-        ['RandomForest', 1.00, 0.84, ''], ['AdaBoost', 0.92, 0.80, ''],
-        ['GBM', 1.00, 0.86, '최고'], ['XGBoost', 1.00, 0.85, ''],
-        ['LightGBM', 1.00, 0.84, ''], ['CatBoost', 1.00, 0.85, ''],
-      ];
-      const cell = (t, head, col, w) => h('td', { key: t + Math.random(), style: {
-        fontFamily: typeof t === 'number' ? EN : KR, fontSize: head ? '24px' : '28px',
-        fontWeight: head || w ? 700 : 400, textAlign: head === 'l' ? 'left' : 'center',
-        padding: '15px 8px', color: col || (head ? MUT : INK),
-        borderBottom: head ? '2px solid ' + INK : '1px solid var(--border-1)' } }, t);
-      return h('table', { style: { width: '100%', borderCollapse: 'collapse' } },
-        h('thead', null, h('tr', null,
-          h('th', { style: { textAlign: 'left', fontFamily: KR, fontSize: '24px',
-            color: MUT, padding: '15px 8px', borderBottom: '2px solid ' + INK } }, '알고리즘'),
-          cell('훈련 정확도', true), cell('테스트 정확도', true), cell('', true))),
-        h('tbody', null, ROWS.map(([nm, tr, te, tag]) => h('tr', { key: nm },
-          h('td', { style: { fontFamily: EN, fontSize: '28px', fontWeight: 700,
-            color: tag ? GRN : INK, padding: '15px 8px',
-            borderBottom: '1px solid var(--border-1)' } }, nm),
-          cell(tr.toFixed(2), false, MUT),
-          cell(te.toFixed(2), false, tag ? GRN : INK, !!tag),
-          cell(tag, false, GRN, true)))));
+      const COL = ['Dtree', 'Bagging Tree', 'Random Forest', 'AdaBoost', 'GBM'];
+      const TIME = [1.34, 3.22, 0.46, 0.67, 1.34];
+      const TR = [95.98, 100, 100, 89.65, 95.08];
+      const TE = [69.76, 68.60, 72.86, 73.64, 69.76];
+      const bestTe = Math.max.apply(null, TE);
+      const cell = (v, k, st) => h('div', { key: k, style: Object.assign({
+        padding: '20px 12px', textAlign: 'center', fontFamily: EN,
+        fontSize: '32px', fontWeight: 800 }, st) }, v);
+      const kids = [];
+      kids.push(h('div', { key: 'h0', style: { padding: '18px 12px', fontFamily: KR,
+        fontSize: '23px', color: 'var(--neutral-lighter)' } }, '구분'));
+      COL.forEach((c, i) => kids.push(h('div', { key: 'h' + i, style: {
+        padding: '18px 12px', textAlign: 'center', fontFamily: EN, fontSize: '26px',
+        fontWeight: 700, color: '#fff' } }, c)));
+      const rowOf = (lab, arr, fmt, hi) => {
+        kids.push(h('div', { key: 'l' + lab, style: { padding: '20px 12px',
+          fontFamily: KR, fontSize: '25px', fontWeight: 700,
+          color: 'var(--neutral-lighter)', borderTop: '1px solid rgba(255,255,255,.16)' } }, lab));
+        arr.forEach((v, i) => kids.push(cell(fmt(v), lab + i, {
+          borderTop: '1px solid rgba(255,255,255,.16)',
+          color: hi && hi(v) ? '#00E49B' : '#fff',
+          background: hi && hi(v) ? 'rgba(0,228,155,.12)' : 'transparent' })));
+      };
+      rowOf('학습시간(초)', TIME, v => v.toFixed(2), null);
+      rowOf('Train ACC', TR, v => v.toFixed(2) + '%', v => v === 100);
+      rowOf('Test ACC', TE, v => v.toFixed(2) + '%', v => v === bestTe);
+      return h('div', { style: { display: 'grid',
+          gridTemplateColumns: '1fr repeat(5, 1fr)', width: '100%',
+          background: 'rgba(255,255,255,.05)', borderRadius: '16px',
+          overflow: 'hidden', alignSelf: 'center' } }, kids);
     })();
 
     return {
       showFooter: this.props.showFooter ?? true,
-      timeline, metaSketch, votingVsBoosting, hardSoft, biasVariance, kfold,
-      bootstrap, baggingFlow, sdot, nEstimators, sdotFI, biasedTrees, randomForest,
-      permutation, nonlinearDirection, weakLearner, adaDemo, gbmResidual, compareTable,
+      timeline, ensembleShapes, voting, biasVariance, kfold, bootstrap,
+      bagSample, rfSample, compareTable,
     };
   }
 }

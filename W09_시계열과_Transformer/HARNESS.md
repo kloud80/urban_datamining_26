@@ -10,6 +10,11 @@
 
 ## 이 주차의 자료
 
+강의안
+- `W09_시계열과_Transformer/slides/W09_순환신경망.html`
+- `W09_시계열과_Transformer/slides/W09_시계열분석.html`
+- `W09_시계열과_Transformer/slides/W09_언어모델과_어텐션.html`
+
 노트북
 - `W09_시계열과_Transformer/notebooks/22 timeseries.ipynb`
 - `W09_시계열과_Transformer/notebooks/23 NN_timeseries.ipynb`
