@@ -18,6 +18,7 @@
 노트북
 - `W03_앙상블/notebooks/04_Dtree.ipynb`
 - `W03_앙상블/notebooks/05_Bagging_RF.ipynb`
+- `W03_앙상블/notebooks/06-2_모델비교.ipynb`
 - `W03_앙상블/notebooks/06_Boosting.ipynb`
 
 ## 165분 배분 (가이드라인 6절)

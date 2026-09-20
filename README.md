@@ -33,6 +33,7 @@
 - 📊 **강의안(PPTX)** — [기계학습.pptx](./W03_%EC%95%99%EC%83%81%EB%B8%94/slides/%EA%B8%B0%EA%B3%84%ED%95%99%EC%8A%B5.pptx)
 - 📓 [04_Dtree](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W03_%EC%95%99%EC%83%81%EB%B8%94/notebooks/04_Dtree.ipynb)
 - 📓 [05_Bagging_RF](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W03_%EC%95%99%EC%83%81%EB%B8%94/notebooks/05_Bagging_RF.ipynb)
+- 📓 [06-2_모델비교](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W03_%EC%95%99%EC%83%81%EB%B8%94/notebooks/06-2_%EB%AA%A8%EB%8D%B8%EB%B9%84%EA%B5%90.ipynb)
 - 📓 [06_Boosting](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W03_%EC%95%99%EC%83%81%EB%B8%94/notebooks/06_Boosting.ipynb)
 
 ### 4주차 · 인공신경망
