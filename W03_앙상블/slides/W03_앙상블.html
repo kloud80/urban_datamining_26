@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>W03_앙상블</title>
+<title>앙상블</title>
 
 <!-- design-system styles, same order as the deck's <helmet> -->
 <link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
@@ -503,10 +503,10 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="8개의 스텀프" data-screen-label="20" data-speaker-notes="출처: 008 Boost.pptx p.11 — 100번 반복한 것 중 앞 8개다. 자르는 자리가 계속 바뀐다. 가로, 세로, 다시 가로. 그리고 가중치를 보라 — 0.76에서 시작해 0.10대까지 떨어진다. 뒤로 갈수록 남은 오답이 어려워지니 정확도가 떨어지고, 그만큼 발언권이 줄어든다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:20px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="8개의 스텀프" data-screen-label="20" data-speaker-notes="출처: 008 Boost.pptx p.11 · 06_Boosting.ipynb 의 직접 구현 루프(n_estimator = 20) — 그중 앞 8개다. 자르는 자리가 계속 바뀐다. 가로, 세로, 다시 가로. 그리고 가중치를 보라 — 0.76에서 시작해 0.10대까지 떨어진다. 뒤로 갈수록 남은 오답이 어려워지니 정확도가 떨어지고, 그만큼 발언권이 줄어든다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:20px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:52px;font-weight:700;line-height:1.15;letter-spacing:-0.02em">자르는 자리가 계속 바뀐다</h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">100번 반복 중 앞 8개</span>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">20번 반복 중 앞 8개</span>
   </div>
   <div style="height:756px;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:14px">
     <div style="background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column"><div style="height:318px"><div class="imgslot fit-contain" style=""><img src="uploads/bst_s11_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>모델 1</span></div></div></div><div style="font-family:var(--font-display);font-size:19px;color:var(--fg-3);text-align:center;padding-top:4px">① α = <b>0.7623</b></div></div>
@@ -710,11 +710,11 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">도시 데이터는 <b style="color:var(--fg-1)">행정동·용도지역</b> 같은 범주형이 많다 — CatBoost 를 한 번 써 볼 만하다.</p>
 </section>
 
-<section data-deck="0" data-label="다섯 모델을 같이 돌리면" data-screen-label="34" data-speaker-notes="출처: 008 Boost.pptx p.28–29 · 06_Boosting.ipynb — 같은 데이터에 다섯을 다 돌린 결과다. 학습 정확도만 보면 배깅과 랜덤 포레스트가 100퍼센트인데, 테스트에서는 68.6과 72.86이다. 배깅은 완전히 외웠고 일반화에 실패했다. 반대로 AdaBoost는 학습이 89.65로 제일 낮은데 테스트가 73.64로 제일 높다. 학습 정확도가 높은 게 좋은 모델이 아니라는 걸 이 표 한 장이 보여 준다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 18% 82%,rgba(0,228,155,.20),transparent 60%)">
+<section data-deck="0" data-label="다섯 모델을 같이 돌리면" data-screen-label="34" data-speaker-notes="출처: 06-2_모델비교.ipynb 을 S-DoT 데이터에 그대로 돌린 결과다. 나무 한 그루는 학습을 100퍼센트 외우는데 테스트가 67.63으로 다섯 중 꼴찌다. 랜덤 포레스트도 학습은 100퍼센트지만 나무를 백 그루 모았기 때문에 테스트가 77.78까지 올라간다. AdaBoost는 깊이 1짜리 그루터기를 쉰 개 이어 붙인 것이라 학습이 75.36밖에 안 되는데 테스트는 78.26이다. 학습 정확도가 높은 게 좋은 모델이 아니라는 걸 이 표 한 장이 보여 준다. 학습시간은 돌린 기계에 따라 달라지니 절대값이 아니라 비율로 읽으면 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 18% 82%,rgba(0,228,155,.20),transparent 60%)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">분석 결과 종합 · 06-2_모델비교.ipynb</div>
   <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">학습 100% 가 좋은 모델이 아니다</h2>
-  <div style="flex:1;min-height:0"><span data-dc-slot="compareTable"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">Bagging 은 <b style="color:#fff">완전히 외우고</b> 테스트 68.60%. AdaBoost 는 학습이 제일 낮은데 테스트가 제일 높다.</p>
+  <div style="flex:1;min-height:0;display:flex;align-items:center"><span data-dc-slot="compareTable"></span></div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.4">Dtree 는 학습을 <b style="color:#fff">100% 외우고</b> 테스트는 67.63% 로 꼴찌. AdaBoost 는 학습이 75.36% 뿐인데 테스트는 78.26%.</p>
 </section>
 
 <section data-deck="0" data-label="정리" data-screen-label="35" data-speaker-notes="정리. 배깅은 나란히 모아 분산을 줄이고, 랜덤 포레스트는 변수까지 뽑아 더 다르게 만들고, 부스팅은 이어 붙여 편향을 줄인다. 그리고 마지막 표가 말하듯 학습 정확도는 지표가 아니다. 다음 주는 신경망 — 나무를 모으는 대신 함수를 겹치는 길로 간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
@@ -738,7 +738,7 @@
 <div id="progress"></div>
 
 <div id="guide">
-  <div class="deckname">W03_앙상블</div>
+  <div class="deckname">앙상블</div>
   <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">35</span></div>
   <div class="slidelabel" id="g-label"></div>
   <div class="keys">
@@ -1132,31 +1132,35 @@ class Component extends DCLogic {
     // ── 비교 표 ─────────────────────────────────────────────────
     const compareTable = (() => {
       const COL = ['Dtree', 'Bagging Tree', 'Random Forest', 'AdaBoost', 'GBM'];
-      const TIME = [1.34, 3.22, 0.46, 0.67, 1.34];
-      const TR = [95.98, 100, 100, 89.65, 95.08];
-      const TE = [69.76, 68.60, 72.86, 73.64, 69.76];
+      const NEST = [1, 10, 100, 50, 100];
+      const TIME = [0.02, 0.13, 0.21, 0.17, 0.54];
+      const TR = [100, 98.54, 100, 75.36, 93.20];
+      const TE = [67.63, 74.88, 77.78, 78.26, 79.23];
       const bestTe = Math.max.apply(null, TE);
       const cell = (v, k, st) => h('div', { key: k, style: Object.assign({
-        padding: '20px 12px', textAlign: 'center', fontFamily: EN,
-        fontSize: '32px', fontWeight: 800 }, st) }, v);
+        padding: '34px 12px', textAlign: 'center', fontFamily: EN,
+        fontSize: '36px', fontWeight: 800 }, st) }, v);
       const kids = [];
-      kids.push(h('div', { key: 'h0', style: { padding: '18px 12px', fontFamily: KR,
-        fontSize: '23px', color: 'var(--neutral-lighter)' } }, '구분'));
+      kids.push(h('div', { key: 'h0', style: { padding: '22px 12px', fontFamily: KR,
+        fontSize: '25px', color: 'var(--neutral-lighter)' } }, '구분'));
       COL.forEach((c, i) => kids.push(h('div', { key: 'h' + i, style: {
-        padding: '18px 12px', textAlign: 'center', fontFamily: EN, fontSize: '26px',
+        padding: '22px 12px', textAlign: 'center', fontFamily: EN, fontSize: '29px',
         fontWeight: 700, color: '#fff' } }, c)));
       const rowOf = (lab, arr, fmt, hi) => {
-        kids.push(h('div', { key: 'l' + lab, style: { padding: '20px 12px',
-          fontFamily: KR, fontSize: '25px', fontWeight: 700,
+        kids.push(h('div', { key: 'l' + lab, style: { padding: '34px 12px',
+          fontFamily: KR, fontSize: '27px', fontWeight: 700,
           color: 'var(--neutral-lighter)', borderTop: '1px solid rgba(255,255,255,.16)' } }, lab));
         arr.forEach((v, i) => kids.push(cell(fmt(v), lab + i, {
           borderTop: '1px solid rgba(255,255,255,.16)',
-          color: hi && hi(v) ? '#00E49B' : '#fff',
-          background: hi && hi(v) ? 'rgba(0,228,155,.12)' : 'transparent' })));
+          color: hi && hi(v) ? (hi(v) === 'bad' ? '#FF7A7A' : '#00E49B') : '#fff',
+          background: hi && hi(v)
+            ? (hi(v) === 'bad' ? 'rgba(217,54,54,.18)' : 'rgba(0,228,155,.12)')
+            : 'transparent' })));
       };
+      rowOf('모아 쓴 모델 수', NEST, v => String(v), null);
       rowOf('학습시간(초)', TIME, v => v.toFixed(2), null);
-      rowOf('Train ACC', TR, v => v.toFixed(2) + '%', v => v === 100);
-      rowOf('Test ACC', TE, v => v.toFixed(2) + '%', v => v === bestTe);
+      rowOf('Train ACC', TR, v => v.toFixed(2) + '%', v => v === 100 ? 'bad' : null);
+      rowOf('Test ACC', TE, v => v.toFixed(2) + '%', v => v === bestTe ? 'good' : null);
       return h('div', { style: { display: 'grid',
           gridTemplateColumns: '1fr repeat(5, 1fr)', width: '100%',
           background: 'rgba(255,255,255,.05)', borderRadius: '16px',
