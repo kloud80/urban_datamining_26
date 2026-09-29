@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>W05_CNN기초</title>
+<title>도시빅데이터와 머신러닝 — 5주차 CNN기초</title>
 
 <!-- design-system styles, same order as the deck's <helmet> -->
 <link rel="stylesheet" href="_ds/bigvalue-design-system-eebf2065-478c-436d-9671-1cf70d2fb9dd/tokens/fonts.css">
@@ -263,7 +263,7 @@
 
 <div id="stagewrap">
   <div id="stage">
-<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.1 · 강의영상 CNN 00:00 · 11 ConvolutionLayer.ipynb — 5주차 1교시. 오늘부터 이미지다. 지난주까지 우리가 쓴 건 덴스 레이어 하나였다. 오늘은 그 말고 다른 구조가 왜 필요한지, 그리고 이미지가 왜 그 구조를 부르는지를 본다. 미리 말해 둘 것 — 오늘 제일 중요한 문장은 '이미지도 데이터다' 이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(68,52,226,.32),transparent 62%)">
+<section data-deck="0" data-label="표지" data-screen-label="01" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.1 · 강의영상 CNN 00:00 · 11 ConvolutionLayer.ipynb — 5주차 1교시. 오늘부터 이미지다. 앞 시간까지 우리가 쓴 건 덴스 레이어 하나였다. 오늘은 그 말고 다른 구조가 왜 필요한지, 그리고 이미지가 왜 그 구조를 부르는지를 본다. 미리 말해 둘 것 — 오늘 제일 중요한 문장은 '이미지도 데이터다' 이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 78% 24%,rgba(68,52,226,.32),transparent 62%)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">5주차 · 1교시</div>
   <h1 style="margin:0;font-size:var(--type-hero);font-weight:800;line-height:1.12;letter-spacing:-0.03em">CNN 기초와 학습</h1>
   <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.5">이미지를 픽셀 그대로 넣으면 왜 안 되는가</p>
@@ -282,13 +282,13 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45;max-width:1620px">지금까지 쓴 <b style="color:var(--fg-1)">덴스 레이어</b>는 모든 입력을 모든 뉴런에 이었다. 사진 한 장에 그대로 쓰면 무슨 일이 생기나.</p>
 </section>
 
-<section data-deck="0" data-label="되짚기 — 덴스 레이어" data-screen-label="04" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.3 · 강의영상 CNN 00:00–02:00 · 4주차 심층신경망 — 되짚기. 덴스 레이어는 풀리 커넥티드다. 왼쪽 V1부터 V5까지가 독립변수 하나하나이고, 엑셀로 치면 필드 개수다. 그림에서 선을 세어 보게 할 것 — 입력 하나가 다음 층의 다섯 노드에 전부 이어지므로 선이 스물다섯 개다. 히든 노드 하나 입장에서 보면 들어온 값들이 가중치와 곱해져 합쳐지고, 활성화 함수를 지나 스위치처럼 켜지거나 꺼진다. 핵심은 모든 데이터의 의미가 다음 레이어에 100퍼센트 전달된다는 것이다. 절편 다섯 개를 더하면 서른 개. 지난주 생활인구 회귀 모델은 이런 층을 몇 겹 쌓아 파라미터가 1,185개였다. 이 숫자를 기억시켜 둘 것 — 다음 장에서 사진을 넣으면 어떻게 되는지 바로 비교한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="되짚기 — 덴스 레이어" data-screen-label="04" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.3 · 강의영상 CNN 00:00–02:00 · 4주차 심층신경망 — 되짚기. 덴스 레이어는 풀리 커넥티드다. 왼쪽 V1부터 V5까지가 독립변수 하나하나이고, 엑셀로 치면 필드 개수다. 그림에서 선을 세어 보게 할 것 — 입력 하나가 다음 층의 다섯 노드에 전부 이어지므로 선이 스물다섯 개다. 히든 노드 하나 입장에서 보면 들어온 값들이 가중치와 곱해져 합쳐지고, 활성화 함수를 지나 스위치처럼 켜지거나 꺼진다. 핵심은 모든 데이터의 의미가 다음 레이어에 100퍼센트 전달된다는 것이다. 절편 다섯 개를 더하면 서른 개. 4주차 심층신경망(10 DeepNN.ipynb)은 이런 층을 여섯 겹 쌓아 파라미터가 232,471개였다. 이 숫자를 기억시켜 둘 것 — 다음 장에서 사진을 넣으면 어떻게 되는지 바로 비교한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">덴스 레이어는 <span style="color:var(--primary-main)">전부 잇는다</span></h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">Fully Connected</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="denseAll"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">입력 하나가 <b style="color:var(--fg-1)">다음 층의 모든 노드</b>에 연결된다. 지난주 생활인구 모델은 이 층을 몇 겹 쌓아 <b style="color:var(--fg-1)">파라미터 1,185개</b>였다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">입력 하나가 <b style="color:var(--fg-1)">다음 층의 모든 노드</b>에 연결된다. 4주차 심층신경망은 이 층을 여섯 겹 쌓아 <b style="color:var(--fg-1)">파라미터 232,471개</b>였다.</p>
 </section>
 
 <section data-deck="0" data-label="사진 한 장의 크기" data-screen-label="05" data-speaker-notes="출처: 강의영상 CNN 이미지 01:00 — 여기서 학생들이 놀라야 한다. 500 곱하기 500 짜리 사진 한 장에 RGB 와 투명도까지 네 개 층이면 입력이 100만 개다. 앉은 자리에서 이미지 하나 넣었을 뿐인데 100만 개의 입력이 생긴 것이다. 이걸 덴스 레이어로 받으면 어떻게 되는지 오른쪽에서 세어 본다. 첫 층 노드를 100개만 둬도 가중치가 1억 개다. 학습은커녕 메모리에 올라가지도 않는다. 이것이 오늘의 질문에 대한 첫 번째 답이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);overflow:hidden">
@@ -361,11 +361,11 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">우리가 원하는 답은 <b style="color:var(--fg-1)">숫자 하나</b>다. 그래서 끝에서 한 줄로 펴고 덴스를 붙인다.</p>
 </section>
 
-<section data-deck="0" data-label="Conv1D 를 실제 데이터에" data-screen-label="11" data-speaker-notes="출처: 강의영상 CNN 15:00–16:30 · 11 ConvolutionLayer.ipynb — 지난주에 덴스 레이어로 돌렸던 그 데이터를 Conv1D 로 바꿔 본 결과다. 가중치가 몇만 개에서 3,900개로 확 줄었다. 그런데 정확도는 떨어졌다. 이 데이터는 필드 순서에 의미가 없기 때문이다. 대지 비율 옆에 도로 비율이 있는 게 아무 뜻도 아니다. 여기서 반드시 짚을 것 — 합성곱이 만능이 아니다. 옆자리가 의미 있는 데이터일 때만 이긴다. 그러니 다음 순서는 자연스럽다. 옆자리가 정말 의미 있는 데이터, 이미지로 간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="Conv1D 를 실제 데이터에" data-screen-label="11" data-speaker-notes="출처: 강의영상 CNN 15:00–16:30 · 11 ConvolutionLayer.ipynb cell 11–16 — 같은 격자 데이터(입력 5개)를 덴스와 Conv1D 로 각각 돌린 결과다. 덴스는 가중치 1,261개, Conv1D 는 필터를 16·32·16 개 겹치면서 2,229개로 오히려 늘었다. 정확도는 둘 다 70%대 후반에서 80%대 초반을 오가고, 돌릴 때마다 어느 쪽이 높은지가 바뀐다. 합성곱을 써서 얻은 게 없다. 이 데이터는 필드 순서에 의미가 없기 때문이다. 남성인구 옆에 여성인구, 그 옆에 소득이 있는 게 아무 뜻도 아니다. 여기서 반드시 짚을 것 — 합성곱이 만능이 아니다. 옆자리가 의미 있는 데이터일 때만 이긴다. 그러니 다음 순서는 자연스럽다. 옆자리가 정말 의미 있는 데이터, 이미지로 간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계를 먼저 본다</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">가볍지만 <span style="color:#D93636">성능을 보장하지는 않는다</span></h2>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">순서에 뜻이 없으면 <span style="color:#D93636">얻는 게 없다</span></h2>
   <div style="flex:1;min-height:0;max-height:420px"><span data-dc-slot="conv1dResult"></span></div>
-  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">이 데이터는 <b style="color:#FF7AA2">필드 순서에 의미가 없다.</b> 대지 비율 옆에 도로 비율이 있는 게 아무 뜻도 아니다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">그럼 옆자리가 정말 의미 있는 데이터는 무엇인가 — 이미지다.</span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">이 데이터는 <b style="color:#FF7AA2">필드 순서에 의미가 없다.</b> 남성인구 옆에 여성인구, 그 옆에 소득이 있는 게 아무 뜻도 아니다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">그럼 옆자리가 정말 의미 있는 데이터는 무엇인가 — 이미지다.</span></div>
 </section>
 
 <section data-deck="0" data-label="오늘의 주인공" data-screen-label="12" data-speaker-notes="출처: 강의영상 이미지데이터 00:00–02:00 · 12 이미지구조.ipynb — 2부다. 오늘의 주인공은 이미지 데이터다. 실습 파일에 올려 둔 이미지는 송파 빌라들의 주소를 뽑아 로드뷰로 바라보고 같은 크기로 크롭한 것이다. 그리고 라벨링을 해 뒀다. 여기서 관점을 하나 바꿔 줘야 한다. 지금까지 입력은 독립변수였고 출력은 종속변수였다. 지금부터 입력이 전부 이미지로 바뀐다. 출력은 그대로다. 뉴럴 네트워크가 다룰 수 있는 데이터의 범위에는 한계가 없다 — 우리가 취급해야 할 모든 것을 데이터로 환원할 수만 있으면 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 80% 28%,rgba(0,228,155,.22),transparent 60%)">
@@ -534,13 +534,13 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">합성곱 레이어에는 <b style="color:#fff">활성화가 없다</b> — 그래서 뒤에 LeakyReLU 를 따로 붙인다.</p>
 </section>
 
-<section data-deck="0" data-label="가중치를 세어 보자" data-screen-label="25" data-speaker-notes="출처: 강의영상 건물외벽 18:00–19:30 · 14 건물외벽학습.ipynb — 세어 본다. 첫 합성곱은 커널 5 곱하기 5에 입력 채널 4니까 100개, 절편 하나를 더해 필터 하나당 101개. 필터가 10개니 1,010개다. 이렇게 끝까지 세면 전체가 7,636개다. 여기서 학생들이 놀라야 한다 — 지난주 덴스 레이어는 입력 110개에 층 두세 개만 쌓았는데도 가중치가 7만 개가 넘었다. 이번엔 500 곱하기 500 이미지를 넣었는데 7,636개다. 필터를 잔뜩 넣은 것 같은데도 그렇다. 학습이 훨씬 쉽다. 그러면서도 인접성을 살리니 이미지에는 특효약이다. 이것이 오늘의 질문에 대한 답이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="가중치를 세어 보자" data-screen-label="25" data-speaker-notes="출처: 강의영상 건물외벽 18:00–19:30 · 14 건물외벽학습.ipynb — 세어 본다. 첫 합성곱은 커널 5 곱하기 5에 입력 채널 4니까 100개, 절편 하나를 더해 필터 하나당 101개. 필터가 10개니 1,010개다. 이렇게 끝까지 세면 전체가 7,636개다. 여기서 학생들이 놀라야 한다 — 4주차 심층신경망은 입력 48개짜리 표 데이터에 덴스 여섯 층을 쌓아 가중치가 232,471개였다. 이번엔 500 곱하기 500 이미지를 넣었는데 7,636개다. 필터를 잔뜩 넣은 것 같은데도 그렇다. 학습이 훨씬 쉽다. 그러면서도 인접성을 살리니 이미지에는 특효약이다. 이것이 오늘의 질문에 대한 답이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사진을 넣었는데 가중치가 <span style="color:var(--primary-main)">7,636개</span></h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">지난주 표 데이터 모델은 7만 개가 넘었다</span>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">4주차 표 데이터 모델은 23만 개였다</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="paramCount"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">필터를 잔뜩 넣은 것 같은데도 <b style="color:var(--fg-1)">열 배 가볍다.</b> 그러면서 인접성을 살린다 — 이미지에는 특효약이다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">필터를 잔뜩 넣은 것 같은데도 <b style="color:var(--fg-1)">30배 가볍다.</b> 그러면서 인접성을 살린다 — 이미지에는 특효약이다.</p>
 </section>
 
 <section data-deck="0" data-label="학습 결과" data-screen-label="26" data-speaker-notes="출처: 강의영상 건물외벽 20:00–22:00 · 14 건물외벽학습.ipynb — 100 에폭 돌린 결과다. 정확도 0.9131, 손실 0.1927. 시작할 때 손실이 0.7959였으니 많이 내려왔다. 예측값을 열어 보면 1이어야 할 것은 0.999, 0이어야 할 것은 0.004 정도로 떨어진다. 딱 1이나 0이 되지는 않는다. 한 가지 꼭 말해 줄 것 — GPU 와 CPU 속도 차이를 이미지 학습에서 피부로 느낄 수 있다. 런타임을 CPU 로 두고 한 번 돌려 보게 할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
@@ -586,16 +586,15 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">CNN 은 분류기이기 전에 <b style="color:var(--accent-green)">요약기</b>다. 이 이야기가 9주차 컨텍스트 벡터에서 그대로 다시 나온다.</p>
 </section>
 
-<section data-deck="0" data-label="지도 위에 격자를 올린다" data-screen-label="30" data-speaker-notes="출처: 강의영상 상권격자 00:00–02:00 · 18 CNN_application.ipynb — 5부다. 지금까지 배운 합성곱을 이미지가 아닌 데이터에 써 본다. 공간 분석에서 포인트나 폴리곤 대신 격자를 쓰는 이유는 간격이 균질하기 때문이다. 단점은 그 균질한 데이터를 만들기가 아주 어렵다는 것이다. 그림을 짚어 줄 것 — 맨 아래가 실제 지도이고 그 위에 100미터 곱하기 100미터 격자를 씌웠다. 그리고 그 격자 한 칸마다 주택 수, 거주인구 수, 직장인구 수, 거주자 추정소득이 층층이 쌓인다. 가운데 기둥을 따라가면 한 자리가 네 개의 값을 갖는다는 것이 보인다. 여기서 결정적인 한마디 — 격자 한 칸이 곧 픽셀 한 칸이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+<section data-deck="0" data-label="지도 위에 격자를 올린다" data-screen-label="30" data-speaker-notes="출처: 강의영상 상권격자 00:00–02:00 · 18 CNN_application.ipynb — 5부다. 지금까지 배운 합성곱을 이미지가 아닌 데이터에 써 본다. 공간 분석에서 포인트나 폴리곤 대신 격자를 쓰는 이유는 간격이 균질하기 때문이다. 단점은 그 균질한 데이터를 만들기가 아주 어렵다는 것이다. 그림을 짚어 줄 것 — 맨 아래가 실제 지도이고 그 위에 100미터 곱하기 100미터 격자를 씌웠다. 그리고 그 격자 한 칸마다 거주인구 수, 직장인구 수, 거주자 추정소득이 층층이 쌓인다. 가운데 기둥을 따라가면 한 자리가 세 개의 값을 갖는다는 것이 보인다. 여기서 결정적인 한마디 — 격자 한 칸이 곧 픽셀 한 칸이다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
   <div style="display:flex;align-items:baseline;gap:24px">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">5부 · 격자 데이터</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">한 칸에 네 가지가 쌓인다</h2>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">한 칸에 세 가지가 쌓인다</h2>
   </div>
   <div style="flex:1;min-height:0;border-radius:18px;overflow:hidden;background:#0C0B17;border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center">
-    <div class="imgslot fit-contain" style=""><img src="uploads/cn_grid_stack.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>지도 위에 씌운 100m 격자와 그 위로 쌓인 네 장의 데이터 층</span></div></div>
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_grid_stack.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>지도 위에 씌운 100m 격자와 그 위로 쌓인 세 장의 데이터 층</span></div></div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px">
-    <div style="padding:18px 24px;background:rgba(255,184,107,.14);border-radius:12px;font-size:var(--type-small);color:#FFB86B;font-weight:700">주택 수</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px">
     <div style="padding:18px 24px;background:rgba(0,228,155,.14);border-radius:12px;font-size:var(--type-small);color:#00E49B;font-weight:700">거주인구 수</div>
     <div style="padding:18px 24px;background:rgba(255,122,162,.14);border-radius:12px;font-size:var(--type-small);color:#FF7AA2;font-weight:700">직장인구 수</div>
     <div style="padding:18px 24px;background:rgba(123,140,255,.14);border-radius:12px;font-size:var(--type-small);color:#7B8CFF;font-weight:700">거주자 추정소득</div>
@@ -603,25 +602,25 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">격자를 쓰는 이유는 <b style="color:#fff">간격이 균질하기 때문</b>이다. 단점은 그 균질한 데이터를 만들기가 아주 어렵다는 것.</p>
 </section>
 
-<section data-deck="0" data-label="그럼 이미지랑 뭐가 다른가" data-screen-label="31" data-speaker-notes="출처: 강의영상 상권격자 02:00 · 18 CNN_application.ipynb — 여기서 학생들에게 먼저 물어볼 것. 이렇게 쌓아 놓고 보면 이게 이미지랑 뭐가 다릅니까. 왼쪽은 격자 네 층, 오른쪽은 이미지 RGBA 네 층이다. 모양이 완전히 같다. 다른 것은 칸에 든 숫자의 뜻뿐이다. 이미지는 0에서 255 사이의 밝기이고, 격자는 인구수와 금액이다. 그리고 층 수도 마음대로다 — 이미지는 넷으로 정해져 있지만 격자는 열 층도 스무 층도 만들 수 있다. 그러니 지난주에 배운 합성곱을 그대로 얹을 수 있다. 이것이 오늘 5부의 출발점이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="그럼 이미지랑 뭐가 다른가" data-screen-label="31" data-speaker-notes="출처: 강의영상 상권격자 02:00 · 18 CNN_application.ipynb — 여기서 학생들에게 먼저 물어볼 것. 이렇게 쌓아 놓고 보면 이게 이미지랑 뭐가 다릅니까. 왼쪽은 격자 세 층, 오른쪽은 이미지 RGB 세 층이다. 모양이 완전히 같다. 다른 것은 칸에 든 숫자의 뜻뿐이다. 이미지는 0에서 255 사이의 밝기이고, 격자는 인구수와 금액이다. 그리고 층 수도 마음대로다 — 이미지는 셋이나 넷으로 정해져 있지만 격자는 열 층도 스무 층도 만들 수 있다. 그러니 앞에서 배운 합성곱을 그대로 얹을 수 있다. 이것이 오늘 5부의 출발점이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">격자 한 칸이 <span style="color:var(--primary-main)">픽셀 한 칸</span>이다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">100m × 100m</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="gridAsImage"></span></div>
-  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">다른 것은 <b style="color:#00E49B">칸에 든 숫자의 뜻</b>뿐이다. 층 수도 넷일 필요가 없다 — 열 층도 스무 층도 된다.</div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">다른 것은 <b style="color:#00E49B">칸에 든 숫자의 뜻</b>뿐이다. 층 수도 셋일 필요가 없다 — 열 층도 스무 층도 된다.</div>
 </section>
 
-<section data-deck="0" data-label="가운데 매장의 매출" data-screen-label="32" data-speaker-notes="출처: 강의영상 상권격자 02:00–05:00 · 18 CNN_application.ipynb — 문제를 세운다. 어떤 브랜드의 서울 355개 매장, 2023년 12월 말 기준 월 매출액이 목표값이다. 각 매장을 한가운데 놓고 가로 1.1킬로미터 세로 1.1킬로미터 정사각형을 잘라 왔다. 100미터 격자니까 11 곱하기 11 이다. 가운데 빨간 칸이 매장 자리이고, 그 둘레 120칸이 이 매장의 배후지다. 그래서 X 의 모양이 355 곱하기 11 곱하기 11 곱하기 4 다. 지난주 외벽 데이터가 138 곱하기 500 곱하기 500 곱하기 4 였던 것과 똑같이 읽으면 된다. 네 장을 같이 볼 것 — 거주인구는 가운데에 몰려 있고, 직장인구는 아래쪽, 소득은 오른쪽이 높고, 주택은 왼쪽에 많다. 배후지의 생김새가 그대로 그림이 된다. 이 그림을 보고 매출을 맞히자는 것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="가운데 매장의 매출" data-screen-label="32" data-speaker-notes="출처: 강의영상 상권격자 02:00–05:00 · 18 CNN_application.ipynb cell 7–10 — 문제를 세운다. 빅밸류 구름에서 구역 16개를 받아 왔다. 구역 하나는 100미터 격자 최대 15 곱하기 15 칸이고, 칸마다 거주인구·직장인구·거주자 추정소득 세 층이 있다. 그래서 X 의 모양이 16 곱하기 15 곱하기 15 곱하기 3 이다. 앞에서 본 외벽 데이터가 138 곱하기 500 곱하기 500 곱하기 4 였던 것과 똑같이 읽으면 된다. 맞힐 값은 그 구역 안 카드매출 연 합계다. 화면의 세 장은 실제 첫 번째 구역의 값이다 — 사람 사는 곳과 일하는 곳이 서로 다른 자리에 몰려 있다. 구역의 생김새가 그대로 그림이 된다. 이 그림을 보고 매출을 맞히자는 것이다. 데이터가 16건뿐이라는 한계도 같이 짚을 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">배후지를 보고 <span style="color:var(--primary-main)">가운데 매장의 매출</span>을 맞힌다</h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">서울 355개 매장 · 1.1km × 1.1km · 2023.12</span>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">구역의 생김새를 보고 <span style="color:var(--primary-main)">그 구역의 매출</span>을 맞힌다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">구역 16개 · 100m 격자 최대 15 × 15 · 층 3개</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="gridSample"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">X 의 모양은 <b style="color:var(--fg-1)">355 × 11 × 11 × 4</b>. 지난주 외벽이 <b style="color:var(--fg-1)">138 × 500 × 500 × 4</b> 였던 것과 똑같이 읽으면 된다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">X 의 모양은 <b style="color:var(--fg-1)">16 × 15 × 15 × 3</b>. 앞에서 본 외벽이 <b style="color:var(--fg-1)">138 × 500 × 500 × 4</b> 였던 것과 똑같이 읽으면 된다.</p>
 </section>
 
-<section data-deck="0" data-label="층마다 단위가 다르다" data-screen-label="33" data-speaker-notes="출처: 강의영상 상권격자 06:00–08:00 · 18 CNN_application.ipynb — 여기서 이미지와 다른 점이 하나 나온다. 이미지는 네 층이 전부 0에서 255였다. 균질했다. 그런데 이 격자는 층마다 단위가 다르다. 인구수는 수천, 추정소득은 수백만, 주택 수는 수십이다. 그대로 넣으면 큰 숫자를 가진 층이 학습을 지배해 버린다. 그래서 맨 앞에 배치 정규화 레이어를 하나 넣었다. 배치 단위로 각 층을 표준화해 준다. 목표값인 매출액에는 MinMax 스케일러를 미리 걸었다. 그리고 마지막 활성화가 시그모이드가 아니라 리니어인 이유도 짚을 것 — 우리가 맞히려는 것이 0이냐 1이냐가 아니라 금액이기 때문이다. 손실도 MSE, 지표도 정확도가 아니라 MAE 를 쓴다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="층마다 단위가 다르다" data-screen-label="33" data-speaker-notes="출처: 강의영상 상권격자 06:00–08:00 · 18 CNN_application.ipynb — 여기서 이미지와 다른 점이 하나 나온다. 이미지는 네 층이 전부 0에서 255였다. 균질했다. 그런데 이 격자는 층마다 단위가 다르다. 칸 하나의 최댓값이 거주인구는 2천대, 직장인구는 6천대, 추정소득은 백만 원 단위로 5백대다. 그리고 맞힐 값인 구역 매출은 조 단위다. 그대로 넣으면 큰 숫자를 가진 층이 학습을 끌고 간다. 그래서 맨 앞에 배치 정규화 레이어를 하나 넣었다. 배치 단위로 각 층을 표준화해 준다. 목표값인 매출액에는 MinMax 스케일러를 미리 걸었다. 그리고 마지막 활성화가 시그모이드가 아니라 리니어인 이유도 짚을 것 — 우리가 맞히려는 것이 0이냐 1이냐가 아니라 금액이기 때문이다. 손실도 MSE, 지표도 정확도가 아니라 MAE 를 쓴다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">층마다 단위가 다르다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">이미지는 전부 0~255 였다</span>
@@ -634,24 +633,24 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="배후지가 CNN 을 지나 매출로" data-screen-label="34" data-speaker-notes="출처: 강의영상 상권격자 07:00–10:00 · 18 CNN_application.ipynb — 모델을 보면 오늘 4부와 똑같이 읽힌다. 11 곱하기 11 곱하기 4 로 들어가, 배치 정규화를 지나고, 커널 2로 필터 10개, 렐루, 맥스풀링으로 반씩 줄어든다. 필터는 10개에서 20개로 늘었다가 다시 10개로. 마지막에 플래튼하면 피처 벡터가 10개 남는다. 그 10개로 매출을 예측한다. 외벽 모델과 다른 곳은 딱 두 군데다 — 맨 앞의 배치 정규화, 그리고 마지막 활성화가 리니어라는 것. 여기서 오늘의 큰 메시지를 던질 것 — 이 자리에 들어갈 수 있는 것은 브랜드 매출만이 아니다. 아파트 시세도, 유동인구도 된다. 조건은 하나, 공간의 정보를 최대한 담아 줘야 한다는 것. 합성곱은 이미지 전용 도구가 아니라 옆자리가 의미 있는 모든 데이터의 도구다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="배후지가 CNN 을 지나 매출로" data-screen-label="34" data-speaker-notes="출처: 강의영상 상권격자 07:00–10:00 · 18 CNN_application.ipynb — 모델을 보면 오늘 4부와 똑같이 읽힌다. 18 CNN_application.ipynb cell 13 — 15 곱하기 15 곱하기 3 으로 들어가, 배치 정규화를 지나고, 커널 2로 필터 10개, 렐루, 맥스풀링으로 반씩 줄어든다 — 15, 7, 3, 1. 필터는 10개에서 20개로 늘었다가 다시 10개로. 마지막에 플래튼하면 피처 벡터가 10개 남고, 덴스 10개와 드롭아웃을 지나 매출 하나를 낸다. 가중치는 모두 1,893개다. 외벽 모델과 다른 곳은 딱 두 군데다 — 맨 앞의 배치 정규화, 그리고 마지막 활성화가 리니어라는 것. 여기서 오늘의 큰 메시지를 던질 것 — 이 자리에 들어갈 수 있는 것은 브랜드 매출만이 아니다. 아파트 시세도, 유동인구도 된다. 조건은 하나, 공간의 정보를 최대한 담아 줘야 한다는 것. 합성곱은 이미지 전용 도구가 아니라 옆자리가 의미 있는 모든 데이터의 도구다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">읽는 법이 <span style="color:var(--primary-main)">외벽 모델과 똑같다</span></h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">11×11×4 → 피처 10개 → 매출액</span>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">15×15×3 → 피처 10개 → 매출액</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="gridModel"></span></div>
   <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">이 자리에 들어갈 수 있는 건 브랜드 매출만이 아니다 — <b style="color:#00E49B">아파트 시세도, 유동인구도</b> 된다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">조건은 하나 — 공간의 정보를 최대한 담아 줄 것. 합성곱은 이미지 전용 도구가 아니다.</span></div>
 </section>
 
-<section data-deck="0" data-label="SOTA 라는 말" data-screen-label="35" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.37 · 강의영상 CNN SOTA 00:00–01:00 · 17 CNN_SOTA.ipynb — 5부다. SOTA 는 State of the Art, 그 시점에 가장 성능이 좋은 모델을 말한다. paperswithcode 에 가면 ImageNet 분류 리더보드가 정리돼 있고 논문 링크와 데이터까지 붙어 있다. 논문 쓸 때 이론적 배경 잡기 아주 좋으니 반드시 소개해 줄 것. 여기서 중요한 감각 하나 — 무조건 크게 만든다고 SOTA 가 되지 않는다. 가중치도 적고, 성능도 좋고, 속도도 빠른 효율이 있어야 올라간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="SOTA 라는 말" data-screen-label="35" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.37 · 강의영상 CNN SOTA 00:00–01:00 · 17 CNN_SOTA.ipynb — 5부다. SOTA 는 State of the Art, 그 시점에 가장 성능이 좋은 모델을 말한다. 화면은 paperswithcode 의 ImageNet 분류 리더보드다. 이 사이트는 2025년 7월에 문을 닫았고 지금은 Hugging Face Papers 로 넘어간다. 리더보드는 이제 각 논문의 벤치마크 표에서 직접 확인해야 한다 — 이 점을 같이 말해 줄 것. 여기서 중요한 감각 하나 — 무조건 크게 만든다고 SOTA 가 되지 않는다. 가중치도 적고, 성능도 좋고, 속도도 빠른 효율이 있어야 올라간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">6부 · 계보</div>
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">SOTA — 그 시점의 최고</h2>
   </div>
   <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
-    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s37_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>paperswithcode 의 ImageNet 분류 리더보드</span></div></div>
+    <div class="imgslot fit-contain" style=""><img src="uploads/cn_s37_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>paperswithcode 의 ImageNet 분류 리더보드 — 2025년 서비스 종료 전 화면</span></div></div>
   </div>
-  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">크게 만든다고 올라가지 않는다 — <b style="color:#00E49B">가중치는 적게, 성능은 높게, 속도는 빠르게.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">paperswithcode.com — 리더보드와 논문 링크가 같이 있다. 이론적 배경 잡을 때 쓸 것.</span></div>
+  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">크게 만든다고 올라가지 않는다 — <b style="color:#00E49B">가중치는 적게, 성능은 높게, 속도는 빠르게.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">paperswithcode 는 2025년에 문을 닫았다 — 지금은 Hugging Face Papers 로 넘어간다. 리더보드는 논문의 벤치마크 표에서 확인할 것.</span></div>
 </section>
 
 <section data-deck="0" data-label="LeNet (1998)" data-screen-label="36" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.39 · 강의영상 CNN SOTA 01:00–09:00 · 17 CNN_SOTA.ipynb — LeNet 이다. 1998년 논문 그대로 구현했다. 이 그림을 우리가 방금 배운 방식으로 읽어 보게 할 것. 28 곱하기 28 필기체를 32로 패딩해서 넣고, 필터 6개로 28이 되고, 서브샘플링으로 14, 다시 합성곱으로 16개 피처맵에 10, 서브샘플링으로 5, 플래튼하면 120개 피처 벡터. 덴스를 지나 출력이 10개다. 왜 10개인가 — 0부터 9까지 맞혀야 하니까. 여기서 더미 변수화를 반드시 설명할 것. 라벨을 0부터 9 숫자 그대로 주면 안 된다. 숫자형 데이터는 0과 1의 간격이 1과 2의 간격과 같다고 가정하는데, 손글씨 0과 1 사이에는 그런 관계가 없다. 그래서 원핫으로 바꿔 간격을 없앤다. 이 판단을 잘못하면 학습이 계속 빙글빙글 돈다. 결과는 파라미터 6만여 개로 학습 99.7%, 테스트 98.8%. 못 맞힌 것을 열어 보면 사람이 봐도 8인지 9인지 모를 악필이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
@@ -668,10 +667,10 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="AlexNet (2012)" data-screen-label="37" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.45 · 강의영상 CNN SOTA 12:00–15:00 · 16 AlexNet(2012).ipynb — AlexNet 이다. GPU 딥러닝의 길을 연 모델이고, 이미 여러 번 나온 이름이다. 읽는 연습을 그대로 하면 된다. 227 곱하기 227 곱하기 3 입력, 커널 11로 필터 96개, 55로 줄고, 27, 13으로 내려가며 필터가 384까지 늘었다가 256으로 줄고, 플래튼 뒤 덴스 4096이 두 번, 마지막 출력이 1000개다. 왜 1000인가 물어볼 것 — ImageNet 의 카테고리가 1000개다. 가중치는 5천만 개다. 여기서 실무 감각 하나 — 필터를 늘리면 더 다양한 관계를 담을 수 있지만 학습 속도가 떨어진다. 어디까지 늘릴지는 감이다. 실습에서는 CIFAR 32 곱하기 32 데이터에 맞춰 절반 크기로 줄여 돌린다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="AlexNet (2012)" data-screen-label="37" data-speaker-notes="출처: 011 CNN(합성곱신경망).pptx p.45 · 강의영상 CNN SOTA 12:00–15:00 · 16 AlexNet(2012).ipynb — AlexNet 이다. GPU 딥러닝의 길을 연 모델이고, 이미 여러 번 나온 이름이다. 읽는 연습을 그대로 하면 된다. 227 곱하기 227 곱하기 3 입력, 커널 11로 필터 96개, 55로 줄고, 27, 13으로 내려가며 필터가 384까지 늘었다가 256으로 줄고, 플래튼 뒤 덴스 4096이 두 번, 마지막 출력이 1000개다. 왜 1000인가 물어볼 것 — ImageNet 의 카테고리가 1000개다. 가중치는 약 6천만 개다. 여기서 실무 감각 하나 — 필터를 늘리면 더 다양한 관계를 담을 수 있지만 학습 속도가 떨어진다. 어디까지 늘릴지는 감이다. 실습에서는 CIFAR 32 곱하기 32 데이터에 맞춰 절반 크기로 줄여 돌린다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">AlexNet — 2012</h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">가중치 5천만 개 · 출력 1000개</span>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">가중치 약 6천만 개 · 출력 1000개</span>
   </div>
   <div style="height:400px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
     <div class="imgslot fit-contain" style=""><img src="uploads/cn_s45_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>AlexNet 구조 — 227×227×3 에서 출력 1000까지</span></div></div>
@@ -743,7 +742,7 @@
 <div id="progress"></div>
 
 <div id="guide">
-  <div class="deckname">W05_CNN기초</div>
+  <div class="deckname">도시빅데이터와 머신러닝 — 5주차 CNN기초</div>
   <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">42</span></div>
   <div class="slidelabel" id="g-label"></div>
   <div class="keys">
@@ -951,7 +950,7 @@ class Component extends DCLogic {
         '#FF7AA2');
       g.push(h('text', { key: 'x2', x: 1116, y: 214, textAnchor: 'middle',
         fontFamily: EN, fontSize: 40, fill: AX }, '→'));
-      step('c', 1170, 520, '지난주 표 데이터 모델은', '1,185', '입력 11개 · 층 3개',
+      step('c', 1170, 520, '4주차 심층신경망은', '232,471', '표 데이터 · 입력 48개',
         '#00E49B');
       g.push(h('text', { key: 'cap', x: 30, y: 420, fontFamily: KR, fontSize: 24,
         fill: 'var(--neutral-lighter)' },
@@ -1092,13 +1091,13 @@ class Component extends DCLogic {
         g.push(h('text', { key: key + 's', x: x + 34, y: 218, fontFamily: KR,
           fontSize: 22, fill: MUT }, s));
       };
-      card('a', 30, 520, '지난주 Dense 모델', '7만+', '정확도 80%대', MUT,
+      card('a', 30, 520, 'Dense 모델 · 입력 5개', '1,261', '정확도 76~85%', MUT,
         'var(--surface-app)');
       g.push(h('text', { key: 'x', x: 590, y: 150, textAnchor: 'middle', fontFamily: EN,
         fontSize: 36, fill: AX }, '→'));
-      card('b', 650, 520, 'Conv1D 로 바꾸면', '3,900', '가중치는 확 줄었다', ACC,
+      card('b', 650, 520, 'Conv1D 로 바꾸면', '2,229', '필터를 겹치니 오히려 늘었다', ACC,
         '#EEF0FE');
-      card('c', 1210, 480, '그런데 정확도는', '60%대', '오히려 떨어졌다', RED, '#FDF0F0');
+      card('c', 1210, 480, '정확도는', '77~80%', '비슷하다 — 얻은 게 없다', RED, '#FDF0F0');
       return svg(W, H, g);
     })();
 
@@ -1279,10 +1278,10 @@ class Component extends DCLogic {
         g.push(h('text', { key: key + 'n', x: 800, y: y + 136, fontFamily: KR,
           fontSize: 22, fill: MUT }, note));
       };
-      bar('a', 76, 75000, 75000, '지난주 표 데이터 · Dense', MUT, '입력 11개 · 층 3개');
-      bar('b', 266, 7636, 75000, '오늘 사진 · CNN', ACC, '500×500 이미지 · 합성곱 4단');
+      bar('a', 76, 232471, 232471, '4주차 표 데이터 · Dense', MUT, '입력 48개 · 덴스 6층');
+      bar('b', 266, 7636, 232471, '오늘 사진 · CNN', ACC, '500×500 이미지 · 합성곱 4단');
       g.push(h('text', { key: 'cap', x: 800, y: 456, fontFamily: KR, fontSize: 25,
-        fontWeight: 700, fill: ACC }, '열 배 가볍다'));
+        fontWeight: 700, fill: ACC }, '30배 가볍다'));
       return svg(W, H, g);
     })();
 
@@ -1420,7 +1419,7 @@ class Component extends DCLogic {
       const W = 1720, H = 480;
       const g = [];
       const rnd = (s) => () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
-      const LAY = [['주택 수', '#FFB86B'], ['거주인구 수', '#00B37A'],
+      const LAY = [['거주인구 수', '#00B37A'],
                    ['직장인구 수', '#FF7AA2'], ['거주자 추정소득', '#7B8CFF']];
       const r = rnd(31);
       LAY.forEach((L, k) => {
@@ -1436,11 +1435,10 @@ class Component extends DCLogic {
           fontSize: 23, fontWeight: 700, fill: L[1] }, L[0]));
       });
       g.push(h('text', { key: 'lt', x: 70, y: 46, fontFamily: KR, fontSize: 24,
-        fontWeight: 700, fill: INK }, '격자 데이터 네 층'));
+        fontWeight: 700, fill: INK }, '격자 데이터 세 층'));
       g.push(h('text', { key: 'eq', x: 790, y: 240, textAnchor: 'middle',
         fontFamily: EN, fontSize: 46, fill: AX }, '='));
-      const RGBA = [['R', '#D93636'], ['G', '#00B37A'], ['B', '#4434E2'],
-                    ['A', '#9E9AB8']];
+      const RGBA = [['R', '#D93636'], ['G', '#00B37A'], ['B', '#4434E2']];
       RGBA.forEach((L, k) => {
         const x0 = 890 + k * 32, y0 = 76 + k * 32;
         for (let a = 0; a < 8; a++)
@@ -1453,7 +1451,7 @@ class Component extends DCLogic {
           fontSize: 23, fontWeight: 800, fill: L[1] }, L[0]));
       });
       g.push(h('text', { key: 'rt', x: 890, y: 46, fontFamily: KR, fontSize: 24,
-        fontWeight: 700, fill: INK }, '이미지 RGBA 네 층'));
+        fontWeight: 700, fill: INK }, '이미지 RGB 세 층'));
       g.push(h('text', { key: 'cap', x: 70, y: 452, fontFamily: KR, fontSize: 23,
         fill: MUT }, '숫자가 0~255 대신 인구수와 금액일 뿐 — 모양은 완전히 같다'));
       return svg(W, H, g);
@@ -1461,35 +1459,32 @@ class Component extends DCLogic {
 
     // ── 매장 하나가 그림 한 장 ──────────────────────────────────
     const gridSample = (() => {
+      // 18 CNN_application.ipynb 의 X[0] — 칸 값을 층마다 log1p 뒤 최댓값으로 나눴다
+      const G = [[[0.0,0.0,0.0,0.0,0.79,0.77,0.76,0.84,0.78,0.77,0.9,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.74,0.76,0.76,0.79,0.88,0.8,0.86,0.76,0.8,0.0,0.0,0.0],[0.0,0.0,0.48,0.61,0.74,0.84,0.75,0.82,0.86,0.88,0.84,0.81,0.41,0.0,0.0],[0.0,0.8,0.73,0.72,0.34,0.78,0.71,0.78,0.79,0.72,0.59,0.8,0.62,0.74,0.0],[0.84,0.82,0.8,0.84,0.75,0.73,0.74,0.79,0.8,0.68,0.84,0.89,0.74,0.63,0.0],[0.87,0.72,0.81,0.84,0.79,0.82,0.8,0.86,0.85,0.89,0.78,0.83,0.75,0.73,0.81],[0.72,0.5,0.8,0.57,0.62,0.71,0.79,0.85,0.73,0.94,0.52,0.79,0.78,0.88,0.85],[0.79,0.15,0.23,0.57,0.0,0.52,0.0,0.27,0.75,0.74,0.74,0.82,0.63,0.23,0.57],[0.8,0.0,0.85,0.78,0.77,0.94,0.0,0.0,0.0,0.0,0.79,0.81,0.57,0.9,0.93],[0.89,0.85,0.88,0.78,0.81,0.92,0.68,0.83,0.0,0.5,0.82,0.82,0.76,1.0,0.84],[0.9,0.87,0.62,0.86,0.96,0.74,0.69,0.88,0.85,0.81,0.71,0.7,0.8,1.0,0.94],[0.0,0.0,0.83,0.87,0.77,0.57,0.0,0.73,0.79,0.77,0.7,0.88,0.84,0.0,0.0],[0.0,0.0,0.82,0.78,0.63,0.0,0.83,0.78,0.8,0.82,0.76,0.83,0.68,0.0,0.0],[0.0,0.0,0.0,0.89,0.84,0.67,0.62,0.78,0.87,0.78,0.81,0.63,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.82,0.0,0.83,0.8,0.81,0.79,0.55,0.0,0.0,0.0,0.0]],[[0.0,0.0,0.0,0.0,0.28,0.17,0.41,0.28,0.45,0.55,0.5,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.42,0.28,0.11,0.51,0.22,0.22,0.38,0.38,0.52,0.0,0.0,0.0],[0.0,0.0,0.86,0.65,0.35,0.11,0.58,0.41,0.44,0.37,0.55,0.65,0.65,0.0,0.0],[0.0,0.83,0.79,0.56,0.75,0.63,0.55,0.61,0.38,0.78,0.64,0.85,0.65,0.68,0.0],[0.7,0.74,0.8,0.11,0.39,0.58,0.53,0.53,0.62,0.56,0.55,0.22,0.51,0.72,0.0],[0.0,0.64,0.6,0.0,0.0,0.37,0.56,0.17,0.22,0.0,0.39,0.48,0.62,0.44,0.0],[1.0,0.79,0.44,0.22,0.0,0.38,0.71,0.59,0.46,0.58,0.31,0.64,0.65,0.42,0.0],[0.35,0.43,0.55,0.58,0.0,0.83,0.79,0.58,0.22,0.43,0.5,0.31,0.35,0.37,0.65],[0.35,0.55,0.0,0.0,0.0,0.65,0.33,0.75,0.71,0.84,0.48,0.38,0.76,0.0,0.26],[0.33,0.0,0.0,0.0,0.0,0.89,0.31,0.28,0.0,0.39,0.53,0.48,0.57,0.28,0.33],[0.37,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.42,0.0,0.69,0.0,0.31,0.35],[0.0,0.85,0.0,0.0,0.0,0.0,0.78,0.0,0.0,0.45,0.69,0.61,0.0,0.0,0.0],[0.0,0.0,0.11,0.52,0.44,0.35,0.0,0.46,0.35,0.48,0.56,0.58,0.33,0.0,0.0],[0.0,0.0,0.0,0.48,0.53,0.43,0.76,0.31,0.0,0.43,0.0,0.35,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.48,0.77,0.6,0.66,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[[0.0,0.0,0.0,0.0,0.57,0.57,0.6,0.61,0.5,0.58,0.68,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.59,0.63,0.6,0.55,0.48,0.51,0.6,0.46,0.55,0.0,0.0,0.0],[0.0,0.0,0.64,0.61,0.62,0.53,0.53,0.49,0.5,0.5,0.6,0.66,0.67,0.0,0.0],[0.0,0.51,0.57,0.56,0.64,0.6,0.55,0.58,0.52,0.6,0.64,0.62,0.6,0.68,0.0],[0.53,0.51,0.59,0.57,0.61,0.55,0.53,0.51,0.51,0.59,0.65,0.64,0.49,0.53,0.0],[0.47,0.6,0.58,0.56,0.6,0.53,0.49,0.5,0.58,0.65,0.63,0.54,0.5,0.54,0.68],[0.47,0.67,0.62,0.56,0.57,0.52,0.72,0.51,0.53,0.61,0.57,0.59,0.6,0.57,0.7],[0.75,0.0,0.0,0.75,0.0,1.0,0.0,0.0,0.65,0.6,0.69,0.66,0.7,0.0,0.52],[0.72,0.0,0.74,0.78,0.78,0.54,0.0,0.0,0.0,0.0,0.59,0.49,0.57,0.59,0.54],[0.71,0.75,0.76,0.76,0.72,0.6,0.72,0.72,0.0,0.46,0.53,0.63,0.63,0.49,0.48],[0.73,0.74,0.72,0.74,0.74,0.74,0.75,0.73,0.73,0.61,0.63,0.49,0.63,0.49,0.56],[0.0,0.0,0.75,0.78,0.79,0.77,0.0,0.72,0.73,0.7,0.68,0.68,0.62,0.0,0.0],[0.0,0.0,0.79,0.79,0.79,0.0,0.66,0.62,0.66,0.7,0.67,0.64,0.65,0.0,0.0],[0.0,0.0,0.0,0.78,0.79,0.81,0.59,0.63,0.7,0.58,0.68,0.67,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.76,0.0,0.69,0.78,0.73,0.73,0.66,0.0,0.0,0.0,0.0]]];
       const W = 1720, H = 534;
       const g = [];
-      const LAY = [['거주인구', '#4434E2', 0.5, 0.5], ['직장인구', '#00B37A', 0.5, 0.78],
-                   ['추정소득', '#FF7AA2', 0.76, 0.5], ['주택 수', '#E8873A', 0.26, 0.5]];
+      const LAY = [['거주인구', '#00B37A'], ['직장인구', '#FF7AA2'], ['추정소득', '#7B8CFF']];
+      const PT = 21;
       LAY.forEach((L, k) => {
-        const x0 = 60 + k * 410;
+        const x0 = 60 + k * 560;
         g.push(h('text', { key: 'l' + k, x: x0, y: 66, fontFamily: KR, fontSize: 25,
           fontWeight: 800, fill: L[1] }, L[0]));
-        for (let a = 0; a < 11; a++)
-          for (let b = 0; b < 11; b++) {
-            const dx = (a / 10 - L[2]), dy = (b / 10 - L[3]);
-            const v = Math.exp(-(dx * dx + dy * dy) * 9);
-            g.push(h('rect', { key: 'c' + k + a + b, x: x0 + a * 27, y: 90 + b * 27,
-              width: 24, height: 24, rx: 4, fill: L[1], opacity: 0.06 + v * 0.84 }));
+        for (let a = 0; a < 15; a++)
+          for (let b = 0; b < 15; b++) {
+            const v = G[k][a][b];
+            g.push(h('rect', { key: 'c' + k + '_' + a + '_' + b, x: x0 + a * PT,
+              y: 86 + (14 - b) * PT, width: PT - 3, height: PT - 3, rx: 3,
+              fill: v > 0 ? L[1] : 'var(--surface-app)', opacity: v > 0 ? 0.08 + v * 0.9 : 1 }));
           }
-        // 한가운데가 매장 자리다 — 둘레 120칸이 배후지
-        g.push(h('rect', { key: 'm' + k, x: x0 + 5 * 27 - 4, y: 90 + 5 * 27 - 4,
-          width: 32, height: 32, rx: 7, fill: 'none', stroke: RED, strokeWidth: 4 }));
-        g.push(h('text', { key: 'n' + k, x: x0, y: 420, fontFamily: KR, fontSize: 21,
-          fill: MUT }, '11 × 11 격자 · 1.1km'));
+        g.push(h('text', { key: 'n' + k, x: x0, y: 432, fontFamily: KR, fontSize: 21,
+          fill: MUT }, '15 × 15 격자 · 한 칸 100m'));
       });
-      g.push(h('text', { key: 'mk', x: 60, y: 452, fontFamily: KR, fontSize: 22,
-        fontWeight: 700, fill: RED }, '빨간 칸이 매장 자리 — 둘레 120칸이 배후지다'));
-      g.push(h('rect', { key: 'yb', x: 60, y: 474, width: 1600, height: 52, rx: 14,
+      g.push(h('rect', { key: 'yb', x: 60, y: 460, width: 1600, height: 56, rx: 14,
         fill: 'var(--surface-app)' }));
-      g.push(h('text', { key: 'yt', x: 90, y: 508, fontFamily: KR, fontSize: 24,
-        fill: 'var(--fg-3)' }, '맞혀야 할 값 — 이 매장의 월 매출액'));
-      g.push(h('text', { key: 'yv', x: 1630, y: 508, textAnchor: 'end', fontFamily: EN,
-        fontSize: 28, fontWeight: 800, fill: ACC }, '약 3억 원'));
+      g.push(h('text', { key: 'yt', x: 90, y: 496, fontFamily: KR, fontSize: 24,
+        fill: 'var(--fg-3)' }, '맞혀야 할 값 — 이 구역 카드매출 연 합계'));
+      g.push(h('text', { key: 'yv', x: 1630, y: 496, textAnchor: 'end', fontFamily: EN,
+        fontSize: 28, fontWeight: 800, fill: ACC }, '약 7,110억 원'));
       return svg(W, H, g);
     })();
 
@@ -1497,24 +1492,24 @@ class Component extends DCLogic {
     const normNeed = (() => {
       const W = 1720, H = 380;
       const g = [];
-      const D = [['거주인구 수', 3200, '명'], ['직장인구 수', 1800, '명'],
-                 ['거주자 추정소득', 4800000, '원'], ['주택 수', 62, '호']];
-      const max = 4800000;
+      const D = [['거주인구 · 칸 최대', 2347, '2,347 명'], ['직장인구 · 칸 최대', 6768, '6,768 명'],
+                 ['추정소득 · 칸 최대', 559, '559 백만 원'], ['맞힐 값 · 구역 매출', 2.0e12, '중앙값 약 2조 원']];
+      const max = 7.2e13;
       D.forEach((d, i) => {
         const y = 60 + i * 76;
         g.push(h('text', { key: 'l' + i, x: 40, y: y + 34, fontFamily: KR,
           fontSize: 24, fill: INK }, d[0]));
-        const bw = Math.max(10, 900 * Math.log10(d[1] + 1) / Math.log10(max + 1));
+        const bw = Math.max(10, 840 * Math.log10(d[1] + 1) / Math.log10(max + 1));
         g.push(h('rect', { key: 'b' + i, x: 380, y: y + 6, width: bw, height: 42,
-          rx: 8, fill: i === 2 ? RED : ACC, opacity: i === 2 ? 1 : 0.55 }));
+          rx: 8, fill: i === 3 ? RED : ACC, opacity: i === 3 ? 1 : 0.55 }));
         g.push(h('text', { key: 'v' + i, x: 380 + bw + 20, y: y + 36, fontFamily: EN,
-          fontSize: 24, fontWeight: 700, fill: i === 2 ? RED : MUT },
-          d[1].toLocaleString() + ' ' + d[2]));
+          fontSize: 24, fontWeight: 700, fill: i === 3 ? RED : MUT },
+          d[2]));
       });
       g.push(h('text', { key: 'cap', x: 1380, y: 120, fontFamily: KR, fontSize: 24,
-        fontWeight: 800, fill: RED }, '소득 한 층이'));
+        fontWeight: 800, fill: RED }, '맞힐 값은'));
       g.push(h('text', { key: 'cap2', x: 1380, y: 158, fontFamily: KR, fontSize: 24,
-        fontWeight: 800, fill: RED }, '학습을 지배한다'));
+        fontWeight: 800, fill: RED }, '조 단위다'));
       g.push(h('text', { key: 'cap3', x: 1380, y: 210, fontFamily: KR, fontSize: 21,
         fill: MUT }, '가로축은 로그 눈금'));
       return svg(W, H, g);
@@ -1524,10 +1519,10 @@ class Component extends DCLogic {
     const gridModel = (() => {
       const W = 1720, H = 420;
       const g = [];
-      const ST = [['입력', '11×11', 4], ['BatchNorm', '11×11', 4],
-                  ['Conv 2×2', '11×11', 10], ['MaxPool', '5×5', 10],
-                  ['Conv', '5×5', 20], ['MaxPool', '2×2', 20],
-                  ['Conv', '2×2', 10], ['MaxPool', '1×1', 10]];
+      const ST = [['입력', '15×15', 3], ['BatchNorm', '15×15', 3],
+                  ['Conv 2×2', '15×15', 10], ['MaxPool', '7×7', 10],
+                  ['Conv', '7×7', 20], ['MaxPool', '3×3', 20],
+                  ['Conv', '3×3', 10], ['MaxPool', '1×1', 10]];
       const X0 = 26, CW = 150, GAP = 12;
       ST.forEach((s, i) => {
         const x = X0 + i * (CW + GAP);
@@ -1548,7 +1543,7 @@ class Component extends DCLogic {
       g.push(h('text', { key: 'ft', x: xf + 66, y: 186, textAnchor: 'middle',
         fontFamily: EN, fontSize: 22, fontWeight: 800, fill: GRN }, 'Flatten'));
       g.push(h('text', { key: 'ft2', x: xf + 66, y: 218, textAnchor: 'middle',
-        fontFamily: KR, fontSize: 20, fill: GRN }, '피처 10개'));
+        fontFamily: KR, fontSize: 20, fill: GRN }, '→ Dense 10'));
       g.push(h('text', { key: 'ar', x: xf + 146, y: 196, fontFamily: EN, fontSize: 30,
         fill: AX }, '→'));
       g.push(h('rect', { key: 'ob', x: xf + 182, y: 150, width: 160, height: 84,
@@ -1568,7 +1563,7 @@ class Component extends DCLogic {
       const g = [];
       const L = [
         ['1998', 'LeNet', '작게, 그러나 되게', ['필기체 98.8%', '파라미터 6만'], MUT],
-        ['2012', 'AlexNet', 'GPU 와 드롭아웃', ['ImageNet 우승', '파라미터 5천만'], ACC],
+        ['2012', 'AlexNet', 'GPU 와 드롭아웃', ['ImageNet 우승', '파라미터 6천만'], ACC],
         ['2014', 'VGG', '3×3 만 깊게', ['작은 커널을 반복', '구조가 단순하다'], VIO],
         ['2015', 'ResNet', '건너뛰어 잇는다', ['깊어도 나빠지지 않는다', '지금도 기본형'], GRN],
         ['2017', 'DenseNet', '앞을 전부 이어 붙인다', ['더 적은 파라미터로', '같은 성능'], '#E8873A'],
@@ -1578,13 +1573,13 @@ class Component extends DCLogic {
       L.forEach((l, i) => {
         const x = X0 + i * (CW + GAP);
         g.push(h('rect', { key: 'b' + i, x: x, y: 60, width: CW, height: 320, rx: 18,
-          fill: '#fff', stroke: l[5], strokeWidth: 2.5 }));
+          fill: '#fff', stroke: l[4], strokeWidth: 2.5 }));
         g.push(h('text', { key: 'y' + i, x: x + 26, y: 112, fontFamily: EN,
-          fontSize: 24, fontWeight: 800, fill: l[5] }, l[0]));
+          fontSize: 24, fontWeight: 800, fill: l[4] }, l[0]));
         g.push(h('text', { key: 'n' + i, x: x + 26, y: 166, fontFamily: EN,
           fontSize: 30, fontWeight: 800, fill: INK }, l[1]));
         g.push(h('text', { key: 'k' + i, x: x + 26, y: 214, fontFamily: KR,
-          fontSize: 22, fontWeight: 700, fill: l[5] }, l[2]));
+          fontSize: 22, fontWeight: 700, fill: l[4] }, l[2]));
         l[3].forEach((s, j) => g.push(h('text', { key: 's' + i + j, x: x + 26,
           y: 268 + j * 38, fontFamily: KR, fontSize: 20,
           fill: 'var(--fg-3)' }, s)));

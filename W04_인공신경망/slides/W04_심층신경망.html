@@ -302,10 +302,10 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="입력을 110개로 늘리면" data-screen-label="02" data-speaker-notes="3주차에 쓰던 S-DoT 센서 데이터를 그대로 쓴다. 독립변수 110개, 데이터 135건, 출력은 고온/저온 하나. 이걸 신경망에 넣으면 파라미터가 몇 개나 될지 보자." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+<section data-deck="0" data-label="입력을 48개로 늘리면" data-screen-label="02" data-speaker-notes="10 DeepNN.ipynb cell 5–7 — 09 NeuralNetwork 에서 쓰던 격자 데이터를 그대로 쓴다. 독립변수 48개, 데이터 172건, 출력은 그 칸의 총연매출이 400억을 넘느냐 하나. 이걸 신경망에 넣으면 파라미터가 몇 개나 될지 보자." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
   <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">실습 데이터</div>
-  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">입력 110 · 출력 1</h2>
-  <p style="font-size:var(--t-body);color:var(--mut);line-height:1.5;margin:24px 0 0;max-width:1620px">3주차에 쓰던 <b style="color:var(--ink)">S-DoT 센서</b> 데이터 그대로. 반경 200m 의 토지이용·건축물 비율 110개로 그 지점이 상대적 고온인지 저온인지를 맞힌다.</p>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">입력 48 · 출력 1</h2>
+  <p style="font-size:var(--t-body);color:var(--mut);line-height:1.5;margin:24px 0 0;max-width:1620px">09 NeuralNetwork 에서 쓰던 <b style="color:var(--ink)">격자 데이터</b> 그대로. 격자 한 칸의 연령대별 인구·업종별 직장인구·추정소득 48개로 그 칸의 연매출이 400억을 넘는지를 맞힌다.</p>
   <div style="flex:1;min-height:0;display:flex;align-items:center;margin-top:22px"><span data-dc-slot="denseStack"></span></div>
   <div data-dc-if="showFooter">
     <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">02</span></div>
@@ -322,23 +322,23 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="가중치 24만 개" data-screen-label="04" data-speaker-notes="층을 이렇게 쌓았더니 파라미터가 246,061개가 된다. 아까 손으로 계산한 게 9개였다. 그 9차원 공간이 이제 24만 차원이 된 것이다. 학습이 어려운 이유가 여기 있다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(68,52,226,.30),transparent 60%)">
+<section data-deck="0" data-label="가중치 23만 개" data-screen-label="04" data-speaker-notes="10 DeepNN.ipynb cell 8 — 층을 이렇게 쌓았더니 파라미터가 232,471개가 된다. 아까 손으로 계산한 게 9개였다. 그 9차원 공간이 이제 23만 차원이 된 것이다. 학습이 어려운 이유가 여기 있다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(68,52,226,.30),transparent 60%)">
   <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:#3CEEB5;font-weight:700">PARAMETERS</div>
-  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.15;letter-spacing:-0.03em;margin:22px 0 0">9개였던 것이 246,061개가 된다</h2>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.15;letter-spacing:-0.03em;margin:22px 0 0">9개였던 것이 232,471개가 된다</h2>
   <div style="display:flex;align-items:baseline;gap:28px;margin-top:34px">
-    <span style="font-family:var(--en);font-size:150px;font-weight:800;color:#3CEEB5;line-height:0.9;letter-spacing:-0.04em">246,061</span>
+    <span style="font-family:var(--en);font-size:150px;font-weight:800;color:#3CEEB5;line-height:0.9;letter-spacing:-0.04em">232,471</span>
     <span style="font-size:var(--t-sub);font-weight:700">개</span>
   </div>
-  <p style="font-size:var(--t-body);color:#B9B6CC;line-height:1.5;margin:30px 0 0;max-width:1620px">손으로 따라간 예제는 가중치가 <b style="color:#fff">9개</b>였다. 그 9차원 공간이 이제 <b style="color:#fff">24만 차원</b>이 된다.</p>
+  <p style="font-size:var(--t-body);color:#B9B6CC;line-height:1.5;margin:30px 0 0;max-width:1620px">손으로 따라간 예제는 가중치가 <b style="color:#fff">9개</b>였다. 그 9차원 공간이 이제 <b style="color:#fff">23만 차원</b>이 된다.</p>
   <p style="font-size:var(--t-small);color:#8F8AA6;line-height:1.5;margin:20px 0 0">10 DeepNN.ipynb · model.summary() 출력</p>
   <div data-dc-if="showFooter">
     <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">04</span></div>
   </div>
 </section>
 
-<section data-deck="0" data-label="단위가 다른 변수들" data-screen-label="05" data-speaker-notes="입력에 제곱미터짜리도 있고 0 또는 1짜리도 있다. 폭이 제각각이면 어떤 변수가 Affine 값을 혼자 끌고 다니면서 과한 영향을 준다. 게다가 시그모이드의 양끝, 즉 기울기가 없는 구간에 값이 놓일 수 있다. BatchNormalization은 변수별로 값을 다시 정리해 주는데, 그 정리 기준까지 학습으로 정한다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
+<section data-deck="0" data-label="단위가 다른 변수들" data-screen-label="05" data-speaker-notes="입력에 수천 명 단위 인구도 있고, 백만 원 단위로 수십인 추정소득도 있고, 광업처럼 172칸 전부 0 인 칸도 있다. 폭이 제각각이면 어떤 변수가 Affine 값을 혼자 끌고 다니면서 과한 영향을 준다. 게다가 시그모이드의 양끝, 즉 기울기가 없는 구간에 값이 놓일 수 있다. BatchNormalization은 변수별로 값을 다시 정리해 주는데, 그 정리 기준까지 학습으로 정한다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#fff;color:var(--ink);font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;overflow:hidden">
   <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:var(--acc);font-weight:700">BATCH NORMALIZATION</div>
-  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">제곱미터와 0/1 을 같이 넣으면</h2>
+  <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin:20px 0 0">사람 수와 백만 원을 같이 넣으면</h2>
   <div style="flex:1;min-height:0;display:grid;grid-template-columns:1.1fr 1fr;gap:52px;align-items:center;margin-top:30px">
     <div style="height:520px"><span data-dc-slot="scaleProblem"></span></div>
     <div style="display:flex;flex-direction:column;gap:24px">
@@ -443,7 +443,7 @@
         <span style="font-family:var(--en);font-size:130px;font-weight:800;color:var(--amber);line-height:0.9;letter-spacing:-0.04em">15.3</span>
         <span style="font-family:var(--en);font-size:48px;font-weight:700;color:var(--amber)">%</span>
       </div>
-      <div style="font-size:var(--t-body);color:#BFBAAF;margin-top:16px">직전 최고 기록 26.2%를 10%p 넘게 끌어내린다</div>
+      <div style="font-size:var(--t-body);color:#BFBAAF;margin-top:16px">2위 26.2%를 10%p 넘게 따돌린다</div>
       
       <div data-dc-if="showCitations">
         <div style="font-size:var(--t-cap);color:#8F8A80;margin-top:24px;line-height:1.5">Krizhevsky, A., Sutskever, I., Hinton, G. E. (2012). ImageNet Classification with Deep Convolutional Neural Networks. NIPS.</div>
@@ -572,7 +572,7 @@
     </div>
     <div style="background:#F4F5F9;border-radius:16px;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
       <div style="font-family:var(--en);font-size:var(--t-sub);font-weight:700;color:var(--acc)">입력이 많으면 더 작게</div>
-      <p style="margin:0;font-size:var(--t-body);color:var(--mut);line-height:1.5">110개가 각각 0.5씩 더해지면 Affine 값이 <b style="color:var(--no)">시그모이드 양끝</b>으로 날아간다.</p>
+      <p style="margin:0;font-size:var(--t-body);color:var(--mut);line-height:1.5">48개가 각각 0.5씩 더해지면 Affine 값이 <b style="color:var(--no)">시그모이드 양끝</b>으로 날아간다.</p>
     </div>
   </div>
   <div style="margin-top:28px;padding:26px 34px;background:#F4F5F9;border-radius:14px;font-size:var(--t-small);color:var(--mut);line-height:1.5;font-family:var(--en)">He · Xavier(Glorot) — 활성화 함수가 무엇이냐에 따라 고른다.</div>
@@ -597,8 +597,8 @@
     </div>
     <div style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 12px rgba(34,48,74,0.12)">
       <div style="font-family:var(--en);font-size:30px;font-weight:700;color:var(--no)">03 Local Optimal</div>
-      <div style="font-size:34px;font-weight:700;margin-top:20px;color:var(--acc)">Momentum · Adam</div>
-      <div style="font-size:var(--t-small);color:#4C5A73;margin-top:16px;line-height:1.5">관성과 적응적 보폭으로 얕은 골짜기를 넘는다</div>
+      <div style="font-size:34px;font-weight:700;margin-top:20px;color:var(--acc)">Momentum</div>
+      <div style="font-size:var(--t-small);color:#4C5A73;margin-top:16px;line-height:1.5">관성으로 얕은 골짜기를 넘는다 — Adam 은 2014년에 나온다</div>
     </div>
   </div>
   <div style="margin-top:44px;padding:32px 40px;background:#fff;border-radius:16px;border-left:8px solid var(--ok);font-size:var(--t-body);line-height:1.5">
@@ -610,15 +610,15 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="정리" data-screen-label="17" data-speaker-notes="2교시 정리. 층을 깊게 쌓으니 세 가지 한계가 생겼고, 2012년 AlexNet에서 한꺼번에 풀렸다. GPU는 편미분이 노드별로 독립이라 쓸 수 있었던 것이고, ReLU는 기울기 소실을, Dropout은 지역 최적해를 푼다. 다음 주부터는 이 구조를 이미지에 맞게 바꾼 CNN으로 간다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(68,52,226,.30),transparent 60%)">
+<section data-deck="0" data-label="정리" data-screen-label="17" data-speaker-notes="2교시 정리. 층을 깊게 쌓으니 세 가지 한계가 생겼고, 2012년 AlexNet에서 한꺼번에 풀렸다. GPU는 편미분이 노드별로 독립이라 쓸 수 있었던 것이고, ReLU는 기울기 소실을, 모멘텀 같은 옵티마이저는 지역 최적해를 풀고, 드롭아웃은 외워버리는 문제를 막는다. 이어서 이 구조를 이미지에 맞게 바꾼 CNN으로 간다." style="padding:var(--pad-t) var(--pad-x) var(--pad-b);background:#0C0B17;color:#fff;font-family:var(--kr);word-break:keep-all;text-wrap:pretty;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background-image:radial-gradient(900px 620px at 78% 26%,rgba(68,52,226,.30),transparent 60%)">
   <div style="font-family:var(--en);font-size:var(--t-small);letter-spacing:0.08em;text-transform:uppercase;color:#3CEEB5;font-weight:700">2교시 정리</div>
   <h2 style="font-size:var(--t-title);font-weight:800;line-height:1.15;letter-spacing:-0.03em;margin:22px 0 0">세 한계가 한꺼번에 풀린 해</h2>
   <ol style="margin:26px 0 0;padding:0 0 0 1.2em;display:flex;flex-direction:column;gap:24px;font-size:var(--t-sub);line-height:1.4;max-width:1620px">
     <li>느리다 → <b style="color:#3CEEB5">GPU</b>. 편미분이 노드별로 독립이라 쓸 수 있었다.</li>
     <li>기울기가 사라진다 → <b style="color:#3CEEB5">ReLU</b>. 양수 구간 기울기가 정확히 1.</li>
-    <li>지역 최적해에 갇힌다 → <b style="color:#3CEEB5">Dropout · Optimizer</b>.</li>
+    <li>지역 최적해에 갇힌다 → <b style="color:#3CEEB5">Optimizer</b>. 외워버리는 문제는 <b style="color:#3CEEB5">Dropout</b>.</li>
   </ol>
-  <div style="margin-top:30px;padding:30px 38px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--t-body);line-height:1.45;max-width:1620px">다음 주 — <b style="color:#fff">이미지 분석</b>. 같은 구조를 이미지에 맞게 바꾼다.<br><span style="color:#8F8AA6;font-size:var(--t-small)">예습: 11 ConvolutionLayer.ipynb · 12 이미지구조.ipynb</span></div>
+  <div style="margin-top:30px;padding:30px 38px;background:rgba(255,255,255,.07);border-radius:16px;font-size:var(--t-body);line-height:1.45;max-width:1620px">이어서 — <b style="color:#fff">이미지 분석</b>. 같은 구조를 이미지에 맞게 바꾼다.<br><span style="color:#8F8AA6;font-size:var(--t-small)">실습: 11 ConvolutionLayer.ipynb · 12 이미지구조.ipynb</span></div>
   <div data-dc-if="showFooter">
     <div style="position:absolute;left:var(--pad-x);right:var(--pad-x);bottom:36px;display:flex;justify-content:space-between;font-size:var(--t-cap);color:#9998A8;font-family:var(--kr)"><span>Kloud</span><span style="font-family:var(--en);font-weight:600">17</span></div>
   </div>
@@ -655,9 +655,9 @@
   </header>
   <div id="ovgrid">
 <button class="ov-card" data-go="0"><div class="ov-thumb"><div class="ov-num">01</div></div><div class="ov-label">표지</div></button>
-<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">입력을 110개로 늘리면</div></button>
+<button class="ov-card" data-go="1"><div class="ov-thumb"><div class="ov-num">02</div></div><div class="ov-label">입력을 48개로 늘리면</div></button>
 <button class="ov-card" data-go="2"><div class="ov-thumb"><div class="ov-num">03</div></div><div class="ov-label">왜 늘렸다 줄이는가</div></button>
-<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">가중치 24만 개</div></button>
+<button class="ov-card" data-go="3"><div class="ov-thumb"><div class="ov-num">04</div></div><div class="ov-label">가중치 23만 개</div></button>
 <button class="ov-card" data-go="4"><div class="ov-thumb"><div class="ov-num">05</div></div><div class="ov-label">단위가 다른 변수들</div></button>
 <button class="ov-card" data-go="5"><div class="ov-thumb"><div class="ov-num">06</div></div><div class="ov-label">학습은 이어서 할 수 있다</div></button>
 <button class="ov-card" data-go="6"><div class="ov-thumb"><div class="ov-num">07</div></div><div class="ov-label">구조는 늘고 가중치는 불어났다</div></button>
@@ -1877,9 +1877,9 @@ class Component extends DCLogic {
           fontSize: 24, fill: _MUT }, '학습 횟수'));
     })();
 
-    // 110 → 220 → 440 → … → 1
+    // 48 → 220 → 440 → … → 1
     const denseStack = (() => {
-      const L = [['입력', 110, _MUT], ['Dense', 220, _ACC], ['BatchNorm', 220, 'var(--ok)'],
+      const L = [['입력', 48, _MUT], ['Dense', 220, _ACC], ['BatchNorm', 220, 'var(--ok)'],
                  ['Dense', 440, _ACC], ['Dense', 220, _ACC], ['Dense', 110, _ACC],
                  ['Dense', 20, _ACC], ['출력', 1, 'var(--amber)']];
       const mx = 440;
@@ -1899,7 +1899,7 @@ class Component extends DCLogic {
     // 풀었다가 조인다
     const funnel = (() => {
       const W = 1600, H = 330;
-      const L = [110, 220, 440, 220, 110, 20, 1], mx = 440;
+      const L = [48, 220, 440, 220, 110, 20, 1], mx = 440;
       const pts = L.map((v, i) => [80 + i * ((W - 160) / (L.length - 1)),
                                    H / 2 - v / mx * 118, H / 2 + v / mx * 118]);
       const top = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
@@ -1920,17 +1920,18 @@ class Component extends DCLogic {
     const scaleProblem = (() => {
       const W = 760, H = 520;
       const bar = (y, w, t, col) => h('g', { key: t },
-        h('text', { x: 190, y: y + 26, textAnchor: 'end', fontFamily: _KR,
+        h('text', { x: 250, y: y + 26, textAnchor: 'end', fontFamily: _KR,
           fontSize: 24, fill: _INK }, t),
-        h('rect', { x: 210, y: y, width: w, height: 36, rx: 7, fill: col, opacity: 0.8 }));
+        h('rect', { x: 270, y: y, width: w, height: 36, rx: 7, fill: col, opacity: 0.8 }));
       return h('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet',
           style: { width: '100%', height: '100%', display: 'block' } },
         h('text', { key: 'h', x: 30, y: 44, fontFamily: _KR, fontSize: 25, fill: _MUT },
           '같은 층에 들어가는 값들'),
-        bar(90, 500, '대지면적 (㎡)', 'var(--no)'),
-        bar(160, 320, '도로면적 (㎡)', 'var(--no)'),
-        bar(230, 12, '지하층 유무 (0/1)', _ACC),
-        bar(300, 14, '슬레이트 (0/1)', _ACC),
+        // 10 DeepNN.ipynb 입력 48개 중 넷의 최댓값 — 7,122 · 2,274 · 204.1 · 75.8
+        bar(90, 460, '직장인구 (명)', 'var(--no)'),
+        bar(160, 147, '거주인구 (명)', 'var(--no)'),
+        bar(230, 13, '거주소득 (백만원)', _ACC),
+        bar(300, 5, '직장소득 (백만원)', _ACC),
         h('text', { key: 'n', x: 30, y: 420, fontFamily: _KR, fontSize: 26,
           fontWeight: 700, fill: 'var(--no)' }, '큰 쪽이 Affine 값을 혼자 끌고 다닌다'),
         h('text', { key: 'n2', x: 30, y: 466, fontFamily: _KR, fontSize: 24,
