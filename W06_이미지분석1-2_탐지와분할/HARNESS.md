@@ -17,6 +17,8 @@
 - `W06_이미지분석1-2_탐지와분할/notebooks/18 CNN_application.ipynb`
 - `W06_이미지분석1-2_탐지와분할/notebooks/19 YOLO.ipynb`
 - `W06_이미지분석1-2_탐지와분할/notebooks/20 Unet.ipynb`
+- `W06_이미지분석1-2_탐지와분할/notebooks/20b 거리뷰분할_DeepLab_SAM.ipynb`
+- `W06_이미지분석1-2_탐지와분할/notebooks/20c 거리지표로_연구하기.ipynb`
 
 ## 165분 배분 (가이드라인 6절)
 

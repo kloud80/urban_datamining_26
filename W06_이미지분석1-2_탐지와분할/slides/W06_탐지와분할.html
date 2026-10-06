@@ -300,7 +300,7 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">오른쪽이 두 갈래로 갈린다 — 아래가 <b style="color:var(--fg-1)">R-CNN 계열(two-stage)</b>, 위가 <b style="color:var(--fg-1)">YOLO 계열(one-stage)</b>.</p>
 </section>
 
-<section data-deck="0" data-label="R-CNN — 잘라서 물어본다" data-screen-label="06" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.23 · 강의영상 detection 02:00–04:00 — R-CNN 의 발상은 놀랄 만큼 단순하다. 2012년에 우리는 이미지가 무엇인지 맞히는 학습된 뉴럴넷을 얻었다. 그러면 이렇게 하면 된다. 이미지 한 판에 박스를 마구잡이로 그린다. 크게도 작게도 이천 개쯤. 그 박스를 잘라서 224 픽셀로 늘리고 찌그러뜨린다. 그리고 AlexNet 에 넣는다. 어떤 박스에서 비행기 확률이 독보적으로 높게 나오면, 그 박스는 비행기로 탐지된 것이다. 이것을 투 스테이지 디텍터라고 한다. 1단계는 박스를 어떻게 만들 것인가, 2단계는 그 박스가 무엇인가. 이후 Fast R-CNN 은 박스를 만드는 일까지 뉴럴넷으로 학습시켰다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="R-CNN — 잘라서 물어본다" data-screen-label="06" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.23 · 강의영상 detection 02:00–04:00 — R-CNN 의 발상은 놀랄 만큼 단순하다. 2012년에 우리는 이미지가 무엇인지 맞히는 학습된 뉴럴넷을 얻었다. 그러면 이렇게 하면 된다. 이미지 한 판에서 물체가 있을 법한 후보 박스를 이천 개쯤 뽑는다. 무작위가 아니라 Selective Search 라는, 색과 질감이 비슷한 영역을 묶어 가는 전통적 알고리즘으로 뽑는다. 그 박스를 잘라서 227 픽셀로 늘리고 찌그러뜨린다. 그리고 AlexNet 에 넣어 피처를 뽑고, 클래스마다 SVM 으로 판정한다. 어떤 박스에서 비행기 확률이 독보적으로 높게 나오면, 그 박스는 비행기로 탐지된 것이다. 이것을 투 스테이지 디텍터라고 한다. 1단계는 박스를 어떻게 만들 것인가, 2단계는 그 박스가 무엇인가. 이후 Fast R-CNN(2015)은 사진 전체를 CNN 에 한 번만 넣고 후보 영역의 피처를 잘라 쓰게 바꿨고, Faster R-CNN(2015)이 후보 박스를 만드는 일까지 신경망(RPN)으로 학습시켰다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">R-CNN — 잘라서 물어본다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2014 · two-stage</span>
@@ -311,14 +311,14 @@
   <div style="flex:1;min-height:0"><span data-dc-slot="twoStage"></span></div>
 </section>
 
-<section data-deck="0" data-label="투 스테이지의 약점" data-screen-label="07" data-speaker-notes="출처: 강의영상 detection 04:00–05:00 — 투 스테이지에는 구조적인 약점이 있다. 학생들이 잘 놓치는 대목이니 천천히 짚을 것. 경사하강법은 손실에서 시작해 입력까지 하나의 사슬로 미분이 흘러가야 한다. 그런데 스테이지가 둘로 잘리면 그 사슬이 끊긴다. 박스를 만드는 단계와 분류하는 단계가 서로의 오차를 주고받지 못한다. 아무리 머리를 굴려 두 개를 잘 결합해도, 끊긴 곳에서 성능이 뭉개진다. 그래서 다음 장의 발상이 나온다 — 아예 한 번에 끝내자." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="투 스테이지의 약점" data-screen-label="07" data-speaker-notes="출처: 강의영상 detection 04:00–05:00 · R-CNN (Girshick 외, CVPR 2014) · Fast R-CNN (Girshick, ICCV 2015) 표 4 · Faster R-CNN (Ren 외, NeurIPS 2015) · YOLO (Redmon 외, CVPR 2016) 표 1 — 투 스테이지의 약점은 정확도가 아니라 속도다. 학생들이 잘 오해하는 대목이니 숫자로 보여 줄 것. R-CNN 은 후보 이천 개를 하나씩 CNN 에 넣는다. 그래서 VGG16 기준 사진 한 장에 47초가 걸렸다. Fast R-CNN 은 사진을 CNN 에 한 번만 넣어 0.3초로 줄였고, Faster R-CNN 은 후보 만들기까지 신경망으로 바꿔 초당 5장이 됐다. 정확도는 오히려 투 스테이지가 높았다 — PASCAL VOC 2007 에서 Faster R-CNN 73.2, YOLO 63.4. 그런데 초당 5장으로는 영상을 따라갈 수 없다. YOLO 는 정확도를 조금 내주고 초당 45장을 얻었다. 그래서 다음 발상이 나온다 — 아예 한 번에 끝내자. 주의 — 논문마다 학습 데이터 구성(VOC 2007 만 / 2007+2012)이 달라 정확도는 대략의 비교다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">구조적인 약점</div>
-  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사슬이 <span style="color:#D93636">끊긴다</span></h2>
-  <div style="flex:1;min-height:0;max-height:380px"><span data-dc-slot="brokenChain"></span></div>
-  <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">경사하강은 손실에서 입력까지 <b style="color:#FF7AA2">하나의 사슬</b>로 흘러야 한다. 스테이지를 자르면 그 사슬이 끊긴다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">두 단계를 아무리 잘 결합해도 끊긴 자리에서 성능이 뭉개진다 — 그래서 다음 발상이 나온다.</span></div>
+  <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정확하지만 <span style="color:#D93636">느리다</span></h2>
+  <div style="flex:1;min-height:0;max-height:420px"><span data-dc-slot="brokenChain"></span></div>
+  <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">후보 2천 개를 <b style="color:#FF7AA2">하나씩</b> CNN 에 넣는다 — 사진 한 장에 수십 초.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">정확도는 투 스테이지가 높았다. 약점은 속도다 — 그래서 “한 번에 끝내자” 는 발상이 나온다.</span></div>
 </section>
 
-<section data-deck="0" data-label="YOLO — 한 번만 본다" data-screen-label="08" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.24 · You Only Look Once (arXiv 1506.02640) · 강의영상 detection 04:00–05:00 · 19 YOLO.ipynb — YOLO 다. You Only Look Once, 한 번만 보면 된다. 2016년 조셉 레드먼 논문이다. 투 스테이지를 버렸다. 앞 장에서 본 대로 박스를 먼저 만들고 나중에 분류하면 사슬이 끊기니, 아예 박스를 만드는 단계를 없앴다. 대신 이미지를 처음부터 균질한 격자로 잘라 놓는다. 그림에 적힌 세 단계가 전부다 — 448로 리사이즈하고, 합성곱 한 번 돌리고, 신뢰도로 걸러낸다. 여기서 제일 중요한 한 문장 — 격자 칸 하나하나가 자기 자리에서 박스와 클래스를 동시에 내놓는다. 분류와 위치가 한 텐서 안에서 같이 나온다. 그래서 역전파가 입력까지 한 사슬로 이어진다. 논문 당시 초당 45장, PASCAL VOC 에서 mAP 63.4 였다. 실시간이라는 말을 쓸 수 있게 된 첫 탐지기다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="YOLO — 한 번만 본다" data-screen-label="08" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.24 · You Only Look Once (arXiv 1506.02640) · 강의영상 detection 04:00–05:00 · 19 YOLO.ipynb — YOLO 다. You Only Look Once, 한 번만 보면 된다. 2016년 조셉 레드먼 논문이다. 투 스테이지를 버렸다. 앞 장에서 본 대로 후보를 하나씩 따로 보면 느리니, 아예 후보 박스를 만드는 단계를 없앴다. 대신 이미지를 처음부터 균질한 격자로 잘라 놓는다. 그림에 적힌 세 단계가 전부다 — 448로 리사이즈하고, 합성곱 한 번 돌리고, 신뢰도로 걸러낸다. 여기서 제일 중요한 한 문장 — 격자 칸 하나하나가 자기 자리에서 박스와 클래스를 동시에 내놓는다. 분류와 위치가 한 텐서 안에서 같이 나온다. 네트워크 하나를 한 번 통과하면 끝이고, 학습도 손실 하나로 처음부터 끝까지 한 번에 한다. 논문 당시 초당 45장, PASCAL VOC 에서 mAP 63.4 였다. 실시간이라는 말을 쓸 수 있게 된 첫 탐지기다. 참고로 실습은 이 v1 이 아니라 v5 를 쓴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">YOLO — <span style="color:var(--primary-main)">한 번만 본다</span></h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2016 · Joseph Redmon · one-stage</span>
@@ -329,11 +329,11 @@
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
     <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">박스를 만드는 <b style="color:var(--fg-1)">단계 자체를 없앴다</b> — 처음부터 균질한 격자로 자른다</div>
     <div style="padding:22px 26px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">칸 하나가 <b style="color:var(--fg-1)">박스와 클래스를 동시에</b> 내놓는다 — 한 텐서 안에서</div>
-    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">그래서 <b style="color:var(--primary-dark)">역전파가 입력까지</b> 한 사슬로 이어진다</div>
+    <div style="padding:22px 26px;background:var(--primary-pale);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">네트워크를 <b style="color:var(--primary-dark)">한 번만 통과</b>한다 — 그래서 실시간, 초당 45장</div>
   </div>
 </section>
 
-<section data-deck="0" data-label="이름은 하나, 만든 사람은 여럿" data-screen-label="09" data-speaker-notes="출처: 신규 · 2026-09 기준 공개 자료 — YOLO 를 쓸 때 반드시 알아야 하는 이야기다. YOLO 는 한 팀이 쭉 만든 게 아니다. v1 부터 v3 까지가 조셉 레드먼이다. 그런데 2020년에 레드먼이 자기 연구가 군사적으로 쓰이는 것이 우려된다며 컴퓨터 비전 연구를 그만두겠다고 공개 선언했다. 그 뒤로는 다른 팀들이 이름을 이어받았다. v4 는 알렉세이 보치콥스키 팀, v5 는 울트라리틱스의 글렌 조커다. 지금 v8, v11, 그리고 2025년 9월의 YOLO26 까지 울트라리틱스가 만든다. 중간의 v6 은 메이투안, v7 은 또 다른 팀이다. 여기서 학생들이 반드시 가져가야 할 것 둘. 첫째, 버전 번호가 성능 순위가 아니다. 2025년 벤치마크 논문에서도 도메인에 따라 옛 버전이 더 나은 경우가 많다고 보고했다. 둘째, 라이선스다. 울트라리틱스 계열은 AGPL-3.0 이라, 회사 제품에 넣으려면 그 제품 소스를 전부 공개하거나 상용 라이선스를 사야 한다. 학교 연구와 수업은 문제없지만 실무에 쓸 때는 반드시 확인할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="이름은 하나, 만든 사람은 여럿" data-screen-label="09" data-speaker-notes="출처: 신규 · 2026-09 기준 공개 자료 — YOLO 를 쓸 때 반드시 알아야 하는 이야기다. YOLO 는 한 팀이 쭉 만든 게 아니다. v1 부터 v3 까지가 조셉 레드먼이다. 그런데 2020년에 레드먼이 자기 연구가 군사적으로 쓰이는 것이 우려된다며 컴퓨터 비전 연구를 그만두겠다고 공개 선언했다. 그 뒤로는 다른 팀들이 이름을 이어받았다. v4 는 알렉세이 보치콥스키 팀, v5 는 울트라리틱스의 글렌 조커다. 지금 v8, v11, 그리고 2025년 9월의 YOLO26 까지 울트라리틱스가 만든다. 중간의 v6 은 메이투안, v7 은 v4 를 만든 왕·보치콥스키 팀이 다시 냈다. v9·v10 도 각각 다른 연구팀 것이라 그림에서는 생략했다. v12 는 대학 연구팀(Tian 외)이다. 여기서 학생들이 반드시 가져가야 할 것 둘. 첫째, 버전 번호가 성능 순위가 아니다. 2025년 벤치마크 논문에서도 도메인에 따라 옛 버전이 더 나은 경우가 많다고 보고했다. 둘째, 라이선스다. 울트라리틱스 계열은 AGPL-3.0 이라, 회사 제품에 넣으려면 그 제품 소스를 전부 공개하거나 상용 라이선스를 사야 한다. 학교 연구와 수업은 문제없지만 실무에 쓸 때는 반드시 확인할 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이름은 하나, <span style="color:var(--primary-main)">만든 사람은 여럿</span></h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">2026년 9월 기준</span>
@@ -345,32 +345,32 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="AI Hub" data-screen-label="10" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.25 · 강의영상 detection 05:00–07:00 — 실습 데이터의 출처를 반드시 소개할 것. AI Hub 다. 과기부가 몇 조를 들여 만든 한국어·한국 문화 학습용 데이터 저장소다. 왜 만들었는지도 말해 줄 것 — 해외에는 학습용 데이터가 넘치는데 한국어와 한국 문화를 학습시킬 데이터는 외국에서 만들어 주지 않는다. 그래서 전 국민이 모여 라벨링을 했다. 연구 용도로는 거의 전부 무료다. 이미지 데이터가 특히 잘 되어 있다. 우리가 쓸 것은 교통문제 해결을 위한 CCTV 교통 영상이다. 학생들에게 반드시 계정을 만들어 두게 할 것 — 기말 발표 데이터의 출발점이 여기다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="AI Hub" data-screen-label="10" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.25 · 강의영상 detection 05:00–07:00 — 실습 데이터의 출처를 반드시 소개할 것. AI Hub 다. 정부(과기정통부·NIA)가 대규모 예산을 들여 만든 한국어·한국 문화 학습용 데이터 저장소다. 왜 만들었는지도 말해 줄 것 — 해외에는 학습용 데이터가 넘치는데 한국어와 한국 문화를 학습시킬 데이터는 외국에서 만들어 주지 않는다. 그래서 수많은 작업자가 참여해 라벨링을 했다. 연구 용도로는 거의 전부 무료다. 이미지 데이터가 특히 잘 되어 있다. 우리가 쓸 것은 교통문제 해결을 위한 CCTV 교통 영상(시내도로)이다. 학생들에게 반드시 계정을 만들어 두게 할 것 — 기말 발표 데이터의 출발점이 여기다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1fr 1.05fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">실습 데이터</div>
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">AI Hub</h2>
     <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">한국어와 한국 문화를 학습시킬 데이터는 <b style="color:var(--fg-1)">외국에서 만들어 주지 않는다.</b></p>
-    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">과기부가 <b style="color:var(--fg-1)">몇 조</b>를 들여 만들었다. 전 국민이 모여 라벨링했고, 연구 용도로는 거의 전부 무료다.</div>
-    <div style="padding:24px 28px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">오늘 쓸 것 — <b style="color:var(--primary-dark)">교통문제 해결을 위한 CCTV 교통 영상</b>.<br>계정을 지금 만들어 둘 것. 기말 발표 데이터의 출발점이다.</div>
+    <div style="padding:24px 28px;background:var(--surface-app);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">정부가 <b style="color:var(--fg-1)">대규모 예산</b>으로 만들었다. 수많은 작업자가 라벨링했고, 연구 용도로는 거의 전부 무료다.</div>
+    <div style="padding:24px 28px;background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">오늘 쓸 것 — <b style="color:var(--primary-dark)">교통문제 해결을 위한 CCTV 교통 영상(시내도로)</b>.<br>계정을 지금 만들어 둘 것. 기말 발표 데이터의 출발점이다.</div>
   </div>
   <div style="height:760px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
     <div class="imgslot fit-contain" style=""><img src="uploads/dt_s25_2.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>AI Hub 데이터 분류 — 한국어, 영상이미지, 헬스케어, 재난안전환경, 농축수산, 교통물류</span></div></div>
   </div>
 </section>
 
-<section data-deck="0" data-label="라벨은 박스와 번호다" data-screen-label="11" data-speaker-notes="출처: 강의영상 detection 08:00–10:00 · 19 YOLO.ipynb — 탐지 데이터가 어떻게 생겼는지. 한 세트가 두 파일이다. 고해상도 CCTV 이미지 하나, 그리고 JSON 라벨 파일 하나. JSON 을 열어 보면 bbox 가 있고 category_id 가 있다. bbox 는 사각형 네 숫자, category_id 는 그게 무엇인지의 번호다. 버스, 승용차, 보행자 같은 것들이다. 여기서 짚을 것 — 5주차 외벽 라벨은 사진 한 장에 답이 하나였다. 탐지는 사진 한 장에 답이 여러 개고, 각 답마다 위치가 붙는다. 라벨링 노동의 양이 완전히 다르다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="라벨은 박스와 번호다" data-screen-label="11" data-speaker-notes="출처: 강의영상 detection 08:00–10:00 · 19 YOLO.ipynb — 탐지 데이터가 어떻게 생겼는지. 카메라 지점마다 JSON 파일이 하나 있고, 그 안에 이미지 목록과 박스 목록이 COCO 형식으로 들어 있다. 실습 데이터는 부천 한 지점, 1920×1080 사진 83장이다. 박스 목록을 열어 보면 bbox 와 category_id 가 있다. bbox 는 왼쪽 위 꼭짓점과 오른쪽 아래 꼭짓점, 네 숫자다. category_id 는 그게 무엇인지의 번호다 — 1 승용차, 2 소형버스, 3 대형버스, 4 트럭, 5 대형 트레일러, 6 이륜차, 7 보행자. 실습 데이터에서는 승용차 412개, 보행자 240개, 트럭 104개 순으로 많다. 여기서 짚을 것 — 5주차 외벽 라벨은 사진 한 장에 답이 하나였다. 탐지는 사진 한 장에 답이 여러 개고, 각 답마다 위치가 붙는다. 라벨링 노동의 양이 완전히 다르다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="height:620px;background:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center">
     <div class="imgslot fit-contain" style=""><img src="uploads/dt_s26_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>CCTV 교통 영상 — 도로와 차량</span></div></div>
   </div>
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
-    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">한 세트 = 두 파일</div>
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">지점마다 JSON 하나 · COCO 형식</div>
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">박스와 번호</h2>
-    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-family:var(--font-display);font-size:23px;color:var(--fg-3);line-height:1.8">"bbox": [ x, y, w, h ]<br>"category_id": <b style="color:var(--primary-main)">1</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">승용차</span><br>"category_id": <b style="color:var(--primary-main)">4</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">버스</span><br>"category_id": <b style="color:var(--primary-main)">7</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">보행자</span></div>
+    <div style="padding:24px 28px;background:#fff;border-radius:14px;font-family:var(--font-display);font-size:23px;color:var(--fg-3);line-height:1.8">"bbox": [ x1, y1, x2, y2 ] &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">두 꼭짓점</span><br>"category_id": <b style="color:var(--primary-main)">1</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">승용차</span><br>"category_id": <b style="color:var(--primary-main)">3</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">대형버스</span><br>"category_id": <b style="color:var(--primary-main)">7</b> &nbsp;<span style="font-family:var(--font-sans);font-size:21px;color:var(--neutral-medium)">보행자</span></div>
     <div style="padding:24px 28px;background:#fff;border-radius:14px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">5주차 외벽은 사진 한 장에 <b style="color:var(--fg-1)">답이 하나</b>였다. 탐지는 <b style="color:var(--fg-1)">답이 여러 개</b>고 각각에 위치가 붙는다.</div>
   </div>
 </section>
 
-<section data-deck="0" data-label="그냥 불러 쓴다" data-screen-label="12" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.26 · 강의영상 detection 06:00–07:00 · 19 YOLO.ipynb — 실습에서 실제로 하는 일은 이게 전부다. ultralytics 깃허브에서 YOLOv5 를 불러오고, 사전 학습된 가중치 파일을 내려받고, 이미지 폴더를 넘긴다. 가중치는 분야별로 여러 개가 공개돼 있어서 원하는 것을 골라 받으면 된다. 여기서 중요한 것은 우리가 학습을 시키지 않았다는 점이다. YOLOv5 는 우리 CCTV 데이터를 본 적이 없다. 그런데도 차와 사람을 찾아낸다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="그냥 불러 쓴다" data-screen-label="12" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.26 · 강의영상 detection 06:00–07:00 · 19 YOLO.ipynb — 실습에서 실제로 하는 일은 이게 전부다. ultralytics 깃허브에서 YOLOv5 를 불러오고, 사전 학습된 가중치 파일을 내려받고, 이미지 폴더를 넘긴다. 가중치는 크기별로(n·s·m·l·x) 공개돼 있고 전부 COCO 80개 클래스로 학습된 것이다. 실습은 작은 s 를 쓴다. 추론은 사진 크기 1920, 신뢰도 0.1 이상으로 돌린다. 여기서 중요한 것은 우리가 학습을 시키지 않았다는 점이다. YOLOv5 는 우리 CCTV 데이터를 본 적이 없다. 그런데도 차와 사람을 찾아낸다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실습에서 하는 일</div>
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">우리는 학습시키지 않는다</h2>
@@ -382,16 +382,31 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">YOLOv5 는 <b style="color:var(--fg-1)">우리 CCTV 데이터를 본 적이 없다.</b> 그런데도 차와 사람을 찾아낸다.</p>
 </section>
 
-<section data-deck="0" data-label="앞차를 놓쳤다" data-screen-label="13" data-speaker-notes="출처: 강의영상 detection 10:00–12:00 · 19 YOLO.ipynb — 결과를 보면 대부분 잘 찾는데 화면 앞쪽의 큰 차를 놓친다. 이게 YOLO 의 구조적 한계다. 균질한 격자로 잘라 놓았기 때문에, 물체가 그 격자 크기를 넘어서 버리면 인식하지 못한다. R-CNN 계열은 박스 크기 자체가 학습되니 큰 버스도 작은 버스도 잡는다. 그런데 여기서 실무 감각을 하나 줄 것 — CCTV 처럼 카메라가 고정돼 있고 화각이 일정한 화면에서는 물체 크기 범위가 정해져 있다. 그런 경우엔 차라리 빠르고 성능 좋은 YOLO 가 낫다. 도구를 고르는 기준은 순위표가 아니라 우리 데이터의 생김새다. 그리고 신뢰도 임계값 0.5 이야기도 할 것 — 낮추면 애매한 것까지 다 잡아 준다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="앞차를 놓쳤다" data-screen-label="13" data-speaker-notes="출처: 강의영상 detection 10:00–12:00 · 19 YOLO.ipynb · cell 16 · YOLO (Redmon 외, 2016) 2.4절 — 결과를 보면 대부분 잘 찾는데 화면 앞쪽의 큰 차를 놓친다. 여기서 흔한 오해부터 바로잡을 것. 격자보다 큰 물체를 못 보는 게 아니다. YOLO 의 격자 칸은 물체의 중심이 어디 있는지만 맡는다. 박스의 가로세로는 따로 예측하므로 박스가 칸보다 몇 배 커도 된다. 원래 논문이 스스로 밝힌 약점은 오히려 작은 물체가 몰려 있을 때다 — 칸 하나가 맡을 수 있는 물체 수가 정해져 있기 때문이다. 그러면 앞차는 왜 놓쳤나. 후보는 셋이다. 하나, 화면 끝에서 차가 잘려 차 모양이 아니다. 둘, 가중치는 COCO 사진으로 배웠는데 높은 CCTV 에서 내려다본 차는 생김새가 다르다. 셋, 640 으로 배운 모델을 1920 으로 돌리면 가까운 차가 배운 크기 범위를 넘을 수 있다. 셋째는 직접 확인할 수 있다 — --img 를 640 으로 바꿔 다시 돌려 보게 할 것. 그리고 신뢰도 0.1 이야기도 할 것 — 실습은 0.1 로 낮춰서 애매한 것까지 다 잡게 했다. 실무 감각 — CCTV 처럼 카메라가 고정된 화면은 물체 크기 범위가 정해져 있으니 그 범위에 맞춰 해상도와 모델을 고르면 된다. 도구를 고르는 기준은 순위표가 아니라 우리 데이터의 생김새다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">격자보다 큰 물체는 못 본다</h2>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">앞차를 놓쳤다 — <span style="color:#D93636">격자 탓은 아니다</span></h2>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="yoloLimit"></span></div>
-  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">도구를 고르는 기준은 순위표가 아니라 <b style="color:#00E49B">우리 데이터의 생김새</b>다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">CCTV 는 카메라가 고정돼 물체 크기 범위가 정해져 있다 — 그럼 빠른 YOLO 가 낫다.</span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">도구를 고르는 기준은 순위표가 아니라 <b style="color:#00E49B">우리 데이터의 생김새</b>다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)"><b style="color:#fff">--img 640</b> 으로 바꿔 다시 돌려 보자. 앞차가 잡히는가?</span></div>
 </section>
 
-<section data-deck="0" data-label="다시 연구하지 않는다" data-screen-label="14" data-speaker-notes="출처: 강의영상 detection 12:00–13:30 — 실무 이야기다. 예전에는 이걸 만들려면 노하우가 엄청 필요했다. 이게 정말 사람인지 판단하려고 회귀도 돌리고 통계도 내고 별의별 짓을 다 했다. 지금은 그럴 필요가 없다. 상용 CCTV 감시 도구는 거의 전부 YOLO 몇 버전이냐만 물어보면 된다. 개별적으로 연구하지 않는다. 다만 앞에서 말한 라이선스는 잊지 말 것 — 코드는 열려 있지만 제품에 넣는 것은 공짜가 아니다. 버전이 올라갈수록 불꽃 검출, 사람 검출, 차량 검출 같은 학습된 가중치가 계속 공개된다. 학생들에게 줄 메시지 — 여러분이 만들 것은 탐지기가 아니라, 탐지 결과로 무엇을 알아낼지다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="해상도만 바꿨다" data-screen-label="14" data-speaker-notes="출처: 19 YOLO.ipynb · cell 16 — 같은 가중치(yolov5s.pt v7.0), 같은 사진, 같은 신뢰도 0.1 로 --img 만 바꿔 실제로 돌린 결과다. 2026년 10월에 직접 돌렸다. 왼쪽 1920 으로 돌리면 화면 앞의 회색 승합차는 신뢰도 0.17 로 겨우 잡히고, 화면 오른쪽 절반을 덮는 엉뚱한 laptop 박스까지 나온다. 오른쪽 640, 모델이 배운 크기로 돌리면 승합차가 0.71, 흰 차가 0.88 로 또렷하게 잡힌다. 대신 멀리 있는 작은 차는 1920 쪽이 더 많이 잡는다. 여기서 줄 메시지 — 해상도는 정답이 하나가 아니다. 가까운 큰 물체를 볼 것이냐, 먼 작은 물체를 볼 것이냐에 따라 고른다. CCTV 는 화각이 고정돼 있으니 한 번 정해 두면 된다. 그리고 신뢰도 0.1 이라 laptop, airplane 같은 헛것도 나온다 — 임계값을 올리면 사라지는 대신 놓치는 것도 생긴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">해상도만 바꿔 다시 돌렸다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">yolov5s · 같은 사진 · 신뢰도 0.1 · 실행 결과</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+    <div style="font-size:var(--type-subtitle);font-weight:800;color:#D93636">--img 1920 <span style="font-size:var(--type-small);font-weight:600;color:var(--fg-3)">승합차 0.17 · 헛것 ‘laptop’</span></div>
+    <div style="font-size:var(--type-subtitle);font-weight:800;color:#00B37A">--img 640 <span style="font-size:var(--type-small);font-weight:600;color:var(--fg-3)">승합차 0.71 · 흰 차 0.88</span></div>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_yolo_imgsize.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>왼쪽 1920 으로 돌린 탐지 결과, 오른쪽 640 으로 돌린 탐지 결과</span></div></div>
+  </div>
+  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">가까운 큰 차는 <b style="color:#00E49B">배운 크기(640)</b>에서 잘 잡히고, 먼 작은 차는 1920 이 더 잡는다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">정답 해상도는 없다 — 무엇을 셀지에 따라 고른다. CCTV 는 화각이 고정이니 한 번 정해 두면 된다.</span></div>
+</section>
+
+<section data-deck="0" data-label="다시 연구하지 않는다" data-screen-label="15" data-speaker-notes="출처: 강의영상 detection 12:00–13:30 — 실무 이야기다. 예전에는 이걸 만들려면 노하우가 엄청 필요했다. 이게 정말 사람인지 판단하려고 회귀도 돌리고 통계도 내고 별의별 짓을 다 했다. 지금은 그럴 필요가 없다. 상용 CCTV 감시 도구도 상당수가 YOLO 계열이라 몇 버전이냐만 물어보면 된다. 개별적으로 연구하지 않는다. 다만 앞에서 말한 라이선스는 잊지 말 것 — 코드는 열려 있지만 제품에 넣는 것은 공짜가 아니다. 버전이 올라갈수록 불꽃 검출, 사람 검출, 차량 검출 같은 학습된 가중치가 계속 공개된다. 학생들에게 줄 메시지 — 여러분이 만들 것은 탐지기가 아니라, 탐지 결과로 무엇을 알아낼지다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">실무</div>
   <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">이건 다시 연구하지 않는다</h2>
   <div style="height:360px;background:#fff;border-radius:18px;padding:20px;display:flex;align-items:center;justify-content:center"><div class="imgslot fit-contain" style=""><img src="uploads/dt_offtheshelf.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>완제품 탐지기가 놓인 선반을 지나쳐 도시 지도를 바라보는 사람</span></div></div></div>
@@ -402,20 +417,20 @@
     </div>
     <div style="background:#fff;border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px;border-top:8px solid var(--primary-main)">
       <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-main)">지금은</div>
-      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">상용 감시 도구도 <b style="color:var(--fg-1)">“YOLO 몇 버전이냐”</b> 만 물어보면 된다. 가중치는 분야별로 계속 공개된다.</p>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">상용 감시 도구도 상당수가 <b style="color:var(--fg-1)">“YOLO 몇 버전이냐”</b> 만 물어보면 된다. 가중치는 분야별로 계속 공개된다.</p>
     </div>
   </div>
   <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">여러분이 만들 것은 <b style="color:#FF7AA2">탐지기가 아니다.</b><br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">탐지 결과로 <b style="color:#00E49B">무엇을 알아낼지</b> — 거기부터가 도시공학의 몫이다.</span></div>
 </section>
 
-<section data-deck="0" data-label="분할은 다른 문제다" data-screen-label="15" data-speaker-notes="출처: 강의영상 detection 13:30–15:00 · 20 Unet.ipynb — 2부다. 탐지는 하나하나의 물건을 찾아내는 일이었다. 이건 자동차인 것 같은데, 저건 사람인 것 같은데. 분할은 다르다. 이미지를 딱 찍어 놓고 여기는 산림인 것 같고 여기는 건물인 것 같고를 픽셀 단위로 칠하는 일이다. 용도가 다르다. 그리고 한마디 덧붙일 것 — 도시공학에서 제일 많이 쓰는 것이 이 분할이다. 도시 환경 분석에 그대로 쓰인다. 최근에는 둘을 섞은 모델도 많다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="분할은 다른 문제다" data-screen-label="16" data-speaker-notes="출처: 강의영상 detection 13:30–15:00 · 20 Unet.ipynb — 2부다. 탐지는 하나하나의 물건을 찾아내는 일이었다. 이건 자동차인 것 같은데, 저건 사람인 것 같은데. 분할은 다르다. 이미지를 딱 찍어 놓고 여기는 산림인 것 같고 여기는 건물인 것 같고를 픽셀 단위로 칠하는 일이다. 용도가 다르다. 그리고 한마디 덧붙일 것 — 도시공학에서 제일 많이 쓰는 것이 이 분할이다. 도시 환경 분석에 그대로 쓰인다. 최근에는 둘을 섞은 모델도 많다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">2부 · 분할</div>
   <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">물건을 세는가, 땅을 칠하는가</h2>
   <div style="flex:1;min-height:0;max-height:460px"><span data-dc-slot="detVsSeg"></span></div>
   <div style="padding:28px 34px;background:var(--primary-pale);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5;max-width:1700px">도시공학에서 제일 많이 쓰는 것이 <b style="color:var(--primary-dark)">분할</b>이다 — 도시 환경 분석에 그대로 들어간다.</div>
 </section>
 
-<section data-deck="0" data-label="토지피복 데이터" data-screen-label="16" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.28 · 강의영상 detection 15:00–16:00 · 20 Unet.ipynb — 실습 데이터다. AI Hub 의 토지피복지도 항공위성 이미지. 왼쪽이 항공 영상, 오른쪽이 사람이 그린 라벨이다. 이게 진짜 노가다의 끝이다. 이미지 위에 여기는 산림, 여기는 건물 하고 일일이 그린 것이다. 이 정도로 정교하게 나올 수 있는 이유를 말해 줄 것 — 한 과제당 1년에 30억에서 70억을 썼다. 수백에서 천 명이 달려들었다. 인공지능 인력 문제를 데이터 라벨링으로 풀었다고들 하는데, 어쨌든 만들어 놓으니 잘 쓴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="토지피복 데이터" data-screen-label="17" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.28 · 강의영상 detection 15:00–16:00 · 20 Unet.ipynb — 실습 데이터다. AI Hub 의 토지피복지도 항공위성 이미지. 왼쪽이 항공 영상, 오른쪽이 사람이 그린 라벨이다. 이게 진짜 노가다의 끝이다. 이미지 위에 여기는 산림, 여기는 건물 하고 일일이 그린 것이다. 이 정도로 정교하게 나올 수 있는 이유를 말해 줄 것 — 한 과제당 1년에 30억에서 70억을 썼다(강의자 경험담 — 공식 집계 수치는 아니다). 수백에서 천 명이 달려들었다. 인공지능 인력 문제를 데이터 라벨링으로 풀었다고들 하는데, 어쨌든 만들어 놓으니 잘 쓴다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">왼쪽을 보고 오른쪽을 그린다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">AI Hub · 토지피복지도 항공위성 이미지</span>
@@ -426,7 +441,7 @@
   <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">이 정도로 정교한 이유 — 한 과제당 1년에 <b style="color:#00E49B">30억~70억</b>. 수백에서 천 명이 달려들었다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">사람이 이미지 위에 일일이 그린 것이다. 라벨링 노동이 곧 데이터의 값어치다.</span></div>
 </section>
 
-<section data-deck="0" data-label="라스터 — 픽셀에 코드가 들어간다" data-screen-label="17" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.29 · 강의영상 detection 19:00–22:00 · 20 Unet.ipynb — 라벨 파일이 이미지가 아니라는 것을 반드시 짚어야 한다. TIFF 라스터 파일이고 채널이 하나다. 그 한 채널의 픽셀에 색이 아니라 코드가 들어 있다. 10이면 건물, 20이면 주차장, 30이면 도로, 40이면 가로수, 50이면 논, 60이면 밭, 70이면 산림, 80이면 나지, 100이면 비대상지다. 우리 눈에 컬러로 보이는 것은 그 코드에 색을 입혀 출력한 것뿐이다. 라스터가 왜 중요한지도 말해 줄 것 — 층을 원하는 만큼 만들 수 있고, 메타에 좌표계까지 넣을 수 있어서 지도에 그대로 얹힌다. 셰이프 파일과 달리 정확히 격자화된 정보 덩어리다. 읽으려면 tifffile 라이브러리를 따로 설치해야 한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="라스터 — 픽셀에 코드가 들어간다" data-screen-label="18" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.29 · 강의영상 detection 19:00–22:00 · 20 Unet.ipynb — 라벨 파일이 이미지가 아니라는 것을 반드시 짚어야 한다. TIFF 라스터 파일이고 채널이 하나다. 그 한 채널의 픽셀에 색이 아니라 코드가 들어 있다. 10이면 건물, 20이면 주차장, 30이면 도로, 40이면 가로수, 50이면 논, 60이면 밭, 70이면 산림, 80이면 나지, 100이면 비대상지다. 우리 눈에 컬러로 보이는 것은 그 코드에 색을 입혀 출력한 것뿐이다. 라스터가 왜 중요한지도 말해 줄 것 — 층을 원하는 만큼 만들 수 있고, 메타에 좌표계까지 넣을 수 있어서 지도에 그대로 얹힌다. 셰이프 파일과 달리 정확히 격자화된 정보 덩어리다. 읽으려면 tifffile 라이브러리를 따로 설치해야 한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">라벨은 <span style="color:var(--primary-main)">그림이 아니다</span></h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">TIFF 라스터 · 1채널 · 픽셀에 코드</span>
@@ -438,7 +453,7 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="U-Net" data-screen-label="18" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.30 · U-Net 논문 arXiv 1505.04597 · 강의영상 detection 16:00–18:00 · 20 Unet.ipynb — 오늘 2부의 중심이다. U-Net. 항공 영상 분할에서 가장 많이 발전된 모델이고, 지금 여러분이 쓰는 이미지 생성 알고리즘의 핵심 키를 쥐고 있는 구조이기도 하다. 왼쪽 내려가는 길은 우리가 아는 그대로다. 572 곱하기 572 한 채널로 들어가 합성곱과 맥스풀링을 반복하며 크기는 줄고 피처는 늘어난다. 맨 아래가 30 곱하기 30 에 피처맵 1024장이다. 여기까지는 5주차와 똑같다. 다른 것은 그다음이다. 우리는 여기서 플래튼하고 이게 뭐냐고 물었다. U-Net 은 그러지 않는다. 다시 위로 올라간다. 전치 합성곱으로 이미지를 키우면서 피처를 줄인다. 그래서 출력이 숫자 하나가 아니라 라벨 이미지 한 장이 된다. 합성곱을 뒤집었다고 생각하면 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);overflow:hidden">
+<section data-deck="0" data-label="U-Net" data-screen-label="19" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.30 · U-Net 논문 arXiv 1505.04597 · 강의영상 detection 16:00–18:00 · 20 Unet.ipynb — 오늘 2부의 중심이다. U-Net. 원래는 2015년 세포 현미경 사진을 분할하려고 만든 의료 영상 모델인데, 지금은 항공 영상 분할에도 가장 널리 쓰이는 뼈대이고, 지금 여러분이 쓰는 이미지 생성 알고리즘의 핵심 키를 쥐고 있는 구조이기도 하다. 왼쪽 내려가는 길은 우리가 아는 그대로다. 572 곱하기 572 한 채널로 들어가 합성곱과 맥스풀링을 반복하며 크기는 줄고 피처는 늘어난다. 맨 아래가 30 곱하기 30 에 피처맵 1024장이다. 여기까지는 5주차와 똑같다. 다른 것은 그다음이다. 우리는 여기서 플래튼하고 이게 뭐냐고 물었다. U-Net 은 그러지 않는다. 다시 위로 올라간다. 전치 합성곱으로 이미지를 키우면서 피처를 줄인다. 그래서 출력이 숫자 하나가 아니라 라벨 이미지 한 장이 된다. 합성곱을 뒤집었다고 생각하면 된다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:center;font-family:var(--font-sans);overflow:hidden">
   <div style="height:800px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
     <div class="imgslot fit-contain" style=""><img src="uploads/dt_s30_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>U-Net 구조 — 내려가는 길과 올라오는 길, 그리고 copy and crop</span></div></div>
   </div>
@@ -451,7 +466,7 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="내려가는 길, 올라오는 길" data-screen-label="19" data-speaker-notes="출처: 신규 — U-Net 구조를 우리 실습 크기로 다시 그린 것 · 20 Unet.ipynb. 실습에서 만든 것은 512 곱하기 512 곱하기 3 으로 들어간다. 맨 앞에 람다 함수로 255를 나눠 0에서 1로 만들고, 합성곱과 풀링으로 64, 128, 256 채널까지 내려간다. 그리고 전치 합성곱으로 다시 올라온다. 마지막 출력이 1채널이다. 여기서 가로로 이어진 회색 화살표, copy and crop 을 반드시 설명할 것 — 내려가면서 잃어버린 세밀한 위치 정보를 같은 높이의 올라오는 길에 그대로 이어 붙인다. 이게 없으면 경계가 뭉개진다. U 자 모양의 이름이 여기서 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="내려가는 길, 올라오는 길" data-screen-label="20" data-speaker-notes="출처: 신규 — U-Net 구조를 우리 실습 크기로 다시 그린 것 · 20 Unet.ipynb · cell 21. 실습에서 만든 것은 512 곱하기 512 곱하기 3 으로 들어간다. 맨 앞에 람다 함수로 255를 나눠 0에서 1로 만들고, 합성곱 두 번과 풀링을 네 번 반복하며 16, 32, 64, 128, 256 채널까지 내려간다. 맨 아래가 32 곱하기 32 에 256장이다. 그리고 전치 합성곱으로 네 번 다시 올라온다. 마지막 출력이 시그모이드 1채널이다. 활성함수는 elu, 중간중간 드롭아웃이 있고 파라미터는 약 194만 개다. 여기서 가로로 이어진 회색 화살표, 스킵 연결을 반드시 설명할 것. 원 논문은 패딩 없이 합성곱해서 가장자리를 잘라 붙였지만(copy and crop), 실습 코드는 padding=same 이라 자를 필요 없이 그대로 이어 붙인다(concatenate) — 내려가면서 잃어버린 세밀한 위치 정보를 같은 높이의 올라오는 길에 그대로 이어 붙인다. 이게 없으면 경계가 뭉개진다. U 자 모양의 이름이 여기서 나온다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">가로로 건너뛰는 선이 핵심이다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">실습 구현 · 512×512×3 → 512×512×1</span>
@@ -460,7 +475,7 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">내려가며 잃어버린 <b style="color:var(--fg-1)">세밀한 위치 정보</b>를 같은 높이로 이어 붙인다. 이게 없으면 경계가 뭉개진다.</p>
 </section>
 
-<section data-deck="0" data-label="건물만 남긴다" data-screen-label="20" data-speaker-notes="출처: 강의영상 detection 22:00–24:00 · 20 Unet.ipynb — 실습에서는 아홉 개 클래스를 다 학습시키지 않는다. 시간이 없어서다. 건물만 1로 남기고 나머지는 전부 0으로 만든다. 그러면 문제가 아주 단순해진다 — 이 픽셀이 건물이냐 아니냐. 그래서 손실이 binary cross entropy 다. 100 에폭을 돌린다. 학생들에게 시킬 것 — 실습에서 건물 대신 산림이나 도로로 바꿔서 돌려 보게 할 것. 코드 한 줄만 바꾸면 된다. 어떤 클래스가 더 잘 맞고 어떤 게 안 맞는지가 그 자체로 발표 거리다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="건물만 남긴다" data-screen-label="21" data-speaker-notes="출처: 강의영상 detection 22:00–24:00 · 20 Unet.ipynb — 실습에서는 아홉 개 클래스를 다 학습시키지 않는다. 시간이 없어서다. 건물만 1로 남기고 나머지는 전부 0으로 만든다. 그러면 문제가 아주 단순해진다 — 이 픽셀이 건물이냐 아니냐. 그래서 손실이 binary cross entropy 다. 100 에폭을 돌린다. 학생들에게 시킬 것 — 실습에서 건물 대신 산림이나 도로로 바꿔서 돌려 보게 할 것. 코드 한 줄(cell 19 의 10)만 바꾸면 된다. 단, cell 19 가 라벨을 0과 1로 덮어쓰므로 라벨을 읽는 cell 12 부터 다시 실행해야 한다. 어떤 클래스가 더 잘 맞고 어떤 게 안 맞는지가 그 자체로 발표 거리다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">문제를 단순하게 만든다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">아홉 클래스 → 건물이냐 아니냐</span>
@@ -472,44 +487,221 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="그 뒤의 분할" data-screen-label="21" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.31–33 — U-Net 이후의 흐름이다. DeepLabV3+ 는 구멍 뚫린 합성곱으로 같은 계산량에 더 넓은 범위를 본다. HRNet 은 고해상도를 끝까지 들고 간다. 그리고 2023년 Segment Anything, SAM 은 판을 바꿨다. 무엇을 찾을지 미리 정해 두지 않고, 점을 찍거나 박스를 치면 그 자리를 알아서 잘라낸다. 학습된 클래스가 아니어도 된다. 여기서 앞으로의 흐름을 예고할 것 — 이 프롬프트로 시키는 방식이 11주차에 다시 나오고, 이미지와 언어가 만나는 12주차로 이어진다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
-  <div style="display:flex;align-items:baseline;gap:24px">
-    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그 뒤의 분할</h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">DeepLabV3+ · HRNet · Segment Anything</span>
-  </div>
-  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
-    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
-      <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">DeepLabV3+</div>
-      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/dt_s31_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>DeepLabV3+ 인코더–디코더 구조</span></div></div></div>
-    </div>
-    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
-      <div style="font-size:var(--type-subtitle);font-weight:700;color:#00B37A">Segment Anything · 2023</div>
-      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/dt_s33_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>SAM — 프롬프트로 지시하면 그 자리를 잘라낸다</span></div></div></div>
-    </div>
-  </div>
-  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">SAM 은 <b style="color:#00E49B">무엇을 찾을지 미리 정해 두지 않는다.</b> 점을 찍거나 박스를 치면 그 자리를 잘라낸다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">이 “시키는” 방식이 11주차 프롬프트, 12주차 멀티모달로 이어진다.</span></div>
-</section>
-
-<section data-deck="0" data-label="U-Net 이 뿌리다" data-screen-label="22" data-speaker-notes="출처: 강의영상 detection 14:00 — 오늘 2부에서 가장 멀리 내다보는 한 장이다. U-Net 은 분할 모델로 만들어졌지만, 지금 여러분이 쓰는 이미지 생성 모델의 뿌리이기도 하다. 왜냐하면 하는 일이 같기 때문이다 — 줄여서 뽑고, 다시 키워서 그린다. 분할은 그려 내는 것이 라벨 이미지였을 뿐이고, 생성은 그 자리에 진짜 그림이 들어간다. 7주차 확산 모델에서 이 그림이 그대로 다시 나온다고 예고할 것." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(158,93,249,.30),transparent 62%)">
+<section data-deck="0" data-label="U-Net 이 뿌리다" data-screen-label="22" data-speaker-notes="출처: 강의영상 detection 14:00 — 오늘 2부에서 가장 멀리 내다보는 한 장이다. U-Net 은 분할 모델로 만들어졌지만, 지금 여러분이 쓰는 이미지 생성 모델의 뿌리이기도 하다. 왜냐하면 하는 일이 같기 때문이다 — 줄여서 뽑고, 다시 키워서 그린다. 분할은 그려 내는 것이 라벨 이미지였을 뿐이고, 생성은 그 자리에 진짜 그림이 들어간다. 7주차 확산 모델에서 이 그림이 그대로 다시 나온다고 예고할 것. 정확히는 초기 확산 모델(DDPM, Stable Diffusion 1·2)의 뼈대가 U-Net 이고, 최근 모델(SD3, FLUX)은 트랜스포머(DiT)로 넘어갔다 — 그 이야기는 멀티모달에서 다시 한다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(1000px 640px at 80% 26%,rgba(158,93,249,.30),transparent 62%)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">멀리 내다보기</div>
   <h2 style="margin:0;font-size:62px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">줄여서 뽑고, 다시 키워서 그린다<br>— 생성 모델도 <span style="color:var(--accent-green)">같은 일</span>을 한다</h2>
   <div style="flex:1;min-height:0;max-height:340px"><span data-dc-slot="unetRoot"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">분할은 그려 내는 것이 <b style="color:#fff">라벨 이미지</b>였을 뿐이다. 생성은 그 자리에 <b style="color:#fff">진짜 그림</b>이 들어간다 — 7주차에서 다시 만난다.</p>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">분할은 그려 내는 것이 <b style="color:#fff">라벨 이미지</b>였을 뿐이다. 생성은 그 자리에 <b style="color:#fff">진짜 그림</b>이 들어간다 — 초기 확산 모델의 뼈대가 U-Net 이다. 7주차에서 다시 만난다.</p>
 </section>
 
-<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="23" data-speaker-notes="출처: 신규 — 학습참여도 평가용 토론. 3분. Q2 가 오늘의 핵심 질문이다. 탐지 결과는 그 자체로 답이 아니라 새로운 변수다. 차량 몇 대, 보행자 몇 명이 시간대별로 나오면 그게 곧 도시 데이터가 된다. Q3 은 기말 발표로 바로 이어지는 질문이니 나온 답을 반드시 적어 둘 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="그 뒤의 분할" data-screen-label="23" data-speaker-notes="출처: 012 CNN Detection Segmentation.pptx p.31–33 · DeepLabV3+ (Chen 외, ECCV 2018) · Segment Anything (Kirillov 외, 2023) — U-Net 이후의 흐름이다. 두 개만 보고 간다. 왼쪽 DeepLabV3+ 는 구멍 뚫린 합성곱, 아트러스 합성곱으로 같은 계산량에 더 넓은 범위를 본다. 그리고 이게 도시공학 연구실들이 거리 사진에 가장 많이 가져다 쓴 모델이다 — 바로 다음 장에서 실제 연구를 본다. 오른쪽 Segment Anything 은 판을 바꾼 모델이다. 무엇을 찾을지 미리 정해 두지 않는다. 오늘의 마지막이 이것이다. 순서를 미리 말해 줄 것 — 연구실이 쓰던 것을 먼저 직접 돌려 보고, 그것의 한계에서 SAM 으로 넘어간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">그 뒤의 분할</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">DeepLabV3+ · 2018 &nbsp;→&nbsp; Segment Anything · 2023</span>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:var(--primary-main)">DeepLabV3+ <span style="font-size:var(--type-small);font-weight:600;color:var(--fg-3)">— 연구실이 가져다 쓴 것</span></div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/dt_s31_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>DeepLabV3+ 인코더–디코더 구조</span></div></div></div>
+    </div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="font-size:var(--type-subtitle);font-weight:700;color:#00B37A">Segment Anything <span style="font-size:var(--type-small);font-weight:600;color:var(--fg-3)">— 오늘의 마지막</span></div>
+      <div style="flex:1;min-height:0"><div class="imgslot fit-contain" style=""><img src="uploads/dt_s33_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>SAM — 프롬프트로 지시하면 그 자리를 잘라낸다</span></div></div></div>
+    </div>
+  </div>
+  <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.5">왼쪽을 <b style="color:#00E49B">직접 돌려 보고</b>, 그 한계에서 오른쪽으로 넘어간다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">둘 다 우리가 학습시키지 않는다 — 이미 학습된 것을 불러 쓴다.</span></div>
+</section>
+
+<section data-deck="0" data-label="거리를 사람 눈높이에서" data-screen-label="24" data-speaker-notes="출처: 20b 거리뷰분할_DeepLab_SAM.ipynb · cell 0 · Ki &amp; Lee (2021) Landscape and Urban Planning 205, 103920 · Kim, Ki, Osutei, Lee &amp; Hipp (2023) Journal of Geographical Systems · Hipp, Lee, Ki &amp; Kim (2022) J Quant Criminol 38(3) — 도시공학에서 분할을 실제로 어떻게 쓰는지 보자. 한양대 도시공학과 이수기 교수 연구실의 거리 환경 연구들이다. 방법은 네 단계로 끝난다. 구글 스트리트뷰 사진을 모은다. Cityscapes 로 이미 학습된 DeepLabV3+ 를 그대로 씌운다 — 연구실이 학습시킨 것이 아니다. 연구실 논문 본문에 그대로 적혀 있다 — 2022년 범죄 논문에는 Deeplabv3+ model, 82.1% mIoU, pre-trained with the Cityscapes dataset, 2023년 논문에는 배포본 출처로 MIT 의 렉스 프리드먼 튜토리얼까지 밝혔다. 다만 2021년 보행 논문 자체는 원문에서 모델 이름을 확인하지 못했으니, 이 모델을 썼다고 단정하지는 말 것. 그러면 픽셀마다 식생, 하늘, 건물이 칠해진다. 식생 픽셀의 비율이 녹시율, Green View Index 다. 그 숫자가 보행 시간 모델의 설명변수로 들어간다. 2021년 논문의 결과 — 서울 주민 2,350명의 보행 시간과 비교했더니, 녹시율이 기존의 녹지 면적 같은 변수보다 보행 시간과 더 밀접했다. 그리고 저소득층일수록 녹시율이 낮은 동네에 살고, 보행 시간이 녹시율에 더 민감했다. 탐지에서 말했던 것과 똑같다 — 분할 결과는 답이 아니라 새 변수다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:34px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">도시 데이터 사례</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">거리를 사람 눈높이에서 잰다</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:22px;align-items:stretch">
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);font-weight:700">1</div><div style="font-size:var(--type-subtitle);font-weight:800">Street View</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">지점마다 사방 사진을 모은다</div></div>
+    <div style="background:var(--primary-pale);border-radius:16px;padding:30px 30px;display:flex;flex-direction:column;gap:12px;border-top:8px solid var(--primary-main)"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--primary-main);font-weight:700">2</div><div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-dark)">DeepLabV3+</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5"><b style="color:var(--fg-1)">Cityscapes 사전학습</b> 그대로 씌운다</div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);font-weight:700">3</div><div style="font-size:var(--type-subtitle);font-weight:800">픽셀 비율</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">식생 비율 = <b style="color:#00B37A">녹시율 GVI</b></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:30px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);font-weight:700">4</div><div style="font-size:var(--type-subtitle);font-weight:800">설명변수</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">보행 시간 모델에 넣는다</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:34px">
+    <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">서울 주민 <b style="color:#00E49B">2,350명</b>의 보행 시간 — 녹시율이 기존 녹지 변수보다 <b style="color:#00E49B">더 밀접</b>했다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">저소득층일수록 녹시율 낮은 동네에 살고, 보행이 녹시율에 더 민감했다.</span></div>
+    <div style="padding:30px 36px;background:var(--surface-app);border-radius:16px;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">Ki &amp; Lee (2021) <i>Landscape and Urban Planning</i> — 보행<br>Hipp, Lee, Ki &amp; Kim (2022) — <i>“Deeplabv3+ … Cityscapes”</i><br><span style="color:var(--neutral-medium)">한양대 도시공학과 이수기 교수 연구실</span></div>
+  </div>
+</section>
+
+<section data-deck="0" data-label="학습 없이 씌운다" data-screen-label="25" data-speaker-notes="출처: 20b 거리뷰분할_DeepLab_SAM.ipynb · cell 4–14 — 연구실이 쓰던 그 모델을 실제로 돌린 결과다. 2018년 구글이 공개한 xception65 Cityscapes 체크포인트, 460메가짜리다. TF1 시절 frozen graph 라서 TF2 에서는 compat 함수로 감싸서 부른다 — 노트북에 다 들어 있다. 사진은 강남 주거지 가로수 길, 위키미디어의 퍼블릭 도메인 사진이다. 한 줄도 학습시키지 않았는데 왼쪽을 넣으면 오른쪽이 나온다. 초록이 식생, 보라가 차도, 분홍이 보도, 진회색이 건물이다. 그리고 픽셀을 세면 그게 지표다. 이 사진의 녹시율은 59.9퍼센트. 하늘은 1.9퍼센트뿐이다 — 가로수 지붕이 하늘을 덮고 있다. 학생들에게 시킬 것 — 자기 동네 길 사진을 올려 녹시율을 비교해 보게 할 것. 사진만 바꾸면 된다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">학습 한 줄 없이 씌운다</h2>
+    <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">DeepLabV3+ xception65 · Cityscapes 19 클래스 · 실행 결과</span>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_seg_deeplab.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>왼쪽 강남 가로수 길 사진, 오른쪽 DeepLabV3+ 분할 결과</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:18px">
+    <div style="background:#fff;border-radius:14px;padding:20px 24px;border-left:10px solid #6B8E23"><div style="font-size:var(--type-small);color:var(--fg-3)">식생 · 녹시율</div><div style="font-family:var(--font-display);font-size:46px;font-weight:800;color:#4F6B12">59.9%</div></div>
+    <div style="background:#fff;border-radius:14px;padding:20px 24px;border-left:10px solid #804080"><div style="font-size:var(--type-small);color:var(--fg-3)">차도</div><div style="font-family:var(--font-display);font-size:46px;font-weight:800">12.6%</div></div>
+    <div style="background:#fff;border-radius:14px;padding:20px 24px;border-left:10px solid #464646"><div style="font-size:var(--type-small);color:var(--fg-3)">건물</div><div style="font-family:var(--font-display);font-size:46px;font-weight:800">9.5%</div></div>
+    <div style="background:#fff;border-radius:14px;padding:20px 24px;border-left:10px solid #F423E8"><div style="font-size:var(--type-small);color:var(--fg-3)">보도</div><div style="font-family:var(--font-display);font-size:46px;font-weight:800">5.9%</div></div>
+    <div style="background:#fff;border-radius:14px;padding:20px 24px;border-left:10px solid #4682B4"><div style="font-size:var(--type-small);color:var(--fg-3)">하늘</div><div style="font-family:var(--font-display);font-size:46px;font-weight:800">1.9%</div></div>
+  </div>
+  <a href="https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/20b%20%EA%B1%B0%EB%A6%AC%EB%B7%B0%EB%B6%84%ED%95%A0_DeepLab_SAM.ipynb" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:14px;align-self:flex-start;text-decoration:none;background:#00B37A;color:#fff;border-radius:999px;padding:16px 30px;font-family:var(--font-display);font-size:25px;font-weight:800;letter-spacing:-0.01em">Colab 에서 열기 &nbsp;·&nbsp; 20b 거리뷰분할_DeepLab_SAM.ipynb &nbsp;→</a>
+</section>
+
+<section data-deck="0" data-label="도시 이미지의 종류" data-screen-label="26" data-speaker-notes="출처: Biljecki &amp; Ito (2021) Street view imagery in urban analytics and GIS: A review, Landscape and Urban Planning 215:104217 · Gong 외 (2018) Building and Environment 134 · Kim, Ki, Osutei, Lee &amp; Hipp (2023) J Geographical Systems · Dubey 외 (2016) ECCV · Microsoft Building Footprints — 도시 연구가 쓰는 이미지가 어떤 것들인지부터 정리한다. 가장 많이 쓰는 것이 거리뷰다. 리뷰 논문 하나가 619편을 훑었는데 대부분이 구글 스트리트뷰였다. 보통 20~50미터 간격으로 지점을 찍고 앞뒤좌우 네 장씩 받는다. 360도 파노라마를 쓰면 하늘이 얼마나 열려 있는지, 천공률을 잴 수 있다. 과거 시점 스트리트뷰로는 동네가 어떻게 변했는지 본다. 위에서 보는 것은 항공과 위성 — 아까 U-Net 실습이 이쪽이다. CCTV 는 탐지 실습에서 봤다. 그리고 마지막이 사람의 평가 — 두 장을 보여 주고 어느 쪽이 더 안전해 보이는지 고르게 하는 크라우드소싱이다. MIT 의 Place Pulse 가 56개 도시 11만 장으로 117만 번의 비교를 모았다. 리뷰가 지적한 한계도 같이 말해 줄 것 — 80퍼센트가 도시 하나만 본 연구이고, 시계열 연구는 아주 드물다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">데이터</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">도시를 찍는 여섯 가지 눈</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px">
+    <div style="background:var(--primary-pale);border-radius:16px;padding:28px 32px;border-top:8px solid var(--primary-main)"><div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-dark)">거리뷰</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:10px">20~50m 간격, 앞뒤좌우 4장 — <b style="color:var(--fg-1)">녹시율 · 범죄 · 보행</b></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 32px"><div style="font-size:var(--type-subtitle);font-weight:800">360° 파노라마</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:10px">하늘이 열린 정도 — <b style="color:var(--fg-1)">천공률 · 위요감</b></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 32px"><div style="font-size:var(--type-subtitle);font-weight:800">과거 시점 거리뷰</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:10px">같은 자리의 몇 년 전 — <b style="color:var(--fg-1)">신축 · 철거 · 동네 변화</b></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 32px"><div style="font-size:var(--type-subtitle);font-weight:800">항공 · 위성</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:10px">위에서 본 땅 — <b style="color:var(--fg-1)">토지피복 · 건물 윤곽</b></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 32px"><div style="font-size:var(--type-subtitle);font-weight:800">CCTV</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:10px">고정된 화각의 시간 흐름 — <b style="color:var(--fg-1)">교통량 · 보행량</b></div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 32px"><div style="font-size:var(--type-subtitle);font-weight:800">사람의 평가</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:10px">두 장 중 하나 고르기 — <b style="color:var(--fg-1)">안전 · 활기 · 걷고 싶음</b></div></div>
+  </div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">논문 <b style="color:#00E49B">619편</b>을 훑은 리뷰 — 대부분이 구글 스트리트뷰였다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">80%가 도시 하나만 봤고, 시간에 따른 변화를 본 연구는 아주 드물다 (Biljecki &amp; Ito, 2021).</span></div>
+</section>
+
+<section data-deck="0" data-label="비율을 재나, 개수를 세나" data-screen-label="27" data-speaker-notes="출처: 20c 거리지표로_연구하기.ipynb · cell 6–12 실행 결과 · Hipp, Lee, Ki &amp; Kim (2022) J Quant Criminol 38(3) · Lieu, Ha, Kim, Ki &amp; Lee (2021) 국토계획 56(2) — 분할에는 세 종류가 있고, 연구에서 어느 것을 쓰느냐는 무엇을 재고 싶으냐로 정해진다. 왼쪽이 원본, 가운데가 시맨틱 분할이다. 픽셀마다 클래스를 칠한다. 보면 차가 여러 대인데 전부 같은 남색 한 덩어리다. 몇 대인지는 모른다. 대신 비율을 재기에 딱 좋다 — 녹시율, 하늘, 건물. 오른쪽이 판옵틱 분할이다. 하늘과 도로 같은 배경은 면적으로, 차와 사람 같은 사물은 하나씩 따로 가른다. 번호가 1번부터 8번까지 붙었다. 그래서 보행자 수, 차량 수를 셀 수 있다. 개체만 가르는 것을 인스턴스 분할이라 하고, 둘을 합친 것이 판옵틱이다. 이수기 교수 연구실 논문들은 비율에 DeepLabV3+ 를 썼다 — 논문 원문에 Cityscapes 사전학습, mIoU 82.1퍼센트라고 적혀 있다. 그리고 개수가 필요할 때는 YOLOv3 를 따로 붙였다. 같은 사진이라도 무엇을 재고 싶으냐에 따라 모델이 달라진다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">알고리즘</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">비율을 재나, 개수를 세나</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
+    <div style="font-size:var(--type-small);font-weight:700;color:var(--fg-3)">원본 사진</div>
+    <div style="font-size:var(--type-small);font-weight:700;color:var(--primary-main)">시맨틱 — 차들이 <b>한 덩어리</b></div>
+    <div style="font-size:var(--type-small);font-weight:700;color:#00B37A">판옵틱 — 1번부터 8번까지 <b>따로</b></div>
+  </div>
+  <div style="height:330px;background:#fff;border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_seg_three.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>같은 사진 — 원본, 시맨틱 분할, 판옵틱 분할 실행 결과</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px">
+    <div style="background:#fff;border-radius:16px;padding:26px 30px;border-top:8px solid var(--primary-main)"><div style="font-size:var(--type-body);font-weight:800;color:var(--primary-main)">시맨틱</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:8px">픽셀마다 클래스 → <b style="color:var(--fg-1)">비율</b><br>녹시율 · 하늘 · 벽</div></div>
+    <div style="background:#fff;border-radius:16px;padding:26px 30px;border-top:8px solid #E8873A"><div style="font-size:var(--type-body);font-weight:800;color:#E8873A">인스턴스 · 탐지</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:8px">물체마다 따로 → <b style="color:var(--fg-1)">개수</b><br>보행자 수 · 차량 수</div></div>
+    <div style="background:#fff;border-radius:16px;padding:26px 30px;border-top:8px solid #00B37A"><div style="font-size:var(--type-body);font-weight:800;color:#00B37A">판옵틱</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5;margin-top:8px">배경은 면적, 사물은 하나씩<br><b style="color:var(--fg-1)">둘 다 한 번에</b></div></div>
+  </div>
+  <div style="padding:22px 30px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-small);line-height:1.5">이수기 교수 연구실 — 비율은 <b style="color:#00E49B">DeepLabV3+ · Cityscapes (mIoU 82.1%)</b>, 개수는 <b style="color:#FFB86B">YOLOv3</b> 를 따로 붙였다.</div>
+</section>
+
+<section data-deck="0" data-label="한 방법, 다섯 질문" data-screen-label="28" data-speaker-notes="출처: Ki, Kim &amp; Lee (2021) 국토계획 56(4) doi:10.17208/jkpa.2021.08.56.4.194 · Ki &amp; Lee (2021) Landscape and Urban Planning 205:103920 · Lieu, Ha, Kim, Ki &amp; Lee (2021) 국토계획 56(2) · Hipp, Lee, Ki &amp; Kim (2022/23) Criminology &amp; Criminal Justice doi:10.1177/17488958221132764 · Kim, Ki, Osutei, Lee &amp; Hipp (2023) J Geographical Systems — 한양대 이수기 교수 연구실의 연구를 한 장에 모았다. 방법은 하나다. 거리뷰를 모으고, DeepLabV3+ 로 칠하고, 비율을 변수로 만든다. 그런데 거기에 붙이는 질문이 다섯 개로 넓어졌다. 녹지 형평성 — 서울 420개 동, 사진 13만 8천 장. 동별 녹시율 평균이 10.1퍼센트, 가장 낮은 동 2.7에서 가장 높은 동 30.6까지 열 배 차이가 났다. 보행 — 서울 주민 2,350명, 녹시율이 기존 녹지 변수보다 보행 시간과 더 밀접했다. 지각 — 사진 400장을 240명이 2,400번 평가했더니 식생·하늘·보도는 플러스, 벽과 차량은 마이너스였다. 범죄 — LA 6만 6천 개 가로 구간에 거리뷰 변수를 넣었더니 강도 모형의 설명력이 63퍼센트 올라갔다. 변화 — 과거 거리뷰로 공사와 철거 지점의 약 75퍼센트를 찾아냈다. 학생들에게 줄 메시지 — 모델은 그대로고 질문이 바뀐다. 여러분이 할 일은 모델을 만드는 것이 아니라 질문을 고르는 것이다. 주의 — Ki &amp; Lee (2021) 의 정확한 모델 변형은 원문으로 확인하지 못했다. 나머지는 원문에 DeepLabV3+ Cityscapes 가 명시돼 있다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:26px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">연구 결과 · 한양대 이수기 교수 연구실</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">방법은 하나, 질문은 다섯</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:grid;grid-template-columns:200px 1fr 470px;gap:24px;align-items:center;background:var(--surface-app);border-radius:14px;padding:20px 28px"><div style="font-size:var(--type-body);font-weight:800;color:#00B37A">녹지 형평</div><div style="font-size:var(--type-small);color:var(--fg-3)">서울 420개 동 · 사진 13만 8,930장</div><div style="font-size:var(--type-small);color:var(--fg-1);font-weight:700">동별 녹시율 2.7% ~ 30.6% — 열 배 차이</div></div>
+    <div style="display:grid;grid-template-columns:200px 1fr 470px;gap:24px;align-items:center;background:var(--surface-app);border-radius:14px;padding:20px 28px"><div style="font-size:var(--type-body);font-weight:800;color:var(--primary-main)">보행</div><div style="font-size:var(--type-small);color:var(--fg-3)">서울 주민 2,350명의 보행 시간</div><div style="font-size:var(--type-small);color:var(--fg-1);font-weight:700">녹시율이 기존 녹지 변수보다 더 밀접</div></div>
+    <div style="display:grid;grid-template-columns:200px 1fr 470px;gap:24px;align-items:center;background:var(--surface-app);border-radius:14px;padding:20px 28px"><div style="font-size:var(--type-body);font-weight:800;color:#9E5DF9">지각</div><div style="font-size:var(--type-small);color:var(--fg-3)">사진 400장 · 240명 · 2,400번 평가</div><div style="font-size:var(--type-small);color:var(--fg-1);font-weight:700">식생·하늘·보도 + &nbsp;/&nbsp; 벽·차량 −</div></div>
+    <div style="display:grid;grid-template-columns:200px 1fr 470px;gap:24px;align-items:center;background:var(--surface-app);border-radius:14px;padding:20px 28px"><div style="font-size:var(--type-body);font-weight:800;color:#D93636">범죄</div><div style="font-size:var(--type-small);color:var(--fg-3)">LA 가로 구간 6만 6천 개</div><div style="font-size:var(--type-small);color:var(--fg-1);font-weight:700">강도 모형 설명력 <b style="color:#D93636">+63%</b></div></div>
+    <div style="display:grid;grid-template-columns:200px 1fr 470px;gap:24px;align-items:center;background:var(--surface-app);border-radius:14px;padding:20px 28px"><div style="font-size:var(--type-body);font-weight:800;color:#E8873A">변화</div><div style="font-size:var(--type-small);color:var(--fg-3)">과거 시점 거리뷰 · 공사·철거 248곳</div><div style="font-size:var(--type-small);color:var(--fg-1);font-weight:700">약 75%를 찾아냈다</div></div>
+  </div>
+  <div style="padding:24px 32px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">모델은 그대로, <b style="color:#00E49B">질문이 바뀐다.</b> <span style="color:var(--neutral-lighter);font-size:var(--type-small)">— 여러분의 몫은 모델이 아니라 질문을 고르는 것이다.</span></div>
+</section>
+
+<section data-deck="0" data-label="같은 동네, 다른 답" data-screen-label="29" data-speaker-notes="출처: Ki, Kim &amp; Lee (2021) 녹지 형평성 연구, 국토계획 56(4) 194–211 · 그림은 개념 설명용 생성 이미지 — 이 연구에서 가장 기억할 만한 결과다. 위성 사진으로 녹지를 재는 표준 지표가 NDVI, 식생지수다. 위에서 보면 초록이 얼마나 많은지를 잰다. 그런데 왼쪽처럼 위에서는 초록이 많아도, 그 녹지가 아파트 단지 안쪽이나 담장 뒤에 있으면 길을 걷는 사람 눈에는 오른쪽처럼 회색 벽만 보인다. 서울 420개 동을 두 지표로 각각 쟀더니 답이 달랐다. NDVI 로 보면 소득에 따른 녹지 불평등이 크지 않았다. 그런데 사람 눈높이의 녹시율로 보면 저소득 지역의 가로 녹지가 부족했다. 어떤 눈으로 재느냐가 정책의 결론을 바꾼다. 이게 거리뷰 분할을 도시 연구에 쓰는 이유다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">연구 결과</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">같은 동네, <span style="color:#00B37A">다른 답</span></h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+    <div style="font-size:var(--type-body);font-weight:800;color:var(--fg-3)">위에서 본 초록 · <span style="color:var(--fg-1)">NDVI</span></div>
+    <div style="font-size:var(--type-body);font-weight:800;color:var(--fg-3)">걷는 사람이 본 초록 · <span style="color:#00B37A">녹시율 GVI</span></div>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_gvi_ndvi.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>위에서 보면 초록이 많은 동네가 길에서는 회색 벽만 보인다</span></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+    <div style="padding:26px 32px;background:var(--surface-app);border-radius:14px;font-size:var(--type-body);color:var(--fg-3);line-height:1.45">NDVI 로 재면 — 소득별 녹지 차이가 <b style="color:var(--fg-1)">크지 않다</b></div>
+    <div style="padding:26px 32px;background:var(--neutral-black);color:#fff;border-radius:14px;font-size:var(--type-body);line-height:1.45">녹시율로 재면 — 저소득 지역의 가로 녹지가 <b style="color:#00E49B">부족하다</b></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">서울 420개 동 · Ki, Kim &amp; Lee (2021) 『국토계획』 &nbsp;·&nbsp; 그림은 개념도</p>
+</section>
+
+<section data-deck="0" data-label="세계는 이렇게 쓴다" data-screen-label="30" data-speaker-notes="출처: Gong 외 (2018) Building and Environment 134:155–167 · Cai 외 (2018) Treepedia 2.0, arXiv 1808.04754 · Gebru 외 (2017) PNAS 114(50) · Microsoft US Building Footprints (GitHub) — 바깥 연구 넷을 숫자로 본다. 홍콩 — 360도 거리뷰를 ADE20K 로 학습된 PSPNet 으로 분할해 하늘이 열린 정도를 쟀더니, 어안렌즈로 직접 찍은 값과 R 제곱 0.97 로 맞았다. 사람이 일일이 나가서 찍던 것을 사진으로 대신할 수 있다는 뜻이다. MIT 의 Treepedia — Cityscapes 로 배운 PSPNet 을 그대로 쓰면 나무 분할 정확도가 mIoU 44 퍼센트였는데, 거리뷰 500장으로 조금 더 학습시키니 60 퍼센트로 올랐다. 가져다 쓰는 모델도 우리 데이터에 맞춰 다듬으면 좋아진다. 스탠퍼드 — 미국 200개 도시 거리뷰 5천만 장에서 차 2,200만 대를 찾아 차종을 분류했다. 도시에 세단이 픽업트럭보다 많으면 88퍼센트 확률로 민주당을 찍는 도시였다. 마이크로소프트 — 항공사진 분할로 미국 건물 1억 3천만 동의 윤곽을 그려 공개했다. 정밀도 98.5퍼센트. 메시지 — 분할 결과는 그 자체가 도시 데이터가 된다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:28px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">연구 결과 · 해외</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">분할 결과가 곧 도시 데이터다</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:10px"><div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:700">홍콩 · 360° 거리뷰 · PSPNet (ADE20K)</div><div style="font-family:var(--font-display);font-size:58px;font-weight:800;color:var(--primary-main)">R² 0.97</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">하늘 열린 정도 — 어안렌즈로 직접 찍은 값과 일치</div></div>
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:10px"><div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:700">MIT Treepedia · PSPNet (Cityscapes → 거리뷰 500장)</div><div style="font-family:var(--font-display);font-size:58px;font-weight:800;color:#00B37A">44% → 60%</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">나무 분할 mIoU — 우리 데이터로 조금 더 학습시키면 오른다</div></div>
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:10px"><div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:700">스탠퍼드 · 미국 200개 도시 거리뷰 5천만 장</div><div style="font-family:var(--font-display);font-size:58px;font-weight:800;color:#D93636">2,200만 대</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">세단이 픽업보다 많은 도시 — 88% 가 민주당 지지</div></div>
+    <div style="background:#fff;border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:10px"><div style="font-size:var(--type-small);color:var(--neutral-medium);font-weight:700">마이크로소프트 · 항공사진 분할</div><div style="font-family:var(--font-display);font-size:58px;font-weight:800;color:#E8873A">1억 3천만 동</div><div style="font-size:var(--type-small);color:var(--fg-3);line-height:1.5">미국 건물 윤곽을 그려 공개 — 정밀도 98.5%</div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium)">Gong 외 2018 · Cai 외 2018 · Gebru 외 2017 PNAS · Microsoft US Building Footprints</p>
+</section>
+
+<section data-deck="0" data-label="연구를 따라 해 본다" data-screen-label="31" data-speaker-notes="출처: 20c 거리지표로_연구하기.ipynb 전체 · Lieu, Ha, Kim, Ki &amp; Lee (2021) 국토계획 56(2) — 실습이다. 방금 본 지각 연구를 교실 크기로 줄여 그대로 따라 한다. 서울 거리 사진 18장에서 시맨틱 분할로 녹시율, 하늘, 건물, 보도 비율을 뽑고, 판옵틱 분할로 사람 수와 차량 수를 센다. 그다음이 중요하다 — 반응 변수는 여러분이 만든다. 두 장을 나란히 보여 주면 어느 길을 더 걷고 싶은지 하나를 고른다. 스무 번. 이게 MIT Place Pulse 와 논문이 쓴 쌍대비교다. 점수를 매기라면 사람마다 기준이 다르지만, 둘 중 하나를 고르는 것은 일관되게 잘한다. 반 전체 응답을 모아 Bradley–Terry 모형으로 사진마다 점수를 만들고, 그 점수를 지표들로 회귀한다. 논문은 식생, 하늘, 보도가 플러스, 벽과 차량이 마이너스였다. 우리 반 결과가 같은 부호를 내는지 보자. 사진 18장이라 통계적으로는 약하다는 것도 반드시 말할 것 — 논문은 400장, 2,400번이었다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:30px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#00B37A;font-weight:700">실습</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">연구를 교실 크기로 따라 한다</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:10px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);font-weight:700">1 · 사진</div><div style="font-size:var(--type-body);font-weight:800">서울 거리 18장</div><div style="font-size:var(--type-small);color:var(--fg-3)">공개 라이선스 사진</div></div>
+    <div style="background:var(--primary-pale);border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:10px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--primary-main);font-weight:700">2 · 지표</div><div style="font-size:var(--type-body);font-weight:800;color:var(--primary-dark)">비율 + 개수</div><div style="font-size:var(--type-small);color:var(--fg-3)">시맨틱 + 판옵틱</div></div>
+    <div style="background:var(--neutral-black);color:#fff;border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:10px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:#00E49B;font-weight:700">3 · 여러분</div><div style="font-size:var(--type-body);font-weight:800">어느 길을 걷고 싶나</div><div style="font-size:var(--type-small);color:var(--neutral-lighter)">두 장 중 하나 · 20번</div></div>
+    <div style="background:var(--surface-app);border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:10px"><div style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium);font-weight:700">4 · 통계</div><div style="font-size:var(--type-body);font-weight:800">점수 ~ 지표 회귀</div><div style="font-size:var(--type-small);color:var(--fg-3)">Bradley–Terry → OLS</div></div>
+  </div>
+  <div style="padding:28px 34px;background:var(--primary-pale);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">논문의 부호 — 식생·하늘·보도 <b style="color:#00B37A">+</b>, 벽·차량 <b style="color:#D93636">−</b>. <b style="color:var(--primary-dark)">우리 반도 같은 부호가 나오는가?</b><br><span style="font-size:var(--type-small)">사진 18장은 통계적으로 약하다 — 논문은 400장·2,400번이었다. 반 전체 응답을 모을수록 나아진다.</span></div>
+  <a href="https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/20c%20%EA%B1%B0%EB%A6%AC%EC%A7%80%ED%91%9C%EB%A1%9C_%EC%97%B0%EA%B5%AC%ED%95%98%EA%B8%B0.ipynb" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:14px;align-self:flex-start;text-decoration:none;background:#00B37A;color:#fff;border-radius:999px;padding:16px 30px;font-family:var(--font-display);font-size:25px;font-weight:800;letter-spacing:-0.01em">Colab 에서 열기 &nbsp;·&nbsp; 20c 거리지표로_연구하기.ipynb &nbsp;→</a>
+</section>
+
+<section data-deck="0" data-label="점 하나로 잘라낸다" data-screen-label="32" data-speaker-notes="출처: 20b 거리뷰분할_DeepLab_SAM.ipynb · cell 8, 17–21 · Segment Anything (Kirillov 외, Meta, 2023) — DeepLab 의 한계부터 말할 것. 클래스가 19개로 고정돼 있다. 간판, 벤치, 화단은 그 목록에 없으니 영원히 못 본다. 새 클래스가 필요하면 U-Net 때처럼 라벨을 그려서 다시 학습해야 한다. 아까 본 그 노가다다. 그리고 독일 도시 사진으로 배웠다. 그래서 나온 것이 Segment Anything, SAM 이다. 2023년 메타. 사진 1,100만 장에 마스크 11억 개로 학습했다. 클래스 목록이 없다. 대신 점을 하나 찍으면 그 점이 속한 물체의 경계를 잘라낸다. 왼쪽은 차 위에 점 하나, 오른쪽은 가로수 줄기에 점 하나. 같은 모델, 다시 학습한 것 없이 지시만 바꿨다. 이게 메타가 이걸 파운데이션 모델이라고 부르는 이유다 — 과제마다 학습하지 않고 시키는 말만 바꾼다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">Segment Anything · Meta · 2023</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:800;line-height:1.15;letter-spacing:-0.02em">점 하나 찍으면 잘라낸다</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px">
+    <div style="padding:22px 28px;background:rgba(255,255,255,.07);border-radius:14px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">DeepLab 의 한계 — 클래스 <b style="color:#fff">19개 고정</b>. 간판·벤치·화단은 없다</div>
+    <div style="padding:22px 28px;background:rgba(255,255,255,.07);border-radius:14px;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.5">SAM — 사진 <b style="color:#fff">1,100만 장</b>, 마스크 <b style="color:#fff">11억 개</b>로 학습</div>
+    <div style="padding:22px 28px;background:rgba(0,228,155,.14);border:2px solid rgba(0,228,155,.45);border-radius:14px;font-size:var(--type-small);color:#fff;line-height:1.5">클래스 목록이 없다 — <b style="color:#00E49B">점·박스</b>로 시킨다</div>
+  </div>
+  <div style="flex:1;min-height:0;background:#fff;border-radius:16px;padding:18px;display:flex;align-items:center;justify-content:center">
+    <div class="imgslot fit-contain" style=""><img src="uploads/dt_seg_sam.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>왼쪽 승용차에 점 하나, 오른쪽 가로수 줄기에 점 하나 — SAM 이 잘라낸 마스크</span></div></div>
+  </div>
+  <p style="margin:0;font-size:var(--type-body);color:var(--neutral-lighter);line-height:1.45">같은 모델, 다시 학습한 것 없이 <b style="color:#fff">시키는 말만 바꿨다</b> — 그래서 <b style="color:var(--accent-green)">파운데이션 모델</b>이라 부른다.</p>
+</section>
+
+<section data-deck="0" data-label="이름은 모른다" data-screen-label="33" data-speaker-notes="출처: 20b 거리뷰분할_DeepLab_SAM.ipynb · cell 22–25 · SAM 2 (Meta, 2024.7) · SAM 3: Segment Anything with Concepts (Meta, 2025.11) — 그런데 파운데이션이라는 말을 그대로 믿으면 안 된다. 노트북 10절이 재미있다. SAM 이 잘라낸 가로수 줄기 안을 DeepLab 에게 물어봤다. DeepLab 은 그 픽셀의 3분의 2를 기둥, pole 이라고 불렀다. 식생은 3분의 1뿐이다. 굵고 곧은 줄기를 전봇대로 본 것이다. 그러면 SAM 은 뭐라고 했나. 아무 말도 안 했다. SAM 은 경계는 아는데 그게 무엇인지는 말하지 않는다. 그래서 둘은 경쟁이 아니라 짝이다 — SAM 의 경계에 DeepLab 의 이름을 붙이는 것이 노트북 마지막 실습이다. 이름까지 알게 된 것은 2년 반 뒤다. 2024년 SAM 2 가 동영상으로 갔고, 2025년 11월 SAM 3 가 단어로 시키는 것을 가능하게 했다. street tree 라고 쓰면 가로수를 전부 잘라낸다. 19개가 아니라 아무 명사나 된다. 다만 SAM 3 가중치는 신청하고 승인을 받아야 받을 수 있다. 정리하면 — 파운데이션이라는 말은 다시 학습하지 않는다는 뜻이지, 다 안다는 뜻이 아니다. 우리 도시 데이터에 맞는지는 여전히 우리가 확인해야 한다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
+  <div style="display:flex;align-items:baseline;gap:24px">
+    <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:#D93636;font-weight:700">한계</div>
+    <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">SAM 은 경계를 알지만 <span style="color:var(--primary-main)">이름은 모른다</span></h2>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px">
+    <div style="background:var(--surface-app);border-radius:18px;padding:34px 36px;display:flex;flex-direction:column;gap:14px;border-top:8px solid var(--primary-main)">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-main)">DeepLabV3+</div>
+      <div style="font-size:var(--type-body);font-weight:700">무엇인지 안다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">단, 정해진 <b style="color:var(--fg-1)">19개</b> 안에서만. 경계는 뭉툭하다</p>
+    </div>
+    <div style="background:var(--surface-app);border-radius:18px;padding:34px 36px;display:flex;flex-direction:column;gap:14px;border-top:8px solid #00B37A">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:#00B37A">SAM · 2023</div>
+      <div style="font-size:var(--type-body);font-weight:700">어디까지인지 안다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.55">경계는 정확하다. 그게 <b style="color:var(--fg-1)">무엇인지는 말하지 않는다</b></p>
+    </div>
+    <div style="background:var(--neutral-black);color:#fff;border-radius:18px;padding:34px 36px;display:flex;flex-direction:column;gap:14px;border-top:8px solid var(--accent-green)">
+      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--accent-green)">SAM 3 · 2025.11</div>
+      <div style="font-size:var(--type-body);font-weight:700">말로 시킨다</div>
+      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-lighter);line-height:1.55"><b style="color:#fff">“street tree”</b> → 가로수를 전부. 19개가 아니라 아무 명사나</p>
+    </div>
+  </div>
+  <div style="padding:28px 34px;background:var(--primary-pale);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5">SAM 이 잘라낸 가로수 줄기 — DeepLab 은 그 픽셀의 <b style="color:var(--primary-dark)">3분의 2를 ‘기둥’</b>이라 불렀다.<br><span style="font-size:var(--type-small)">둘은 경쟁이 아니라 짝이다. SAM 의 경계에 DeepLab 의 이름을 붙인다 — 노트북 마지막 실습.</span></div>
+  <div style="padding:28px 34px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5">파운데이션은 <b style="color:#00E49B">다시 학습하지 않는다</b>는 뜻이지, <b style="color:#FF7AA2">다 안다</b>는 뜻이 아니다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">우리 도시 데이터에 맞는지는 여전히 우리가 확인한다.</span></div>
+</section>
+
+<section data-deck="0" data-label="같이 생각해 볼 것" data-screen-label="34" data-speaker-notes="출처: 신규 — 학습참여도 평가용 토론. 3분. Q1 은 거리뷰 지표의 한계를 묻는다 — 그늘, 계절, 보도 폭, 사진을 찍은 날의 날씨처럼 픽셀 비율이 담지 못하는 것들이 답으로 나오면 된다. Q2 가 오늘의 핵심 질문이다. 탐지 결과는 그 자체로 답이 아니라 새로운 변수다. 차량 몇 대, 보행자 몇 명이 시간대별로 나오면 그게 곧 도시 데이터가 된다. Q3 은 기말 발표로 바로 이어지는 질문이니 나온 답을 반드시 적어 둘 것." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--primary-main);font-weight:700">3분 · 옆 사람과</div>
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">하나만 골라 이야기해 보자</h2>
   </div>
   <div style="display:flex;flex-direction:column;gap:26px">
-    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q1</b> &nbsp; 우리 동네 CCTV 에 YOLO 를 붙인다면, <b style="color:var(--fg-1)">격자 크기</b>를 어떻게 정하겠는가?</div>
+    <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q1</b> &nbsp; 녹시율이 높은 길이 정말 <b style="color:var(--fg-1)">걷기 좋은 길</b>인가? 이 지표가 놓치는 것은 무엇인가?</div>
     <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q2</b> &nbsp; 탐지 결과는 답이 아니라 <b style="color:var(--fg-1)">새 변수</b>다. 차량 수와 보행자 수가 시간대별로 나오면 무엇을 분석하겠는가?</div>
     <div style="padding:32px 38px;background:var(--surface-app);border-radius:16px;font-size:var(--type-body);color:var(--fg-3);line-height:1.5"><b style="color:var(--primary-main)">Q3</b> &nbsp; 항공 영상 분할로 <b style="color:var(--fg-1)">시계열 변화</b>를 본다면, 어떤 클래스의 증감이 도시 정책과 이어지겠는가?</div>
   </div>
 </section>
 
-<section data-deck="0" data-label="정리" data-screen-label="24" data-speaker-notes="출처: 신규 — 오늘의 질문에 답하는 마지막 장. 무엇이 있다와 어디에 있다는 어떻게 다른가. 분류는 답이 하나다. 사진 한 장에 라벨 하나. 탐지는 답이 여러 개고 각각에 좌표가 붙는다. 분할은 답이 픽셀 수만큼이다. 답의 모양이 달라지면 모델의 출력 모양이 달라지고, 출력 모양이 달라지면 손실이 달라진다. 그게 세 문제의 진짜 차이다. 그리고 지난주 마지막에 본 것을 한 번 더 상기시킬 것 — 합성곱은 이미지 전용이 아니다. 옆자리가 의미 있으면 격자 데이터에도 그대로 쓴다. 다음 주 예고 — 지금까지는 있는 이미지를 읽었다. 다음 주는 없던 이미지를 만든다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 24% 78%,rgba(0,228,155,.22),transparent 60%)">
+<section data-deck="0" data-label="정리" data-screen-label="35" data-speaker-notes="출처: 신규 — 오늘의 질문에 답하는 마지막 장. 무엇이 있다와 어디에 있다는 어떻게 다른가. 분류는 답이 하나다. 사진 한 장에 라벨 하나. 탐지는 답이 여러 개고 각각에 좌표가 붙는다. 분할은 답이 픽셀 수만큼이다. 답의 모양이 달라지면 모델의 출력 모양이 달라지고, 출력 모양이 달라지면 손실이 달라진다. 그게 세 문제의 진짜 차이다. 그리고 지난주 마지막에 본 것을 한 번 더 상기시킬 것 — 합성곱은 이미지 전용이 아니다. 옆자리가 의미 있으면 격자 데이터에도 그대로 쓴다. 다음 주 예고 — 지금까지는 있는 이미지를 읽었다. 다음 주는 없던 이미지를 만든다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden;background-image:radial-gradient(900px 620px at 24% 78%,rgba(0,228,155,.22),transparent 60%)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-green);font-weight:700">오늘의 질문에 답한다</div>
   <h2 style="margin:0;font-size:60px;font-weight:800;line-height:1.22;letter-spacing:-0.025em;max-width:1700px">답의 모양이 다르면<br><span style="color:var(--accent-green)">손실이 달라진다</span></h2>
   <div style="flex:1;min-height:0;max-height:300px"><span data-dc-slot="answerShape"></span></div>
@@ -523,7 +715,7 @@
 
 <div id="guide">
   <div class="deckname">W06_탐지와분할</div>
-  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">24</span></div>
+  <div class="counter"><b id="g-cur">01</b><i>/</i><span id="g-total">35</span></div>
   <div class="slidelabel" id="g-label"></div>
   <div class="keys">
     <kbd>&larr;</kbd><kbd>&rarr;</kbd><span>이동</span>
@@ -560,17 +752,28 @@
 <button class="ov-card" data-go="10"><div class="ov-thumb"><div class="ov-num">11</div></div><div class="ov-label">라벨은 박스와 번호다</div></button>
 <button class="ov-card" data-go="11"><div class="ov-thumb"><div class="ov-num">12</div></div><div class="ov-label">그냥 불러 쓴다</div></button>
 <button class="ov-card" data-go="12"><div class="ov-thumb"><div class="ov-num">13</div></div><div class="ov-label">앞차를 놓쳤다</div></button>
-<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">다시 연구하지 않는다</div></button>
-<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">분할은 다른 문제다</div></button>
-<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">토지피복 데이터</div></button>
-<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">라스터 — 픽셀에 코드가 들어간다</div></button>
-<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">U-Net</div></button>
-<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">내려가는 길, 올라오는 길</div></button>
-<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">건물만 남긴다</div></button>
-<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">그 뒤의 분할</div></button>
+<button class="ov-card" data-go="13"><div class="ov-thumb"><div class="ov-num">14</div></div><div class="ov-label">해상도만 바꿨다</div></button>
+<button class="ov-card" data-go="14"><div class="ov-thumb"><div class="ov-num">15</div></div><div class="ov-label">다시 연구하지 않는다</div></button>
+<button class="ov-card" data-go="15"><div class="ov-thumb"><div class="ov-num">16</div></div><div class="ov-label">분할은 다른 문제다</div></button>
+<button class="ov-card" data-go="16"><div class="ov-thumb"><div class="ov-num">17</div></div><div class="ov-label">토지피복 데이터</div></button>
+<button class="ov-card" data-go="17"><div class="ov-thumb"><div class="ov-num">18</div></div><div class="ov-label">라스터 — 픽셀에 코드가 들어간다</div></button>
+<button class="ov-card" data-go="18"><div class="ov-thumb"><div class="ov-num">19</div></div><div class="ov-label">U-Net</div></button>
+<button class="ov-card" data-go="19"><div class="ov-thumb"><div class="ov-num">20</div></div><div class="ov-label">내려가는 길, 올라오는 길</div></button>
+<button class="ov-card" data-go="20"><div class="ov-thumb"><div class="ov-num">21</div></div><div class="ov-label">건물만 남긴다</div></button>
 <button class="ov-card" data-go="21"><div class="ov-thumb"><div class="ov-num">22</div></div><div class="ov-label">U-Net 이 뿌리다</div></button>
-<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
-<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">정리</div></button>
+<button class="ov-card" data-go="22"><div class="ov-thumb"><div class="ov-num">23</div></div><div class="ov-label">그 뒤의 분할</div></button>
+<button class="ov-card" data-go="23"><div class="ov-thumb"><div class="ov-num">24</div></div><div class="ov-label">거리를 사람 눈높이에서</div></button>
+<button class="ov-card" data-go="24"><div class="ov-thumb"><div class="ov-num">25</div></div><div class="ov-label">학습 없이 씌운다</div></button>
+<button class="ov-card" data-go="25"><div class="ov-thumb"><div class="ov-num">26</div></div><div class="ov-label">도시 이미지의 종류</div></button>
+<button class="ov-card" data-go="26"><div class="ov-thumb"><div class="ov-num">27</div></div><div class="ov-label">비율을 재나, 개수를 세나</div></button>
+<button class="ov-card" data-go="27"><div class="ov-thumb"><div class="ov-num">28</div></div><div class="ov-label">한 방법, 다섯 질문</div></button>
+<button class="ov-card" data-go="28"><div class="ov-thumb"><div class="ov-num">29</div></div><div class="ov-label">같은 동네, 다른 답</div></button>
+<button class="ov-card" data-go="29"><div class="ov-thumb"><div class="ov-num">30</div></div><div class="ov-label">세계는 이렇게 쓴다</div></button>
+<button class="ov-card" data-go="30"><div class="ov-thumb"><div class="ov-num">31</div></div><div class="ov-label">연구를 따라 해 본다</div></button>
+<button class="ov-card" data-go="31"><div class="ov-thumb"><div class="ov-num">32</div></div><div class="ov-label">점 하나로 잘라낸다</div></button>
+<button class="ov-card" data-go="32"><div class="ov-thumb"><div class="ov-num">33</div></div><div class="ov-label">이름은 모른다</div></button>
+<button class="ov-card" data-go="33"><div class="ov-thumb"><div class="ov-num">34</div></div><div class="ov-label">같이 생각해 볼 것</div></button>
+<button class="ov-card" data-go="34"><div class="ov-thumb"><div class="ov-num">35</div></div><div class="ov-label">정리</div></button>
   </div>
 </div>
 
@@ -615,7 +818,7 @@ class Component extends DCLogic {
       const W = 1720, H = 400;
       const C = [
         ['1', '탐지 — 어디에 있나', ['R-CNN → YOLO', 'CCTV 교통 영상'], ACC],
-        ['2', '분할 — 픽셀마다 무엇인가', ['U-Net', '토지피복 항공영상'], VIO],
+        ['2', '분할 — 픽셀마다 무엇인가', ['U-Net · 토지피복 항공영상', 'DeepLabV3+ · 거리 사진 녹시율', 'Segment Anything'], VIO],
       ];
       const g = [];
       const CW = 700, GAP = 100, X0 = 110;
@@ -634,7 +837,7 @@ class Component extends DCLogic {
           textAnchor: 'middle', fontFamily: EN, fontSize: 34, fill: AX }, '→'));
       });
       g.push(h('text', { key: 'cap', x: 40, y: 376, fontFamily: KR, fontSize: 22,
-        fill: MUT }, '실습 — 19 YOLO.ipynb · 20 Unet.ipynb'));
+        fill: MUT }, '실습 — 19 YOLO.ipynb · 20 Unet.ipynb · 20b 거리뷰분할_DeepLab_SAM.ipynb'));
       return svg(W, H, g);
     })();
 
@@ -677,8 +880,8 @@ class Component extends DCLogic {
     const twoStage = (() => {
       const W = 1720, H = 240;
       const g = [];
-      const S = [['1단계', '박스를 어떻게 만들까', '무작위로 2천 개쯤 자른다', ACC],
-                 ['2단계', '그 박스가 무엇일까', '224로 늘려 AlexNet 에 넣는다', VIO]];
+      const S = [['1단계', '박스를 어떻게 만들까', 'Selective Search 로 후보 2천 개', ACC],
+                 ['2단계', '그 박스가 무엇일까', '227로 늘려 CNN 피처 → 클래스별 SVM', VIO]];
       S.forEach((s, i) => {
         const x = 40 + i * 850;
         g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 790, height: 170, rx: 20,
@@ -697,39 +900,38 @@ class Component extends DCLogic {
       return svg(W, H, g);
     })();
 
-    // ── 끊긴 사슬 ───────────────────────────────────────────────
+    // ── 속도와 정확도 (논문 보고값) ─────────────────────────────
     const brokenChain = (() => {
-      const W = 1720, H = 340;
+      const W = 1720, H = 400;
       const g = [];
-      const B = [['입력', MUT], ['박스 만들기', ACC], ['분류하기', VIO], ['손실', RED]];
-      const CW = 300, GAP = 120, X0 = 150;
-      B.forEach((b, i) => {
-        const x = X0 + i * (CW + GAP);
-        g.push(h('rect', { key: 'b' + i, x: x, y: 90, width: CW, height: 110, rx: 18,
-          fill: '#fff', stroke: b[1], strokeWidth: 3 }));
-        g.push(h('text', { key: 't' + i, x: x + CW / 2, y: 155, textAnchor: 'middle',
-          fontFamily: KR, fontSize: 27, fontWeight: 700, fill: b[1] }, b[0]));
+      // [이름, 연도, 사진 한 장 처리 시간(초), 보고 방식, VOC2007 mAP, 색]
+      const M = [['R-CNN', '2014', 47, '47초', '66.0', ACC],
+                 ['Fast R-CNN', '2015', 0.32, '0.32초', '70.0', ACC],
+                 ['Faster R-CNN', '2015', 0.2, '0.2초 · 초당 5장', '73.2', ACC],
+                 ['YOLO', '2016', 1 / 45, '0.022초 · 초당 45장', '63.4', GRN]];
+      const X0 = 330, BW = 900, lg = (t) => Math.log10(t);
+      const lo = lg(1 / 60), hi = lg(60);
+      g.push(h('text', { key: 'h1', x: X0, y: 34, fontFamily: KR, fontSize: 22, fill: MUT },
+        '사진 한 장 처리 시간 (로그 눈금 — 한 칸이 10배)'));
+      g.push(h('text', { key: 'h2', x: X0 + BW + 230, y: 34, fontFamily: KR, fontSize: 22,
+        fill: MUT, textAnchor: 'middle' }, 'VOC2007 mAP'));
+      M.forEach((m, i) => {
+        const y = 62 + i * 76;
+        const w = (lg(m[2]) - lo) / (hi - lo) * BW;
+        g.push(h('text', { key: 'n' + i, x: X0 - 24, y: y + 36, textAnchor: 'end',
+          fontFamily: EN, fontSize: 28, fontWeight: 800, fill: m[5] }, m[0]));
+        g.push(h('text', { key: 'yr' + i, x: X0 - 24, y: y + 62, textAnchor: 'end',
+          fontFamily: EN, fontSize: 18, fill: MUT }, m[1]));
+        g.push(h('rect', { key: 'b' + i, x: X0, y: y + 8, width: w, height: 44, rx: 8,
+          fill: m[5], opacity: 0.85 }));
+        g.push(h('text', { key: 'v' + i, x: X0 + w + 14, y: y + 40, fontFamily: KR,
+          fontSize: 23, fontWeight: 700, fill: INK }, m[3]));
+        g.push(h('text', { key: 'm' + i, x: X0 + BW + 230, y: y + 42, textAnchor: 'middle',
+          fontFamily: EN, fontSize: 34, fontWeight: 800,
+          fill: m[4] === '73.2' ? ACC : INK }, m[4]));
       });
-      // 역전파 화살표 — 오른쪽에서 왼쪽으로, 가운데서 끊긴다
-      for (let i = 3; i > 0; i--) {
-        const x2 = X0 + i * (CW + GAP), x1 = x2 - GAP;
-        const broken = i === 2;
-        g.push(h('line', { key: 'a' + i, x1: x2 - 4, y1: 250, x2: x1 + 4, y2: 250,
-          stroke: broken ? RED : GRN, strokeWidth: 4,
-          strokeDasharray: broken ? '10 10' : 'none', opacity: broken ? 0.55 : 1 }));
-        if (!broken)
-          g.push(h('path', { key: 'h' + i, d: 'M' + (x1 + 18) + ' 242 L' + (x1 + 2)
-            + ' 250 L' + (x1 + 18) + ' 258 Z', fill: GRN }));
-      }
-      const cx = X0 + 2 * (CW + GAP) - GAP / 2;
-      g.push(h('line', { key: 'cut1', x1: cx - 16, y1: 218, x2: cx + 16, y2: 282,
-        stroke: RED, strokeWidth: 5 }));
-      g.push(h('line', { key: 'cut2', x1: cx + 16, y1: 218, x2: cx - 16, y2: 282,
-        stroke: RED, strokeWidth: 5 }));
-      g.push(h('text', { key: 'ct', x: cx, y: 314, textAnchor: 'middle', fontFamily: KR,
-        fontSize: 24, fontWeight: 800, fill: RED }, '여기서 끊긴다'));
-      g.push(h('text', { key: 'lt', x: 150, y: 60, fontFamily: KR, fontSize: 23,
-        fill: MUT }, '초록 화살표 — 오차가 거꾸로 흘러가는 길'));
+      g.push(h('text', { key: 'cap', x: 40, y: 388, fontFamily: KR, fontSize: 19, fill: MUT },
+        '각 논문 보고값 · VGG16 기준 · R-CNN·Fast R-CNN 시간은 후보 생성(약 2초) 제외 · 학습 데이터가 논문마다 달라 정확도는 대략의 비교'));
       return svg(W, H, g);
     })();
 
@@ -738,8 +940,8 @@ class Component extends DCLogic {
       const W = 1720, H = 260;
       const g = [];
       const S = [['①', 'YOLOv5 를 불러온다', 'ultralytics 깃허브'],
-                 ['②', '사전 학습 가중치를 받는다', 'yolov5s.pt · 분야별로 공개'],
-                 ['③', '이미지 폴더를 넘긴다', '신뢰도 0.5 이상만 출력']];
+                 ['②', '사전 학습 가중치를 받는다', 'yolov5s.pt · COCO 80 클래스'],
+                 ['③', '이미지 폴더를 넘긴다', '1920px · 신뢰도 0.1 이상']];
       S.forEach((s, i) => {
         const x = 40 + i * 550;
         g.push(h('rect', { key: 'b' + i, x: x, y: 20, width: 510, height: 170, rx: 20,
@@ -765,8 +967,8 @@ class Component extends DCLogic {
       const V = [['v1', '2016', 'Redmon', ACC], ['v2', '2016', 'Redmon', ACC],
                  ['v3', '2018', 'Redmon', ACC], ['v4', '2020', 'Bochkovskiy', VIO],
                  ['v5', '2020', 'Ultralytics', GRN], ['v6', '2022', 'Meituan', VIO],
-                 ['v7', '2022', 'Wang 외', VIO], ['v8', '2023', 'Ultralytics', GRN],
-                 ['v11', '2024', 'Ultralytics', GRN], ['v12', '2025', '커뮤니티', VIO],
+                 ['v7', '2022', 'v4 팀', VIO], ['v8', '2023', 'Ultralytics', GRN],
+                 ['v11', '2024', 'Ultralytics', GRN], ['v12', '2025', 'Tian 외', VIO],
                  ['26', '2025', 'Ultralytics', GRN]];
       const X0 = 40, PITCH = 152;
       g.push(h('line', { key: 'ax', x1: X0, y1: 214, x2: X0 + 10 * PITCH + 100,
@@ -795,41 +997,47 @@ class Component extends DCLogic {
       return svg(W, H, g);
     })();
 
-    // ── YOLO 의 한계 ────────────────────────────────────────────
+    // ── YOLO 의 한계 — 격자는 중심만 맡는다 ─────────────────────
     const yoloLimit = (() => {
-      const W = 1720, H = 480;
+      const W = 1720, H = 460;
       const g = [];
-      const panel = (key, x0, title, col, cells, big) => {
-        g.push(h('rect', { key: key + 'b', x: x0, y: 60, width: 760, height: 340,
-          rx: 20, fill: 'var(--surface-app)' }));
-        g.push(h('text', { key: key + 't', x: x0 + 30, y: 40, fontFamily: KR,
-          fontSize: 26, fontWeight: 800, fill: col }, title));
-        // 균질 격자
-        for (let a = 0; a < 8; a++)
-          for (let b = 0; b < 4; b++)
-            g.push(h('rect', { key: key + 'g' + a + b, x: x0 + 30 + a * 88,
-              y: 84 + b * 76, width: 84, height: 72, rx: 6, fill: 'none',
-              stroke: '#D9D7E6', strokeWidth: 1.5 }));
-        cells.forEach((c, i) => {
-          g.push(h('rect', { key: key + 'd' + i, x: x0 + 30 + c[0] * 88,
-            y: 84 + c[1] * 76, width: c[2] * 88 - 6, height: c[3] * 76 - 6, rx: 8,
-            fill: 'none', stroke: GRN, strokeWidth: 3.5 }));
-        });
-        if (big) {
-          g.push(h('rect', { key: key + 'big', x: x0 + 30, y: 200, width: 330,
-            height: 190, rx: 12, fill: RED, opacity: 0.18, stroke: RED,
-            strokeWidth: 3.5, strokeDasharray: '10 7' }));
-          g.push(h('text', { key: key + 'bt', x: x0 + 195, y: 305,
-            textAnchor: 'middle', fontFamily: KR, fontSize: 25, fontWeight: 800,
-            fill: RED }, '격자보다 크다'));
-        }
-      };
-      panel('a', 40, 'YOLO — 격자가 균질하다', ACC,
-        [[3, 0, 1, 1], [5, 1, 1, 1], [6, 0, 1, 1], [2, 1, 1, 1]], true);
-      panel('b', 890, 'R-CNN 계열 — 박스 크기도 학습한다', VIO,
-        [[3, 0, 1, 1], [5, 1, 1, 1], [0, 2, 4, 2], [6, 0, 1, 1]], false);
-      g.push(h('text', { key: 'cap', x: 40, y: 448, fontFamily: KR, fontSize: 23,
-        fill: MUT }, '화면 앞쪽의 큰 차를 놓치는 이유 — 물체가 격자 크기를 넘어서 버렸다'));
+      // 왼쪽 — 격자 위의 큰 박스, 중심 칸만 책임진다
+      g.push(h('text', { key: 'lt', x: 40, y: 36, fontFamily: KR, fontSize: 26,
+        fontWeight: 800, fill: ACC }, '칸은 중심만 맡는다 — 박스는 칸보다 커도 된다'));
+      const GX = 40, GY = 60, CW = 92, CH = 72;
+      for (let a = 0; a < 8; a++)
+        for (let b = 0; b < 5; b++)
+          g.push(h('rect', { key: 'g' + a + b, x: GX + a * CW, y: GY + b * CH,
+            width: CW - 4, height: CH - 4, rx: 6, fill: 'none', stroke: '#D9D7E6',
+            strokeWidth: 1.5 }));
+      g.push(h('rect', { key: 'c', x: GX + 2 * CW, y: GY + 2 * CH, width: CW - 4,
+        height: CH - 4, rx: 6, fill: ACC, opacity: 0.25, stroke: ACC, strokeWidth: 3 }));
+      g.push(h('rect', { key: 'big', x: GX + 18, y: GY + 70, width: 390, height: 280,
+        rx: 12, fill: 'none', stroke: GRN, strokeWidth: 4.5 }));
+      g.push(h('circle', { key: 'ctr', cx: GX + 18 + 195, cy: GY + 70 + 140, r: 9, fill: ACC }));
+      g.push(h('text', { key: 'bt', x: GX + 430, y: GY + 120, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: GRN }, '큰 차의 박스'));
+      g.push(h('text', { key: 'ct', x: GX + 430, y: GY + 218, fontFamily: KR, fontSize: 22,
+        fontWeight: 700, fill: ACC }, '← 중심이 든 칸 하나가 예측'));
+      // 오른쪽 — 놓친 이유 후보
+      const R = [['①', '화면 끝에서 잘렸다', '차 모양이 반만 보인다'],
+                 ['②', '배운 사진과 시점이 다르다', 'COCO 사진 ↔ 높은 CCTV 에서 내려다본 차'],
+                 ['③', '배운 크기 범위를 넘었다', '640 으로 배워 1920 으로 돌렸다 — 직접 바꿔 확인']];
+      g.push(h('text', { key: 'rt', x: 900, y: 36, fontFamily: KR, fontSize: 26,
+        fontWeight: 800, fill: RED }, '그럼 왜 놓쳤나 — 후보 셋'));
+      R.forEach((r, i) => {
+        const y = 62 + i * 116;
+        g.push(h('rect', { key: 'rb' + i, x: 900, y: y, width: 780, height: 100, rx: 16,
+          fill: 'var(--surface-app)' }));
+        g.push(h('text', { key: 'rn' + i, x: 930, y: y + 44, fontFamily: EN, fontSize: 28,
+          fontWeight: 800, fill: RED }, r[0]));
+        g.push(h('text', { key: 'rh' + i, x: 976, y: y + 44, fontFamily: KR, fontSize: 26,
+          fontWeight: 700, fill: INK }, r[1]));
+        g.push(h('text', { key: 'rs' + i, x: 976, y: y + 80, fontFamily: KR, fontSize: 20,
+          fill: 'var(--fg-3)' }, r[2]));
+      });
+      g.push(h('text', { key: 'cap', x: 40, y: 448, fontFamily: KR, fontSize: 21, fill: MUT },
+        'YOLO 원 논문이 밝힌 약점은 반대다 — 작은 물체가 몰려 있을 때 놓친다'));
       return svg(W, H, g);
     })();
 
@@ -892,55 +1100,45 @@ class Component extends DCLogic {
       return svg(W, H, g);
     })();
 
-    // ── U-Net 실습 모양 ─────────────────────────────────────────
+    // ── U-Net 실습 모양 — 20 Unet.ipynb cell 21 그대로 ───────────
     const unetShape = (() => {
-      const W = 1720, H = 520;
+      const W = 1720, H = 560;
       const g = [];
-      const DOWN = [['512', 3, 0], ['512', 64, 0], ['256', 128, 1], ['128', 256, 2],
-                    ['64', 512, 3]];
-      const UP = [['128', 256, 2], ['256', 128, 1], ['512', 64, 0], ['512', 1, 0]];
-      const bx = (i) => 90 + i * 150, by = (lv) => 80 + lv * 82;
-      DOWN.forEach((d, i) => {
-        const lv = d[2];
-        g.push(h('rect', { key: 'd' + i, x: bx(i), y: by(lv), width: 110, height: 62,
-          rx: 10, fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }));
-        g.push(h('text', { key: 'dz' + i, x: bx(i) + 55, y: by(lv) + 28,
+      const DOWN = [['512', 16, 0], ['256', 32, 1], ['128', 64, 2], ['64', 128, 3],
+                    ['32', 256, 4]];
+      const UP = [['64', 128, 3], ['128', 64, 2], ['256', 32, 1], ['512', 16, 0]];
+      const bx = (i) => 70 + i * 160, by = (lv) => 76 + lv * 76;
+      const box = (key, x, lv, size, ch, fill, col, lab) => {
+        g.push(h('rect', { key: key, x: x, y: by(lv), width: 120, height: 62,
+          rx: 10, fill: fill, stroke: col, strokeWidth: 2.5 }));
+        g.push(h('text', { key: key + 'z', x: x + 60, y: by(lv) + 28,
           textAnchor: 'middle', fontFamily: EN, fontSize: 20, fontWeight: 700,
-          fill: ACC }, d[0]));
-        g.push(h('text', { key: 'df' + i, x: bx(i) + 55, y: by(lv) + 52,
-          textAnchor: 'middle', fontFamily: KR, fontSize: 18, fill: MUT },
-          '피처 ' + d[1]));
-      });
-      UP.forEach((u, i) => {
-        const lv = u[2], x = bx(5 + i);
-        g.push(h('rect', { key: 'u' + i, x: x, y: by(lv), width: 110, height: 62,
-          rx: 10, fill: '#EDF9F4', stroke: GRN, strokeWidth: 2.5 }));
-        g.push(h('text', { key: 'uz' + i, x: x + 55, y: by(lv) + 28,
-          textAnchor: 'middle', fontFamily: EN, fontSize: 20, fontWeight: 700,
-          fill: GRN }, u[0]));
-        g.push(h('text', { key: 'uf' + i, x: x + 55, y: by(lv) + 52,
-          textAnchor: 'middle', fontFamily: KR, fontSize: 18, fill: MUT },
-          '피처 ' + u[1]));
-      });
-      // 건너뛰는 선
-      [[1, 7], [2, 6], [3, 5]].forEach((p, i) => {
+          fill: col }, size + '×' + size));
+        g.push(h('text', { key: key + 'f', x: x + 60, y: by(lv) + 52,
+          textAnchor: 'middle', fontFamily: KR, fontSize: 18, fill: MUT }, lab + ' ' + ch));
+      };
+      DOWN.forEach((d, i) => box('d' + i, bx(i), d[2], d[0], d[1], '#EEF0FE', ACC, '피처'));
+      UP.forEach((u, i) => box('u' + i, bx(5 + i), u[2], u[0], u[1], '#EDF9F4', GRN, '피처'));
+      box('out', bx(9), 0, '512', 1, '#FFF4E8', '#E07B00', '출력');
+      // 건너뛰는 선 — 같은 높이끼리 이어 붙인다
+      [[3, 5], [2, 6], [1, 7], [0, 8]].forEach((p, i) => {
         const lv = DOWN[p[0]][2];
-        g.push(h('line', { key: 'sk' + i, x1: bx(p[0]) + 110, y1: by(lv) + 31,
+        g.push(h('line', { key: 'sk' + i, x1: bx(p[0]) + 120, y1: by(lv) + 31,
           x2: bx(p[1]), y2: by(lv) + 31, stroke: '#9E9AB8', strokeWidth: 3,
           strokeDasharray: '10 7' }));
         g.push(h('path', { key: 'skh' + i, d: 'M' + (bx(p[1]) - 16) + ' '
           + (by(lv) + 23) + ' L' + bx(p[1]) + ' ' + (by(lv) + 31) + ' L'
           + (bx(p[1]) - 16) + ' ' + (by(lv) + 39) + ' Z', fill: '#9E9AB8' }));
       });
-      g.push(h('text', { key: 'lt', x: 90, y: 54, fontFamily: KR, fontSize: 23,
-        fontWeight: 700, fill: ACC }, '내려가는 길 — Conv + MaxPool'));
-      g.push(h('text', { key: 'rt', x: 840, y: 54, fontFamily: KR, fontSize: 23,
-        fontWeight: 700, fill: GRN }, '올라오는 길 — Conv2DTranspose'));
-      g.push(h('text', { key: 'sc', x: 660, y: 462, textAnchor: 'middle',
+      g.push(h('text', { key: 'lt', x: 70, y: 50, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: ACC }, '내려가는 길 — Conv ×2 + MaxPool, 네 번'));
+      g.push(h('text', { key: 'rt', x: 900, y: 50, fontFamily: KR, fontSize: 23,
+        fontWeight: 700, fill: GRN }, '올라오는 길 — Conv2DTranspose, 네 번'));
+      g.push(h('text', { key: 'sc', x: 860, y: 500, textAnchor: 'middle',
         fontFamily: KR, fontSize: 24, fontWeight: 800, fill: '#6E6890' },
-        'copy and crop — 같은 높이로 건너뛴다'));
-      g.push(h('text', { key: 'cap', x: 90, y: 500, fontFamily: KR, fontSize: 22,
-        fill: MUT }, '출력이 숫자 하나가 아니라 라벨 이미지 한 장이다'));
+        '스킵 연결 — 같은 높이를 그대로 이어 붙인다 (concatenate)'));
+      g.push(h('text', { key: 'cap', x: 70, y: 544, fontFamily: KR, fontSize: 21,
+        fill: MUT }, '20 Unet.ipynb cell 21 · elu · 드롭아웃 0.1~0.3 · 파라미터 약 194만 개 · 출력은 시그모이드 1채널'));
       return svg(W, H, g);
     })();
 

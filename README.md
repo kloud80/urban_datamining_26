@@ -65,6 +65,8 @@
 - 📓 [18 CNN_application](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/18%20CNN_application.ipynb)
 - 📓 [19 YOLO](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/19%20YOLO.ipynb)
 - 📓 [20 Unet](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/20%20Unet.ipynb)
+- 📓 [20b 거리뷰분할_DeepLab_SAM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/20b%20%EA%B1%B0%EB%A6%AC%EB%B7%B0%EB%B6%84%ED%95%A0_DeepLab_SAM.ipynb)
+- 📓 [20c 거리지표로_연구하기](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/20c%20%EA%B1%B0%EB%A6%AC%EC%A7%80%ED%91%9C%EB%A1%9C_%EC%97%B0%EA%B5%AC%ED%95%98%EA%B8%B0.ipynb)
 - 🖼 실습 자료 — [LC_AP_37705085_079.png](./W06_%EC%9D%B4%EB%AF%B8%EC%A7%80%EB%B6%84%EC%84%9D1-2_%ED%83%90%EC%A7%80%EC%99%80%EB%B6%84%ED%95%A0/notebooks/LC_AP_37705085_079.png)
 
 ### 7주차 · 이미지 분석 2 — 생성모델
