@@ -85,8 +85,8 @@
 ### 9주차 · 시계열·순환신경망·Transformer
 > 순서가 있는 데이터는 무엇이 다른가?
 
-- 📊 **강의안** — [W09_순환신경망](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%88%9C%ED%99%98%EC%8B%A0%EA%B2%BD%EB%A7%9D.html)
 - 📊 **강의안** — [W09_시계열분석](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EB%B6%84%EC%84%9D.html)
+- 📊 **강의안** — [W09_순환신경망](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%88%9C%ED%99%98%EC%8B%A0%EA%B2%BD%EB%A7%9D.html)
 - 📊 **강의안** — [W09_언어모델과_어텐션](https://kloud80.github.io/urban_datamining_26/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/slides/W09_%EC%96%B8%EC%96%B4%EB%AA%A8%EB%8D%B8%EA%B3%BC_%EC%96%B4%ED%85%90%EC%85%98.html)
 - 📓 [22 timeseries](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/notebooks/22%20timeseries.ipynb)
 - 📓 [23 NN_timeseries](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W09_%EC%8B%9C%EA%B3%84%EC%97%B4%EA%B3%BC_Transformer/notebooks/23%20NN_timeseries.ipynb)

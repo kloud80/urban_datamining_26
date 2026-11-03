@@ -20,6 +20,7 @@
   --gap-title:42px; --gap-item:24px;
 }
 #stage > section[data-deck="0"] {word-break:keep-all;text-wrap:pretty}
+@media print {.ts-gen-btn{visibility:hidden}}
 
 
   /* ---- deck runtime: mounted chart slots and <sc-if> blocks ---- */
@@ -357,7 +358,7 @@
   </div>
 </section>
 
-<section data-deck="0" data-label="세 시계열 나란히" data-screen-label="08" data-speaker-notes="출처: 013 Time Series.pptx p.4 의 세 코드를 한 식으로 묶은 것 — 셋을 한 축에 겹쳐 놨다. 여기서 반드시 짚을 것: 세 선은 똑같은 난수 수열 하나로 그렸다. 그러니까 선이 달라 보이는 이유는 운이 아니라 규칙 하나 때문이다. 식을 보면 셋이 같은 식이다. x_t = 파이 곱하기 직전 값 더하기 잡음. 파이가 0이면 직전 값을 아예 안 가져오니까 백색잡음, 0.5면 절반만 가져오니까 정상 확률 과정, 1이면 통째로 가져오니까 확률보행이다. 그림을 보면 파란 선과 초록 선은 빨간 점선 근처를 못 벗어난다. 빨간 선만 위아래로 흘러가서 돌아오지 않는다. 계수 하나가 0.5에서 1로 바뀌었을 뿐인데 그렇다. 학생들에게 물어볼 것 — 어느 것이 예측 가능해 보이나." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="세 시계열 나란히" data-screen-label="08" data-speaker-notes="출처: 013 Time Series.pptx p.4 의 세 코드를 한 식으로 묶은 것 — 셋을 한 축에 겹쳐 놨다. 여기서 반드시 짚을 것: 세 선은 똑같은 난수 수열 하나로 그렸다. 그러니까 선이 달라 보이는 이유는 운이 아니라 규칙 하나 때문이다. 식을 보면 셋이 같은 식이다. x_t = 파이 곱하기 직전 값 더하기 잡음. 파이가 0이면 직전 값을 아예 안 가져오니까 백색잡음, 0.5면 절반만 가져오니까 정상 확률 과정, 1이면 통째로 가져오니까 확률보행이다. 그림을 보면 파란 선과 초록 선은 빨간 점선 근처를 못 벗어난다. 빨간 선만 위아래로 흘러가서 돌아오지 않는다. 계수 하나가 0.5에서 1로 바뀌었을 뿐인데 그렇다. 학생들에게 물어볼 것 — 어느 것이 예측 가능해 보이나. 오른쪽 아래 버튼을 누르면 새 난수 수열 하나로 세 선을 같이 다시 그린다. 몇 번 눌러도 빨간 선만 떠내려간다 — 운이 아니라는 증거다. 다음 장 이동평균도 같은 수열을 따라간다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:22px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">셋은 <span style="color:var(--primary-main)">같은 식</span>이다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">같은 난수 수열로 그렸다 — 다른 건 계수 하나뿐</span>
@@ -393,7 +394,7 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">ADF 검정이 하는 일이 이 그림을 숫자로 재는 것이고, 다음 장 ARIMA 의 <b style="color:var(--fg-1)">I</b> 가 하는 일이 빨간 선을 파란 선으로 만드는 것이다.</p>
 </section>
 
-<section data-deck="0" data-label="ARIMA" data-screen-label="10" data-speaker-notes="출처: 013 Time Series.pptx p.5 · 강의영상 ① 10:00–12:30 — 통계학에서 가장 많이 쓰인 시계열 모델. AutoRegressive Integrated Moving Average. 정상 시계열에 특화돼 있고, Box-Jenkins 절차로 정상성을 확인한 뒤 쓴다. AR은 몇 시점 전 값까지, MA는 몇 시점 전 오차까지, I는 몇 번 차분하느냐다. 수식 세 줄이 전부다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="ARIMA" data-screen-label="10" data-speaker-notes="출처: 013 Time Series.pptx p.5 · 강의영상 ① 10:00–12:30 — 통계학에서 가장 많이 쓰인 시계열 모델. AutoRegressive Integrated Moving Average. 정상 시계열에 특화돼 있고, Box-Jenkins 절차로 정상성을 확인한 뒤 쓴다. AR은 몇 시점 전 값까지, MA는 몇 시점 전 오차까지, I는 몇 번 차분하느냐다. 수식 세 줄이 전부다. 주의 — MA 는 이름과 달리 앞 장에서 본 값의 이동평균이 아니다. 과거 시점의 오차, 즉 예측이 빗나간 몫(충격 ε)을 몇 개까지 가중해 끌어오느냐다. 변동성(분산)을 모형화하는 것은 ARCH·GARCH 이고 ARIMA 의 일이 아니다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">ARIMA (p, d, q)</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">AutoRegressive Integrated Moving Average · Box–Jenkins 로 정상성 확인 후 사용</span>
@@ -415,7 +416,7 @@
       <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--primary-main)">MA (q)</div>
       <div style="font-size:var(--type-body);font-weight:700">이동평균</div>
       <div style="height:78px;background:#fff;border-radius:10px;padding:10px 14px"><div class="imgslot fit-contain" style=""><img src="uploads/ts_s05_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>MA 수식</span></div></div></div>
-      <p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.5">몇 시점 전 <b style="color:var(--fg-1)">오차</b>까지 끌어오나</p>
+      <p style="margin:0;font-size:var(--type-note);color:var(--fg-3);line-height:1.5">몇 시점 전 <b style="color:var(--fg-1)">오차 ε</b>까지 끌어오나</p>
     </div>
   </div>
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">계절성을 더하면 <b style="color:var(--fg-1)">SARIMA</b>. 생산 관리·수요 예측에서 지금도 현역이다 — <b style="color:var(--fg-1)">직관적이기 때문</b>이다.</p>
@@ -627,7 +628,27 @@
 <script>
 (function () {
 class Component extends DCLogic {
-  state = { w1: 3, a1: 60, w2: 7, a2: 30 };
+  state = { w1: 3, a1: 60, w2: 7, a2: 30,
+    // 5·6·7쪽은 각자 시드, 8·9쪽은 한 시드를 같이 쓴다 (같은 난수 수열이어야 비교가 된다)
+    wnSeed: 20260909, rwSeed: 20260909, stSeed: 20260909,
+    mixSeed: 20260909, mixProg: 1 };
+
+  componentWillUnmount() { if (this._raf) cancelAnimationFrame(this._raf); }
+
+  newSeed() { return Math.floor(Math.random() * 4294967296); }
+
+  // 8쪽 — 새 난수 수열 하나를 뽑고, 세 선을 같은 속도로 왼쪽부터 그린다
+  animateMix() {
+    if (this._raf) cancelAnimationFrame(this._raf);
+    const DUR = 2600, t0 = performance.now();
+    this.setState({ mixSeed: this.newSeed(), mixProg: 0 });
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / DUR);
+      this.setState({ mixProg: p });
+      this._raf = p < 1 ? requestAnimationFrame(tick) : null;
+    };
+    this._raf = requestAnimationFrame(tick);
+  }
 
   renderVals() {
     const h = React.createElement;
@@ -647,18 +668,35 @@ class Component extends DCLogic {
     // ── 세 대표 시계열 : 같은 잡음 수열, 계수만 다르다 ─────────
     //    x_t = phi * x_{t-1} + eps_t   ( phi = 0 / 0.5 / 1 )
     //    013 Time Series.pptx p.4 의 코드와 같은 설정 — n=100, N(0,1), A_corr=0.5
+    //    [새로 생성] 버튼이 시드를 바꾼다 — 첫 화면은 고정 시드라 PDF 와 같다
     const N_T = 100;
-    const EPS = (() => {
-      const r = rng(20260909), a = [0];
+    const noise = (seed) => {
+      const r = rng(seed), a = [0];
       for (let i = 1; i < N_T; i++) a.push(gauss(r));
       return a;
-    })();
-    const walk = (phi) => {
+    };
+    const walk = (phi, eps) => {
       const a = [0];
-      for (let i = 1; i < N_T; i++) a.push(a[i - 1] * phi + EPS[i]);
+      for (let i = 1; i < N_T; i++) a.push(a[i - 1] * phi + eps[i]);
       return a;
     };
-    const WN = walk(0), ST = walk(0.5), RW = walk(1);
+    const { wnSeed, rwSeed, stSeed, mixSeed, mixProg } = this.state;
+    const WN1 = walk(0, noise(wnSeed)), RW1 = walk(1, noise(rwSeed)),
+          ST1 = walk(0.5, noise(stSeed));
+    const EPS = noise(mixSeed);
+    const WN = walk(0, EPS), ST = walk(0.5, EPS), RW = walk(1, EPS);
+
+    const genBtn = (label, onClick, col) => h('button', {
+      type: 'button', className: 'ts-gen-btn', onClick: onClick,
+      style: { fontFamily: KR, fontSize: '22px', fontWeight: 700, color: '#fff',
+        background: col || ACC, border: 0, borderRadius: '10px',
+        padding: '9px 22px', cursor: 'pointer', flex: 'none',
+        boxShadow: '0 2px 6px rgba(20,16,60,.18)' } }, '▶ ' + label);
+    // 버튼은 차트 위 한 줄에 — 선을 가리지 않게 차트와 따로 쌓는다
+    const withBtn = (chart, btn) => h('div', { style: { display: 'flex',
+        flexDirection: 'column', height: '100%', gap: '8px' } },
+      h('div', { style: { display: 'flex' } }, btn),
+      h('div', { style: { flex: 1, minHeight: 0 } }, chart));
 
     // ── 시계열 라인차트 ────────────────────────────────────────
     const niceTicks = (lo, hi) => {
@@ -695,22 +733,32 @@ class Component extends DCLogic {
       [0, 25, 50, 75, 99].forEach((i, k) => kids.push(
         h('text', { key: 'x' + k, x: X(i), y: H - 14, textAnchor: 'middle',
           fontFamily: EN, fontSize: 21, fill: MUT }, String(i))));
-      sets.forEach((s, k) => kids.push(h('path', {
-        key: 'p' + k, fill: 'none', stroke: s.c, strokeWidth: s.w || 3,
-        strokeLinejoin: 'round', opacity: s.o === undefined ? 1 : s.o,
-        d: s.d.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' +
-          Y(v).toFixed(1)).join(' ') })));
+      // opt.upto — 축은 전체 값으로 잡고 선만 앞에서부터 그린다 (그리는 중에 축이 안 흔들린다)
+      const upto = opt.upto === undefined ? N_T : Math.max(1, Math.min(N_T, opt.upto));
+      sets.forEach((s, k) => {
+        const d = s.d.slice(0, upto);
+        kids.push(h('path', {
+          key: 'p' + k, fill: 'none', stroke: s.c, strokeWidth: s.w || 3,
+          strokeLinejoin: 'round', opacity: s.o === undefined ? 1 : s.o,
+          d: d.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' +
+            Y(v).toFixed(1)).join(' ') }));
+        if (upto < N_T) kids.push(h('circle', { key: 'h' + k,
+          cx: X(upto - 1), cy: Y(d[upto - 1]), r: 8, fill: s.c }));
+      });
       if (opt.note) kids.push(h('text', { key: 'n', x: W - R, y: T + 4,
         textAnchor: 'end', fontFamily: KR, fontSize: 22, fill: MUT }, opt.note));
       return svg(W, H, kids);
     };
 
-    const wnPlot = series(980, 460, [{ d: WN, c: ACC }],
-      { note: 'x\u209C = \u03B5\u209C' });
-    const rwPlot = series(980, 460, [{ d: RW, c: RED }],
-      { note: 'x\u209C = x\u209C\u208B\u2081 + \u03B5\u209C' });
-    const stPlot = series(940, 400, [{ d: ST, c: GRN }],
-      { note: 'x\u209C = 0.5 \u00B7 x\u209C\u208B\u2081 + \u03B5\u209C' });
+    const wnPlot = withBtn(series(980, 410, [{ d: WN1, c: ACC }],
+      { note: 'x\u209C = \u03B5\u209C' }),
+      genBtn('새로 생성', () => this.setState({ wnSeed: this.newSeed() }), ACC));
+    const rwPlot = withBtn(series(980, 410, [{ d: RW1, c: RED }],
+      { note: 'x\u209C = x\u209C\u208B\u2081 + \u03B5\u209C' }),
+      genBtn('새로 생성', () => this.setState({ rwSeed: this.newSeed() }), RED));
+    const stPlot = withBtn(series(940, 350, [{ d: ST1, c: GRN }],
+      { note: 'x\u209C = 0.5 \u00B7 x\u209C\u208B\u2081 + \u03B5\u209C' }),
+      genBtn('새로 생성', () => this.setState({ stSeed: this.newSeed() }), GRN));
 
     // ── 셋을 한 축에 : 다른 건 계수 하나뿐 ─────────────────────
     const threeSeries = (() => {
@@ -718,7 +766,7 @@ class Component extends DCLogic {
         { d: RW, c: RED, w: 3.4 },
         { d: ST, c: GRN, w: 3 },
         { d: WN, c: ACC, w: 2.4, o: 0.8 },
-      ], {});
+      ], { upto: Math.ceil(mixProg * N_T) });
       return h('div', { style: { display: 'flex', flexDirection: 'column',
         height: '100%', gap: '14px' } },
         h('div', { style: { flex: 1, minHeight: 0 } }, chart),
@@ -733,7 +781,9 @@ class Component extends DCLogic {
               h('span', { style: { fontFamily: EN, fontSize: '25px',
                 fontWeight: 700, color: c } }, f),
               h('span', { style: { fontFamily: KR, fontSize: '25px',
-                color: 'var(--fg-3)' } }, n)))));
+                color: 'var(--fg-3)' } }, n))),
+          h('div', { style: { marginLeft: 'auto' } },
+            genBtn('같은 난수로 셋 다시 그리기', () => this.animateMix(), '#26233A'))));
     })();
 
     // ── 정상성을 눈으로 : 20 구간 이동평균 ─────────────────────
