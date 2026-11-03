@@ -98,8 +98,8 @@
 ### 10주차 · LLM 정렬과 활용
 > 언어 모델은 무엇을 맞히도록 학습되었는가?
 
-- 📊 **강의안** — [W10_LLM_학습_3단계](https://kloud80.github.io/urban_datamining_26/W10_LLM/slides/W10_LLM_%ED%95%99%EC%8A%B5_3%EB%8B%A8%EA%B3%84.html)
 - 📊 **강의안** — [W10_LLM의_구조](https://kloud80.github.io/urban_datamining_26/W10_LLM/slides/W10_LLM%EC%9D%98_%EA%B5%AC%EC%A1%B0.html)
+- 📊 **강의안** — [W10_LLM_학습_3단계](https://kloud80.github.io/urban_datamining_26/W10_LLM/slides/W10_LLM_%ED%95%99%EC%8A%B5_3%EB%8B%A8%EA%B3%84.html)
 - 📓 [28 GPT](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W10_LLM/notebooks/28%20GPT.ipynb)
 - 📓 [29 LLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W10_LLM/notebooks/29%20LLM.ipynb)
 

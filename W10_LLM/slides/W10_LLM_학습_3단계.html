@@ -331,7 +331,10 @@
     <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">28 GPT.ipynb · GPT-2 는 아직 공개돼 있다</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="gpt2Run"></span></div>
-  <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">우리가 쓰는 챗GPT 와는 <b style="color:#D93636">아무 상관이 없다.</b> 그냥 확률 1등 토큰을 이어 붙일 뿐이다.</p>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:32px">
+    <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">우리가 쓰는 챗GPT 와는 <b style="color:#D93636">아무 상관이 없다.</b> 그냥 확률 1등 토큰을 이어 붙일 뿐이다.</p>
+    <a href="https://poloclub.github.io/transformer-explainer/" target="_blank" rel="noopener noreferrer" style="flex:none;display:inline-flex;align-items:center;gap:12px;padding:14px 26px;background:var(--primary-main);color:#fff;border-radius:12px;text-decoration:none;font-size:var(--type-small);font-weight:700;box-shadow:0 2px 8px rgba(20,16,60,.18)">GPT-2 를 브라우저에서 직접 — Transformer Explainer <span style="font-family:var(--font-display)">&#8599;</span></a>
+  </div>
 </section>
 
 <section data-deck="0" data-label="정리되지 않은 덩어리" data-screen-label="08" data-speaker-notes="출처: 강의영상 ② 36:00–37:20 — 프리트레이닝만 끝난 모델은 정리되지 않은 덩어리다. 언어를 잘 만들어낼 수는 있는데 목적도 의미도 담기지 않는다. 초기에 이 상태로 서비스했더니 폭탄 만드는 법도 알려주고 주식 종목도 추천해 줬다. 그래서 두 단계가 더 필요했다." style="background:var(--neutral-black);color:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);overflow:hidden">
@@ -355,6 +358,7 @@
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">정답지는 그냥 <span style="color:var(--primary-main)">대화</span>다</h2>
     <span style="font-family:var(--font-display);font-size:var(--type-note);color:var(--neutral-medium)">AI2 · OLMo 의 공개 SFT 데이터셋</span>
+    <a href="https://huggingface.co/datasets/allenai/tulu-3-sft-olmo-2-mixture-0225" target="_blank" rel="noopener noreferrer" style="margin-left:auto;align-self:center;flex:none;display:inline-flex;align-items:center;gap:12px;padding:12px 24px;background:var(--primary-main);color:#fff;border-radius:12px;text-decoration:none;font-size:var(--type-note);font-weight:700;box-shadow:0 2px 8px rgba(20,16,60,.18)">데이터셋 직접 보기 — Hugging Face <span style="font-family:var(--font-display)">&#8599;</span></a>
   </div>
   <div style="height:560px;background:#fff;border-radius:16px;padding:22px;display:flex;align-items:center;justify-content:center">
     <div class="imgslot fit-contain" style=""><img src="uploads/lm_s32_1.png" alt="" onerror="this.closest('.imgslot').classList.add('no-img')"><div class="imgslot-ph"><span>role: user / role: assistant 쌍으로 된 SFT 데이터</span></div></div>
@@ -366,7 +370,7 @@
     </div>
     <div style="background:var(--neutral-black);color:#fff;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:8px">
       <div style="font-family:var(--font-display);font-size:22px;color:#00E49B;font-weight:700">기억해 둘 것</div>
-      <p style="margin:0;font-size:var(--type-small);line-height:1.5;opacity:.92">다음 주 API 로 프롬프트를 넣을 때 <b>정확히 이 형식</b>으로 넣는다.</p>
+      <p style="margin:0;font-size:var(--type-small);line-height:1.5;color:#fff;opacity:.92">다음 주 API 로 프롬프트를 넣을 때 <b>정확히 이 형식</b>으로 넣는다.</p>
     </div>
   </div>
 </section>
@@ -472,7 +476,7 @@
 <section data-deck="0" data-label="RLVR" data-screen-label="20" data-speaker-notes="출처: 강의영상 ② 52:40–55:20 — RLHF의 문제는 사람이 필요하다는 것이다. 그것도 전문가가. 의사가 봐야 할 수도 있다. 그 전문가를 다 동원할 수가 없다. 그래서 휴먼 피드백을 아예 빼 봤다. 수학 문제는 마지막 정답이 맞았는지만 본다. 맞으면 1점, 형식까지 잘 썼으면 2점, 틀리면 0점. 코딩도 똑같다. 작동하면 1점, 표준을 따랐으면 2점, 안 돌아가면 0점. 이걸 공개하고부터 LLM의 수학과 코드 성능이 미친 듯이 올라갔다. 지금 코드 제너레이터가 잘 되는 이유가 이것이다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;gap:24px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="display:flex;align-items:baseline;gap:24px">
     <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">사람 없이 채점할 수 있는 것들</h2>
-    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">RLVR — 검증 가능한 보상</span>
+    <span style="font-family:var(--font-display);font-size:var(--type-small);color:var(--neutral-medium)">RLVR (Reinforcement Learning with Verifiable Rewards) — 검증 가능한 보상</span>
   </div>
   <div style="flex:1;min-height:0"><span data-dc-slot="rlvrFig"></span></div>
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">이걸 공개하고부터 <b style="color:var(--fg-1)">수학과 코드 성능이 급격히 올라갔다.</b> 지금 코드 제너레이터가 잘 되는 이유다.</p>
@@ -497,7 +501,7 @@
   <p style="margin:0;font-size:var(--type-body);color:var(--fg-3);line-height:1.4">성능은 조금 떨어지지만 <b style="color:var(--fg-1)">맥락은 맞게</b> 간다. 이미지의 스테이블 디퓨전에서도 같은 기법을 봤다.</p>
 </section>
 
-<section data-deck="0" data-label="양자화" data-screen-label="23" data-speaker-notes="출처: 강의영상 ② 59:20–61:00 — 또 하나가 양자화다. 가중치가 부동소수점인데, 그 소수점 아래 수천만 가지 경우의 수가 정말 다 쓰일까? 시그모이드에 넣으면 0 아니면 1로 나오는데. 그래서 실제로 잘 쓰이는 값들만 남기고 줄인다. 원본 30GB짜리가 8GB, 심하면 3.5GB까지 내려간다. 품질은 당연히 떨어지지만 GPU 없이도 어느 정도 돌아가는 모델을 만들 수 있다. 이진화까지 해 본 실험도 있다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
+<section data-deck="0" data-label="양자화" data-screen-label="23" data-speaker-notes="출처: 강의영상 ② 59:20–61:00 — 또 하나가 양자화다. 가중치가 부동소수점인데, 그 소수점 아래 수천만 가지 경우의 수가 정말 다 쓰일까? 시그모이드에 넣으면 0 아니면 1로 나오는데. 그래서 실제로 잘 쓰이는 값들만 남기고 줄인다. 원본 30GB짜리가 8GB, 심하면 3.5GB까지 내려간다. 품질은 당연히 떨어지지만 GPU 없이도 어느 정도 돌아가는 모델을 만들 수 있다. 이진화까지 해 본 실험도 있다. 왼쪽 그림 — 가중치는 대부분 0 근처에 종 모양으로 몰려 있다. 4비트면 칸이 16개뿐이라 각 가중치를 가장 가까운 칸으로 반올림한다. 가까운 두 가중치가 한 칸에 떨어지면 둘의 차이가 사라진다 — 품질이 떨어지는 이유가 이것이다. 점 위치는 개념 예시." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="height:740px"><span data-dc-slot="quantFig"></span></div>
   <div style="display:flex;flex-direction:column;gap:var(--gap-item)">
     <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">QUANTIZATION</div>
@@ -1067,32 +1071,79 @@ class Component extends DCLogic {
 
     // ── 양자화 ──────────────────────────────────────────────────
     const quantFig = (() => {
+      // 위: 종 모양으로 퍼진 FP32 가중치를 INT4 의 16칸 중 가장 가까운 칸으로 반올림한다.
+      //     점 위치는 개념 예시다 — 두 점이 한 칸에 떨어지면 둘의 차이가 사라진다는 것을 보인다.
+      // 아래: 강의에서 든 저장 용량 예시 (30 → 8 → 3.5 GB)
       const W = 1080, H = 740;
-      const bar = (y, lab, gb, col, note) => h('g', { key: lab },
-        h('text', { x: 40, y: y + 44, fontFamily: KR, fontSize: 26, fontWeight: 700,
-          fill: col }, lab),
-        h('rect', { x: 330, y: y, width: gb / 30 * 600, height: 64, rx: 12, fill: col,
-          opacity: 0.85 }),
-        h('text', { x: 330 + gb / 30 * 600 + 20, y: y + 46, fontFamily: EN,
-          fontSize: 30, fontWeight: 800, fill: col }, gb + ' GB'),
-        h('text', { x: 330, y: y + 98, fontFamily: KR, fontSize: 21, fill: MUT }, note));
-      return svg(W, H, [
+      const PINK = '#D6246E', PUR = '#8A2BE2';
+      const X0 = 190, X1 = 1050, NB = 16, BW = (X1 - X0) / NB;
+      const BASE = 372, PEAK = 96, ZR = 3;
+      const zx = (z) => X0 + (z + ZR) / (2 * ZR) * (X1 - X0);
+      const zy = (z) => BASE - (BASE - PEAK) * Math.exp(-z * z / 2);
+      const bin = (z) => Math.min(NB - 1, Math.max(0, Math.floor((z + ZR) / (2 * ZR) * NB)));
+      const PTS = [-2.15, -1.7, -1.15, -0.62, -0.5, 0.08, 0.3, 0.95, 1.45, 2.2];
+      const used = new Set(PTS.map(bin));
+      const BOX_Y = 446, BOX = 40;
+      const kids = [
         h('rect', { key: 'bg', width: W, height: H, fill: '#fff', rx: 16,
           stroke: 'var(--border-1)' }),
-        h('text', { key: 'h', x: 40, y: 58, fontFamily: KR, fontSize: 24, fill: MUT },
-          '같은 모델을 양자화 수준만 바꿔 저장하면'),
-        bar(96, '원본', 30, MUT, '부동소수점 그대로'),
-        bar(256, '중간 단계', 8, ACC, '실무에서 가장 많이 쓰는 구간'),
-        bar(416, '더 줄이면', 3.5, GRN, '노트북에서도 돈다'),
-        h('rect', { key: 'w', x: 40, y: 580, width: 1000, height: 116, rx: 14,
-          fill: '#FDF0F0' }),
-        h('text', { key: 'wt', x: 70, y: 630, fontFamily: KR, fontSize: 25,
-          fontWeight: 700, fill: RED }, '품질은 떨어진다'),
-        h('text', { key: 'wt2', x: 70, y: 670, fontFamily: KR, fontSize: 23,
-          fill: 'var(--fg-3)' }, '섬세한 맥락·전문 용어에서 먼저 티가 난다'),
-        h('text', { key: 'n', x: 40, y: 550, fontFamily: KR, fontSize: 21, fill: MUT },
-          '강의에서 든 예시 수치 — 모델·방식에 따라 달라진다'),
-      ]);
+      ];
+      for (let b = 0; b < NB; b += 2) kids.push(h('rect', { key: 'band' + b,
+        x: X0 + b * BW + 2, y: PEAK - 20, width: BW - 4, height: BASE - PEAK + 20,
+        fill: '#EFEEF3' }));
+      const curve = [];
+      for (let k = 0; k <= 200; k++) {
+        const z = -ZR - 0.25 + k / 200 * (2 * ZR + 0.5);
+        curve.push((k ? 'L' : 'M') + zx(z).toFixed(1) + ' ' + zy(z).toFixed(1));
+      }
+      kids.push(h('line', { key: 'base', x1: X0 - 20, y1: BASE, x2: X1 + 20, y2: BASE,
+        stroke: INK, strokeWidth: 4 }));
+      kids.push(h('path', { key: 'curve', d: curve.join(' '), fill: 'none',
+        stroke: INK, strokeWidth: 7, strokeLinejoin: 'round' }));
+      PTS.forEach((z, k) => {
+        const cx = X0 + (bin(z) + 0.5) * BW;
+        kids.push(h('line', { key: 'ar' + k, x1: zx(z), y1: zy(z), x2: cx, y2: BOX_Y - 10,
+          stroke: '#8F8BA3', strokeWidth: 2.4, strokeDasharray: '6 5' }));
+      });
+      PTS.forEach((z, k) => kids.push(h('circle', { key: 'pt' + k, cx: zx(z), cy: zy(z),
+        r: 13, fill: PUR })));
+      for (let b = 0; b < NB; b++) {
+        const x = X0 + b * BW + (BW - BOX) / 2;
+        kids.push(h('rect', { key: 'bx' + b, x: x, y: BOX_Y, width: BOX, height: BOX,
+          rx: 4, fill: '#F9D3E3', stroke: INK, strokeWidth: 2.4 }));
+        if (used.has(b)) kids.push(h('circle', { key: 'bd' + b, cx: x + BOX / 2,
+          cy: BOX_Y + BOX / 2, r: 10, fill: PINK }));
+      }
+      kids.push(h('text', { key: 'fp', x: 30, y: 150, fontFamily: EN, fontSize: 52,
+        fontWeight: 800, fill: PUR }, 'FP32'));
+      kids.push(h('text', { key: 'fps', x: 30, y: 188, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '수십억 가지 값'));
+      kids.push(h('line', { key: 'down', x1: 82, y1: 210, x2: 82, y2: 410,
+        stroke: INK, strokeWidth: 4 }));
+      kids.push(h('path', { key: 'downh', d: 'M70 402 L94 402 L82 424 Z', fill: INK }));
+      kids.push(h('text', { key: 'i4', x: 30, y: 480, fontFamily: EN, fontSize: 52,
+        fontWeight: 800, fill: PINK }, 'INT4'));
+      kids.push(h('text', { key: 'i4s', x: 30, y: 518, fontFamily: KR, fontSize: 22,
+        fill: MUT }, '16칸뿐'));
+      kids.push(h('text', { key: 'cap', x: X1, y: 528, textAnchor: 'end', fontFamily: KR,
+        fontSize: 23, fill: 'var(--fg-3)' },
+        '가장 가까운 칸으로 반올림 — 한 칸에 둘이 들어가면 차이가 사라진다'));
+
+      // 저장 용량 — 강의 예시 수치
+      kids.push(h('line', { key: 'sep', x1: 30, y1: 566, x2: W - 30, y2: 566,
+        stroke: '#EEEDF3', strokeWidth: 2 }));
+      [['원본', '30 GB', MUT, 40], ['중간 단계', '8 GB', ACC, 390], ['더 줄이면', '3.5 GB', GRN, 740]]
+        .forEach(([lab, gb, col, x], k) => {
+          kids.push(h('text', { key: 'sl' + k, x: x, y: 616, fontFamily: KR, fontSize: 24,
+            fontWeight: 700, fill: col }, lab));
+          kids.push(h('text', { key: 'sg' + k, x: x, y: 668, fontFamily: EN, fontSize: 44,
+            fontWeight: 800, fill: col }, gb));
+          if (k < 2) kids.push(h('text', { key: 'sa' + k, x: x + 290, y: 660,
+            fontFamily: EN, fontSize: 36, fill: AX }, '→'));
+        });
+      kids.push(h('text', { key: 'sn', x: 40, y: 714, fontFamily: KR, fontSize: 20,
+        fill: MUT }, '같은 모델의 저장 용량 — 강의에서 든 예시 수치, 모델·방식에 따라 달라진다'));
+      return svg(W, H, kids);
     })();
 
     return {
