@@ -29,7 +29,14 @@ python 04_rag.py                  # 처음 한 번 인덱스를 만든다 (1~2�
 
 ## Codex 로 수업하기
 
-이 폴더에서 `codex` 를 실행하면 Codex 가 `AGENTS.md` 를 읽고 시작한다. 단계마다 아래처럼
+이 폴더에서 아래처럼 Codex 를 실행한다. 기본 샌드박스는 네트워크를 막아서 GitHub 파일·
+`pip install`·OpenAI API 호출이 모두 실패한다.
+
+```bash
+codex -c 'sandbox_workspace_write.network_access=true'
+```
+
+Codex 가 `AGENTS.md` 를 읽고 시작한다. 단계마다 아래처럼
 시키고, 막히면 완성본 파일을 실행한다.
 
 | 단계 | Codex 에 칠 말 (예) |

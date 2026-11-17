@@ -115,6 +115,12 @@
 - 📓 [35 GCN](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/35%20GCN.ipynb)
 - 📓 [36 ReinforcementLearning](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/36%20ReinforcementLearning.ipynb)
 
+> Codex 를 네트워크 허용으로 실행 — 기본 샌드박스는 GitHub 파일·pip·OpenAI API 접속을 막는다
+
+```bash
+codex -c 'sandbox_workspace_write.network_access=true'
+```
+
 ### 14주차 · 에이전트 하네스
 > 에이전트에게 무엇까지 맡기고, 무엇으로 채점하는가?
 
