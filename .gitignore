@@ -16,3 +16,9 @@ __pycache__/
 .DS_Store
 .idea/
 .print.html
+
+# 11주차 codex_lab — 원문 PDF(66MB)·인덱스·키·실행 기록은 실행할 때 생긴다
+/W11_*/codex_lab/data/*.pdf
+/W11_*/codex_lab/data/index/
+/W11_*/codex_lab/logs/
+.env

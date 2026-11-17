@@ -107,6 +107,7 @@
 > 모델이 모르는 것을 어떻게 알게 하는가?
 
 - 🔗 **참고** — [OpenAI Codex](https://github.com/openai/codex)
+- 🔗 **참고** — [Codex 실습 폴더 — 파주 2040 계획으로 RAG·에이전트·하네스 (codex_lab)](https://github.com/kloud80/urban_datamining_26/tree/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/codex_lab)
 - 📊 **강의안** — [W11_프롬프트와_증강생성](https://kloud80.github.io/urban_datamining_26/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/slides/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1.html)
 - 📓 [30 LLM RAG](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/30%20LLM%20RAG.ipynb)
 - 📓 [31 LLAMA INDEX](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/31%20LLAMA%20INDEX.ipynb)

@@ -1,0 +1,7 @@
+openai
+openai-agents
+llama-index-core
+llama-index-embeddings-openai
+llama-index-llms-openai
+pypdf
+python-dotenv
