@@ -103,26 +103,16 @@
 - 📓 [28 GPT](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W10_LLM/notebooks/28%20GPT.ipynb)
 - 📓 [29 LLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W10_LLM/notebooks/29%20LLM.ipynb)
 
-### 11주차 · 프롬프트와 증강 생성
+### 11주차 · 프롬프트·증강 생성·에이전트
 > 모델이 모르는 것을 어떻게 알게 하는가?
 
+- 🔗 **참고** — [OpenAI Codex](https://github.com/openai/codex)
 - 📊 **강의안** — [W11_프롬프트와_증강생성](https://kloud80.github.io/urban_datamining_26/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/slides/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1.html)
 - 📓 [30 LLM RAG](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/30%20LLM%20RAG.ipynb)
-
-### 12주차 · 검색 기반 시스템
-> '비슷하다'를 컴퓨터는 어떻게 재는가?
-
-- 📊 **강의안** — [W12_멀티모달과_VLM](https://kloud80.github.io/urban_datamining_26/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/slides/W12_%EB%A9%80%ED%8B%B0%EB%AA%A8%EB%8B%AC%EA%B3%BC_VLM.html)
-- 📊 **강의안** — [W12_벡터DB와_검색](https://kloud80.github.io/urban_datamining_26/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/slides/W12_%EB%B2%A1%ED%84%B0DB%EC%99%80_%EA%B2%80%EC%83%89.html)
-- 📓 [31 LLAMA INDEX](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/notebooks/31%20LLAMA%20INDEX.ipynb)
-- 📓 [32 VLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/notebooks/32%20VLM.ipynb)
-- 📓 [35 GCN](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W12_%EA%B2%80%EC%83%89%EA%B8%B0%EB%B0%98%EC%8B%9C%EC%8A%A4%ED%85%9C/notebooks/35%20GCN.ipynb)
-
-### 13주차 · 에이전트
-> 도구를 쓸 줄 아는 모델은 무엇이 달라지는가?
-
-- 📊 **강의안** — [W13_툴_에이전트와_MCP](https://kloud80.github.io/urban_datamining_26/W13_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8/slides/W13_%ED%88%B4_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8%EC%99%80_MCP.html)
-- 📓 [36 ReinforcementLearning](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W13_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8/notebooks/36%20ReinforcementLearning.ipynb)
+- 📓 [31 LLAMA INDEX](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/31%20LLAMA%20INDEX.ipynb)
+- 📓 [32 VLM](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/32%20VLM.ipynb)
+- 📓 [35 GCN](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/35%20GCN.ipynb)
+- 📓 [36 ReinforcementLearning](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/W11_%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8%EC%99%80_%EC%A6%9D%EA%B0%95%EC%83%9D%EC%84%B1/notebooks/36%20ReinforcementLearning.ipynb)
 
 ### 14주차 · 에이전트 하네스
 > 에이전트에게 무엇까지 맡기고, 무엇으로 채점하는가?
@@ -142,7 +132,7 @@
 ## 아직 주차에 배정되지 않은 자료
 
 - 📓 [33 Association TFIDF](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/_%EB%AF%B8%EB%B0%B0%EC%A0%95/33%20Association%20TFIDF.ipynb) — 연관분석. 2주차 사례로 축약하는 선택지(G3)
-- 📓 [34 CollaborateFiltering](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/_%EB%AF%B8%EB%B0%B0%EC%A0%95/34%20CollaborateFiltering.ipynb) — 협업 필터링. 12주 검색·추천과 붙일 수 있다(G3)
+- 📓 [34 CollaborateFiltering](https://colab.research.google.com/github/kloud80/urban_datamining_26/blob/main/_%EB%AF%B8%EB%B0%B0%EC%A0%95/34%20CollaborateFiltering.ipynb) — 협업 필터링. 11주 검색·추천과 붙일 수 있다(G3)
 
 ---
 

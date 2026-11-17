@@ -367,12 +367,7 @@
 <section data-deck="0" data-label="루프는 언제 멈추나" data-screen-label="10" data-speaker-notes="출처: 신규 — 앞의 두 장에서 자연히 따라오는 질문. 루프가 도는 것은 알겠는데 언제 멈추나. 네 가지다. 첫째, 모델이 도구를 더 부르지 않고 글로만 답할 때 — 정상 종료다. 둘째, 사람이 멈출 때. 셋째, 권한에 걸려 승인을 거부당했을 때. 넷째, 컨텍스트가 한계에 닿았을 때 — 이때는 지금까지의 대화를 요약해서 새 대화로 이어 붙인다. 압축이라고 부른다. 여기서 반드시 짚을 것 — 압축은 손실이다. 요약하면서 버려지는 것이 생기므로, 중요한 결정은 대화가 아니라 파일에 남겨야 한다. 그것이 다음 장 CLAUDE.md 와 작업 기록이 필요한 이유다. 그리고 무한 루프 이야기도 — 종료 조건이 없으면 에이전트는 같은 실패를 반복하며 돈다. 최대 반복 횟수와 예산 한계도 하네스가 정한다." style="background:var(--surface-app);padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">종료 조건</div>
   <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">루프는 언제 멈추나</h2>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:26px">
-    <div style="background:#fff;border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-size:30px;font-weight:800;color:#00B37A">정상 종료</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">도구를 더 부르지 않고 <b style="color:var(--fg-1)">글로만 답한다.</b></p></div>
-    <div style="background:#fff;border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-size:30px;font-weight:800;color:var(--primary-main)">사람이 멈춤</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">중단하거나 <b style="color:var(--fg-1)">방향을 다시 준다.</b></p></div>
-    <div style="background:#fff;border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-size:30px;font-weight:800;color:#D93636">승인 거부</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">권한 규칙에 걸려 <b style="color:var(--fg-1)">그 도구를 못 쓴다.</b></p></div>
-    <div style="background:#fff;border-radius:16px;padding:28px 30px;display:flex;flex-direction:column;gap:12px"><div style="font-size:30px;font-weight:800;color:#9E5DF9">한계 도달</div><p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.5">컨텍스트가 차서 <b style="color:var(--fg-1)">요약해 이어 붙인다.</b></p></div>
-  </div>
+  <div style="height:470px"><span data-dc-slot="loopExits"></span></div>
   <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px">요약은 <b style="color:#FF7AA2">손실</b>이다. 그래서 중요한 결정은 <b style="color:#00E49B">대화가 아니라 파일에</b> 남겨야 한다.<br><span style="color:var(--neutral-lighter);font-size:var(--type-small)">종료 조건이 없으면 같은 실패를 반복하며 돈다 — 최대 반복과 예산 한계도 하네스가 정한다.</span></div>
 </section>
 
@@ -423,18 +418,7 @@
 <section data-deck="0" data-label="스킬과 MCP" data-screen-label="15" data-speaker-notes="출처: 신규 · 앞의 MCP 통신 로그와 이어진다 — 하네스에 능력을 더하는 방법은 크게 둘이다. 스킬은 절차를 파일로 적어 두는 것이다. 언제 쓰는지, 어떤 순서로 하는지, 무엇을 확인하고 끝내는지를 마크다운으로 적어 두면 에이전트가 그 절차대로 움직인다. 새 도구를 붙이는 게 아니라 이미 있는 도구를 쓰는 순서를 정하는 것이다. MCP 는 반대로 바깥 시스템을 도구로 붙이는 규약이다. 사내 API, 데이터베이스, 디자인 시스템 같은 것을 표준 방식으로 연결한다. 둘의 관계를 이렇게 말할 것 — MCP 가 무엇을 할 수 있는지를 늘리고, 스킬이 그것을 어떤 순서로 쓸지를 정한다. 다음 두 장이 실제 사례다." style="background:#fff;padding:var(--pad-top) var(--pad-x) var(--pad-bottom);display:flex;flex-direction:column;justify-content:center;gap:32px;font-family:var(--font-sans);color:var(--fg-1)">
   <div style="font-family:var(--font-display);font-size:var(--type-eyebrow);letter-spacing:0.08em;text-transform:uppercase;color:var(--neutral-medium)">하네스에 능력을 더하는 두 방법</div>
   <h2 style="margin:0;font-size:var(--type-title);font-weight:700;line-height:1.15;letter-spacing:-0.02em">스킬과 MCP</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:38px">
-    <div style="background:var(--surface-app);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px">
-      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-main)">스킬 — 절차를 적는다</div>
-      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">언제 쓰는지, 어떤 순서로 하는지, 무엇을 확인하고 끝내는지를 <b style="color:var(--fg-1)">마크다운으로</b> 적어 둔다.</p>
-      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.6">새 도구를 붙이는 게 아니라 <b style="color:var(--fg-1)">이미 있는 도구를 쓰는 순서</b>를 정하는 것이다.</p>
-    </div>
-    <div style="background:var(--primary-pale);border:2px solid var(--primary-main);border-radius:18px;padding:36px 40px;display:flex;flex-direction:column;gap:16px">
-      <div style="font-size:var(--type-subtitle);font-weight:800;color:var(--primary-dark)">MCP — 바깥을 붙인다</div>
-      <p style="margin:0;font-size:var(--type-small);color:var(--fg-3);line-height:1.6">사내 API, 데이터베이스, 디자인 시스템을 <b style="color:var(--fg-1)">표준 규약으로</b> 도구화한다.</p>
-      <p style="margin:0;font-size:var(--type-small);color:var(--neutral-medium);line-height:1.6">앞에서 본 그 <b style="color:var(--fg-1)">initialize · tools/list · tools/call</b> 이 여기서 쓰인다.</p>
-    </div>
-  </div>
+  <div style="height:480px"><span data-dc-slot="skillMcp"></span></div>
   <div style="padding:30px 36px;background:var(--neutral-black);color:#fff;border-radius:16px;font-size:var(--type-body);line-height:1.5;max-width:1700px"><b style="color:#00E49B">MCP 가 무엇을 할 수 있는지를 늘리고, 스킬이 그것을 어떤 순서로 쓸지를 정한다.</b></div>
 </section>
 
@@ -994,9 +978,121 @@ class Component extends DCLogic {
       return svg(W, H, g);
     })();
 
+
+    // ── 루프의 네 출구 ──────────────────────────────────────────
+    //    루프는 하나, 빠져나가는 길은 넷 — 넷 다 하네스가 정한다.
+    const loopExits = (() => {
+      const W = 1720, H = 470, g = [];
+      g.push(h('defs', { key: 'defs' }, h('marker', { id: 'lxa', viewBox: '0 0 10 10',
+        refX: 8, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' },
+        h('path', { d: 'M0 0 L10 5 L0 10 Z', fill: '#8E8AA6' }))));
+      const box = (key, x, y, w, t, sub, col, bg) => {
+        g.push(h('rect', { key: key + 'b', x: x, y: y, width: w, height: 124, rx: 18,
+          fill: bg, stroke: col, strokeWidth: 3 }));
+        g.push(h('text', { key: key + 't', x: x + w / 2, y: y + 56, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 32, fontWeight: 800, fill: col }, t));
+        g.push(h('text', { key: key + 's', x: x + w / 2, y: y + 94, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 21, fill: MUT }, sub));
+      };
+      box('m', 90, 30, 400, '모델', '글 또는 도구 호출을 낸다', VIO, '#F4F0FE');
+      box('h', 90, 316, 400, '하네스', '도구를 실행하고 결과를 붙인다', ACC, '#EEF0FE');
+      const arc = (key, d) => g.push(h('path', { key: key, d: d, fill: 'none',
+        stroke: '#8E8AA6', strokeWidth: 4, markerEnd: 'url(#lxa)' }));
+      arc('down', 'M170 160 C 120 210, 120 262, 170 310');
+      arc('up', 'M410 310 C 460 262, 460 210, 410 160');
+      g.push(h('text', { key: 'dl', x: 100, y: 242, textAnchor: 'end', fontFamily: EN,
+        fontSize: 20, fill: MUT }, 'tool_use'));
+      g.push(h('text', { key: 'ul', x: 470, y: 242, fontFamily: EN, fontSize: 20,
+        fill: MUT }, 'tool_result'));
+
+      const EX = [
+        { t: '정상 종료', d: '도구를 더 부르지 않고 글로만 답한다', c: GRN, bg: '#EDF9F4' },
+        { t: '사람이 멈춤', d: '중단하거나 방향을 다시 준다', c: ACC, bg: '#EEF0FE' },
+        { t: '승인 거부', d: '권한 규칙에 걸려 그 도구를 못 쓴다', c: RED, bg: '#FDF0F0' },
+        { t: '한계 도달', d: '컨텍스트가 차서 요약해 이어 붙인다', c: VIO, bg: '#F4F0FE' },
+      ];
+      const HX = 680, HY = 236, OX = 860, RH = 94, RG = 18, RY0 = 14;
+      g.push(h('line', { key: 'hl', x1: 600, y1: HY, x2: HX - 14, y2: HY, stroke: INK,
+        strokeWidth: 3.5, strokeDasharray: '8 6' }));
+      EX.forEach((e, i) => {
+        const y = RY0 + i * (RH + RG), cy = y + RH / 2;
+        g.push(h('path', { key: 'p' + i, fill: 'none', stroke: e.c, strokeWidth: 3.5,
+          d: 'M' + HX + ' ' + HY + ' C ' + (HX + 90) + ' ' + HY + ', ' + (OX - 90) + ' '
+            + cy + ', ' + (OX - 4) + ' ' + cy }));
+        g.push(h('rect', { key: 'r' + i, x: OX, y: y, width: 820, height: RH, rx: 16,
+          fill: e.bg, stroke: e.c, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 't' + i, x: OX + 30, y: cy + 11, fontFamily: KR,
+          fontSize: 31, fontWeight: 800, fill: e.c }, e.t));
+        g.push(h('text', { key: 'd' + i, x: OX + 250, y: cy + 9, fontFamily: KR,
+          fontSize: 24, fill: 'var(--fg-3)' }, e.d));
+      });
+      g.push(h('circle', { key: 'hub', cx: HX, cy: HY, r: 14, fill: INK }));
+      g.push(h('text', { key: 'hubt', x: 600, y: HY - 22, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: INK }, '출구는 넷'));
+      return svg(W, H, g);
+    })();
+
+    // ── 스킬과 MCP ──────────────────────────────────────────────
+    //    스킬은 안쪽에서 순서를, MCP 는 바깥에서 능력을 — 화살표 방향이 요점이다.
+    const skillMcp = (() => {
+      const W = 1720, H = 480, g = [];
+      g.push(h('defs', { key: 'defs' }, h('marker', { id: 'smA', viewBox: '0 0 10 10',
+        refX: 8, refY: 5, markerWidth: 5, markerHeight: 5, orient: 'auto' },
+        h('path', { d: 'M0 0 L10 5 L0 10 Z', fill: GRN }))));
+      // 가운데 — 에이전트
+      const AX0 = 640, AY = 150, AW = 420, AH = 180, MY = AY + AH / 2;
+      g.push(h('rect', { key: 'ag', x: AX0, y: AY, width: AW, height: AH, rx: 24,
+        fill: '#fff', stroke: INK, strokeWidth: 3.5 }));
+      g.push(h('text', { key: 'agt', x: AX0 + AW / 2, y: AY + 84, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 38, fontWeight: 800, fill: INK }, '에이전트'));
+      g.push(h('text', { key: 'ags', x: AX0 + AW / 2, y: AY + 128, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 22, fill: MUT }, '모델 + 하네스'));
+      // 왼쪽 — SKILL.md 문서
+      const SX = 20, SY = 40, SW = 470, SH = 400, F = 56;
+      g.push(h('path', { key: 'doc', fill: '#F3FBF7', stroke: GRN, strokeWidth: 3,
+        d: 'M' + SX + ' ' + SY + ' L' + (SX + SW - F) + ' ' + SY + ' L' + (SX + SW) + ' '
+          + (SY + F) + ' L' + (SX + SW) + ' ' + (SY + SH) + ' L' + SX + ' ' + (SY + SH) + ' Z' }));
+      g.push(h('path', { key: 'fold', fill: 'none', stroke: GRN, strokeWidth: 3,
+        d: 'M' + (SX + SW - F) + ' ' + SY + ' L' + (SX + SW - F) + ' ' + (SY + F) + ' L'
+          + (SX + SW) + ' ' + (SY + F) }));
+      g.push(h('text', { key: 'skh', x: SX + 32, y: SY + 62, fontFamily: EN,
+        fontSize: 30, fontWeight: 800, fill: GRN }, 'SKILL.md'));
+      g.push(h('text', { key: 'sks', x: SX + 32, y: SY + 102, fontFamily: KR,
+        fontSize: 23, fontWeight: 700, fill: INK }, '스킬 — 절차를 적는다'));
+      ['① 언제 쓰는가', '② 어떤 순서로 하는가', '③ 무엇을 확인하고 끝내는가'].forEach((t, i) =>
+        g.push(h('text', { key: 'skl' + i, x: SX + 32, y: SY + 176 + i * 54, fontFamily: KR,
+          fontSize: 25, fill: 'var(--fg-3)' }, t)));
+      g.push(h('text', { key: 'skn', x: SX + 32, y: SY + SH - 30, fontFamily: KR,
+        fontSize: 21, fontWeight: 700, fill: GRN }, '새 도구가 아니라, 쓰는 순서'));
+      g.push(h('line', { key: 'sa', x1: SX + SW + 12, y1: MY, x2: AX0 - 12, y2: MY,
+        stroke: GRN, strokeWidth: 4, markerEnd: 'url(#smA)' }));
+      g.push(h('text', { key: 'sat', x: (SX + SW + AX0) / 2, y: MY - 18, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 21, fontWeight: 700, fill: GRN }, '순서'));
+      // 오른쪽 — 바깥 시스템 세 개를 MCP 로 꽂는다
+      const EXT = ['사내 API', '데이터베이스', '디자인 시스템'];
+      const EX0 = 1320, EW = 380, EH = 86;
+      EXT.forEach((t, i) => {
+        const y = 40 + i * 116, cy = y + EH / 2;
+        g.push(h('path', { key: 'w' + i, fill: 'none', stroke: ACC, strokeWidth: 4,
+          d: 'M' + EX0 + ' ' + cy + ' C ' + (EX0 - 120) + ' ' + cy + ', '
+            + (AX0 + AW + 150) + ' ' + MY + ', ' + (AX0 + AW + 34) + ' ' + MY }));
+        g.push(h('rect', { key: 'e' + i, x: EX0, y: y, width: EW, height: EH, rx: 16,
+          fill: '#EEF0FE', stroke: ACC, strokeWidth: 2.5 }));
+        g.push(h('text', { key: 'et' + i, x: EX0 + EW / 2, y: cy + 10, textAnchor: 'middle',
+          fontFamily: KR, fontSize: 27, fontWeight: 800, fill: ACC }, t));
+      });
+      g.push(h('rect', { key: 'plug', x: AX0 + AW, y: MY - 18, width: 34, height: 36, rx: 6,
+        fill: ACC }));
+      g.push(h('text', { key: 'mcph', x: EX0 + EW / 2, y: 418, textAnchor: 'middle',
+        fontFamily: KR, fontSize: 26, fontWeight: 800, fill: ACC }, 'MCP — 바깥을 붙인다'));
+      g.push(h('text', { key: 'mcpt', x: EX0 + EW / 2, y: 456, textAnchor: 'middle',
+        fontFamily: EN, fontSize: 21, fill: MUT }, 'initialize · tools/list · tools/call'));
+      return svg(W, H, g);
+    })();
+
     return {
       showFooter: this.props.showFooter ?? true,
-      modelVsAgent, rings, threeJobs, agentLoop, toolRound, claudeMd,
+      loopExits, skillMcp, modelVsAgent, rings, threeJobs, agentLoop, toolRound, claudeMd,
       harnessTree, jobMap, gates, bvDesign, designMcp,
     };
   }
